@@ -306,6 +306,17 @@ const LEVELS = [
   '  ==========================  ====================================================   ===============',
   '  ==========================  ====================================================   ===============',
 ],
+[
+  '',
+  '',
+  '',
+  '              oo                    ooo',
+  '             ====        W         =====          ====',
+  '                        M',
+  '   P     T     H     R      G      B      T      R     H     G        F',
+  '  ==============================  ========================  ================',
+  '  ==============================  ========================  ================',
+],
 ];
 
 // ============ GAME STATE ============
@@ -332,8 +343,43 @@ const player = {
   runFrame: 0,
 };
 
+// From world 4 each level grows ~10% per level, from world 7 ~20% per level:
+// a safe slice of the map's middle is repeated to stretch the adventure.
+function stretchMap(map, factor) {
+  if (factor <= 1.01) return map;
+  const Wd = Math.max(...map.map(r => r.length));
+  const rows = map.map(r => r.padEnd(Wd, ' '));
+  const Ht = rows.length;
+  const isSafe = x => {
+    for (let y = 0; y < Ht - 2; y++) if (rows[y][x] !== ' ') return false;
+    return rows[Ht - 2][x] === '=' && rows[Ht - 1][x] === '=';
+  };
+  let fxCol = Wd;
+  rows.forEach(r => { const i = r.indexOf('F'); if (i >= 0) fxCol = i; });
+  const safes = [];
+  for (let x = Math.floor(Wd * 0.22); x < Math.min(fxCol - 6, Math.floor(Wd * 0.85)); x++) {
+    if (isSafe(x)) safes.push(x);
+  }
+  if (safes.length < 2) return map;
+  const b = safes[safes.length - 1];
+  const extra = Math.round(Wd * (factor - 1));
+  let best = null;
+  for (const s of safes) {
+    const wch = b - s;
+    if (wch < 10) continue;
+    const t = Math.max(1, Math.round(extra / wch));
+    const err = Math.abs(t * wch - extra);
+    if (!best || err < best.err) best = { s, t, err };
+  }
+  if (!best) return map;
+  // one-of-a-kind letters (friends, ship, pistols) don't get cloned
+  const chunk = rows.map(r => r.slice(best.s, b).replace(/[LNDKAJSW]/g, ' '));
+  return rows.map((r, y) => r.slice(0, b) + chunk[y].repeat(best.t) + r.slice(b));
+}
+
 function loadLevel(n) {
-  const map = LEVELS[n];
+  const factor = n <= 2 ? 1 : n <= 5 ? 1 + 0.1 * (n - 2) : 1.3 + 0.2 * (n - 5);
+  const map = stretchMap(LEVELS[n], factor);
   levelH = map.length;
   levelW = Math.max(...map.map(r => r.length));
   tiles = [];
@@ -388,6 +434,8 @@ function loadLevel(n) {
         // from world 7 the bruisers carry blasters; from world 9 the red clones too.
         // Amnesio, Sample and Fibber always shoot.
         if ((kind === 'G' && n >= 6) || (kind === 'R' && n >= 8) || '320'.includes(kind)) en.armed = true;
+        // from world 10, Gantu and Reuben have turned good
+        if ((kind === 'G' || kind === 'B') && n >= 9) { en.friendly = true; en.armed = false; }
         enemies.push(en);
       }
       else if (c === 'W') guns.push({ x, y, taken: false, phase: Math.random() * 6 });
@@ -849,7 +897,7 @@ function update() {
       }
       let hit = false;
       for (const en of enemies) {
-        if (!en.alive || en.inShip || en.kind === 'T') continue; // bolts never hit Mertle
+        if (!en.alive || en.inShip || en.kind === 'T' || en.friendly) continue; // bolts never hit Mertle or friends
         if (b.x > en.x && b.x < en.x + en.w && b.y > en.y && b.y < en.y + en.h) {
           hit = true;
           if (en.kind === 'G' && !en.shell) {
@@ -994,6 +1042,7 @@ function update() {
             x: en.x + en.w / 2, y: en.y + 8,
             vx: en.face * (2.6 + Math.min(2, Math.abs(pdx) / 250)),
             vy: -6.5, spin: Math.random() * 6,
+            gift: !!en.friendly, // a good Reuben shares his lunch
           });
           sfx.toss();
         }
@@ -1023,12 +1072,10 @@ function update() {
     if (player.x < en.x + en.w && player.x + player.w > en.x &&
         player.y < en.y + en.h && player.y + player.h > en.y) {
       if (player.vy > 1.5 && player.y + player.h - en.y < TILE * 0.6) {
-        if (en.kind === 'T') {
-          // you can't squash Mertle — she just screams louder
+        if (en.kind === 'T' || en.friendly) {
+          // you can't squash Mertle or a friend — just bounce off
           player.vy = -8;
-          en.scream = 45;
-          en.screamT = 220;
-          sfx.scream();
+          if (en.kind === 'T') { en.scream = 45; en.screamT = 220; sfx.scream(); }
         } else if (en.kind === 'G' && !en.shell) {
           // the big bruiser is tough: first stomp tucks him into his shell
           en.shell = true;
@@ -1050,7 +1097,9 @@ function update() {
             { G: '#8296ab', R: '#e05252', B: '#e8c66a', '1': '#f2a0c0', '3': '#6db8ff', '2': '#c77dff', '0': '#ff5555' }[en.kind] || '#f0f0f0', 8);
         }
       } else if (player.invuln <= 0 && !en.shell) {
-        if (en.kind === 'T') {
+        if (en.friendly) {
+          // good guys don't hurt — walk right past them
+        } else if (en.kind === 'T') {
           // Mertle's scream knocks Stitch asleep for 10 seconds
           player.sleep = 600;
           player.vx = 0;
@@ -1129,7 +1178,12 @@ function update() {
         s.y > player.y - 10 && s.y < player.y + player.h + 10) {
       sandwiches.splice(i, 1);
       spawnParticles(s.x, s.y, '#e8c66a', 8);
-      if (player.big) {
+      if (s.gift) {
+        // a sandwich from a friendly Reuben is a snack!
+        if (!player.big) setSize(true);
+        state.score += 100;
+        sfx.powerup();
+      } else if (player.big) {
         setSize(false);
         player.invuln = 60;
         sfx.hurt();
@@ -1179,7 +1233,7 @@ function killPlayer() {
 }
 
 // ============ DRAWING ============
-// scenery themes: Hawaii (W1-3), beach (W4-7), alien planet (W8-10), Lilo's house (W11)
+// scenery themes: Hawaii (W1-3), beach (W4-7), alien planet (W8-10), Lilo's house (W11), school (W12)
 const THEMES = [
   { sky: ['#4a90d9', '#8ec9f0', '#b8e0f7'],
     dirt: '#b5651d', dirtSpot: '#8b4513', grass: '#5fbf3f', grassDark: '#4aa32e',
@@ -1193,6 +1247,9 @@ const THEMES = [
   { sky: ['#f7e6c8', '#f3dcb2', '#eccd9c'],
     dirt: '#a06a3c', dirtSpot: '#875529', grass: '#c98d4e', grassDark: '#a87440',
     brick: '#8a5a34', brickLine: '#6d4526', hill: '#d9b98c' },
+  { sky: ['#e9efe0', '#e0e8d2', '#d4dcc2'],
+    dirt: '#b98a52', dirtSpot: '#9a7040', grass: '#cba26a', grassDark: '#b08549',
+    brick: '#9a7040', brickLine: '#7c5930', hill: '#c9d6b8' },
 ];
 let theme = THEMES[0];
 function draw() {
@@ -1201,7 +1258,7 @@ function draw() {
   if (btnFireEl.style.display !== showFire) btnFireEl.style.display = showFire;
 
   // themed sky
-  const themeIdx = state.level <= 2 ? 0 : state.level <= 6 ? 1 : state.level <= 9 ? 2 : 3;
+  const themeIdx = state.level <= 2 ? 0 : state.level <= 6 ? 1 : state.level <= 9 ? 2 : state.level === 10 ? 3 : 4;
   theme = THEMES[themeIdx];
   const grad = ctx.createLinearGradient(0, 0, 0, H);
   grad.addColorStop(0, theme.sky[0]);
@@ -1351,6 +1408,71 @@ function draw() {
         }
       }
     }
+  } else if (themeIdx === 4) {
+    // Lilo's school: chalkboards, sunny windows, wall clocks and desks
+    ctx.fillStyle = '#d9cba8';
+    ctx.fillRect(-250, groundY - 70, span + 400, 70);
+    ctx.fillStyle = '#b5a582';
+    ctx.fillRect(-250, groundY - 74, span + 400, 5);
+    for (let i = 0; i < 6; i++) {
+      const bx = wrap(i * 760 + 60 - camX * 0.45);
+      ctx.fillStyle = '#8a5a34';
+      ctx.fillRect(bx - 8, groundY - 248, 176, 106);
+      ctx.fillStyle = '#2e5e46';
+      ctx.fillRect(bx, groundY - 240, 160, 90);
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.font = 'bold 22px -apple-system, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText('A L O H A', bx + 14, groundY - 210);
+      ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(bx + 14, groundY - 192); ctx.lineTo(bx + 110, groundY - 192);
+      ctx.moveTo(bx + 14, groundY - 176); ctx.lineTo(bx + 78, groundY - 176);
+      ctx.stroke();
+    }
+    for (let i = 0; i < 7; i++) {
+      const wx = wrap(i * 640 + 330 - camX * 0.45);
+      ctx.fillStyle = '#fffbe8';
+      ctx.fillRect(wx - 7, groundY - 244, 104, 120);
+      ctx.fillStyle = '#9fd4ef';
+      ctx.fillRect(wx, groundY - 237, 90, 106);
+      ctx.fillStyle = '#ffd94d';
+      ctx.beginPath();
+      ctx.arc(wx + 66, groundY - 212, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fffbe8';
+      ctx.fillRect(wx + 43, groundY - 237, 4, 106);
+      ctx.fillRect(wx, groundY - 188, 90, 4);
+    }
+    for (let i = 0; i < 8; i++) {
+      const dx2 = wrap(i * 470 + 200 - camX * 0.6);
+      if (i % 3 === 0) {
+        // wall clock
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(dx2, groundY - 250, 16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#5a4632';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(dx2, groundY - 250); ctx.lineTo(dx2, groundY - 260);
+        ctx.moveTo(dx2, groundY - 250); ctx.lineTo(dx2 + 7, groundY - 246);
+        ctx.stroke();
+      } else {
+        // school desk with a book
+        ctx.fillStyle = '#a8764a';
+        ctx.fillRect(dx2, groundY - 40, 64, 8);
+        ctx.fillStyle = '#8a5a34';
+        ctx.fillRect(dx2 + 4, groundY - 32, 6, 32);
+        ctx.fillRect(dx2 + 54, groundY - 32, 6, 32);
+        ctx.fillStyle = i % 2 ? '#c65a4e' : '#3a5da8';
+        ctx.fillRect(dx2 + 18, groundY - 47, 22, 7);
+      }
+    }
   } else {
     // clouds
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
@@ -1476,6 +1598,10 @@ function draw() {
     if (en.inShip) continue; // he's inside the saucer
     if (!en.alive && en.squash > ('H1'.includes(en.kind) ? 55 : 25)) continue;
     drawEnemy(en);
+    if (en.friendly && en.alive) {
+      ctx.fillStyle = '#ff6b8a';
+      drawHeart(en.x + en.w / 2, en.y - 16 + Math.sin(en.frame) * 2, 5);
+    }
   }
 
   // player
@@ -2341,18 +2467,21 @@ function drawEnemy(en) {
     ctx.fill();
     // blaster when armed (worlds 7+)
     if (en.armed) drawPistol(cx + (lookX > 0 ? w * 0.62 : -w * 0.62), py + h * 0.5, 1, lookX > 0 ? 1 : -1);
-    // heavy scowling brows + frown
+    // scowl for the villain, a warm smile once he's turned good
     ctx.strokeStyle = '#1a2430';
     ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.moveTo(cx - w * 0.2, py + h * 0.07);
-    ctx.lineTo(cx - w * 0.04, py + h * 0.11);
-    ctx.moveTo(cx + w * 0.2, py + h * 0.07);
-    ctx.lineTo(cx + w * 0.04, py + h * 0.11);
-    ctx.stroke();
+    if (!en.friendly) {
+      ctx.beginPath();
+      ctx.moveTo(cx - w * 0.2, py + h * 0.07);
+      ctx.lineTo(cx - w * 0.04, py + h * 0.11);
+      ctx.moveTo(cx + w * 0.2, py + h * 0.07);
+      ctx.lineTo(cx + w * 0.04, py + h * 0.11);
+      ctx.stroke();
+    }
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(cx, py + h * 0.26, w * 0.1, Math.PI * 1.2, Math.PI * 1.8);
+    if (en.friendly) ctx.arc(cx, py + h * 0.18, w * 0.1, 0.3, Math.PI - 0.3);
+    else ctx.arc(cx, py + h * 0.26, w * 0.1, Math.PI * 1.2, Math.PI * 1.8);
     ctx.stroke();
   } else if (en.kind === 'R') {
     // — red trouble-clone: quick and bouncy —
@@ -2822,6 +2951,7 @@ function drawEnemy(en) {
 }
 
 function drawPlayer() {
+  if (state.level === 11) return drawLiloPlayer(); // World 12: Lilo takes the stage!
   // art is authored for the small hitbox; when big, scale it up anchored at the feet
   const BW = TILE * 0.62, BH = TILE * 0.8;
   const s = player.big ? 1.32 : 1;
@@ -2968,6 +3098,120 @@ function drawPlayer() {
   ctx.arc(cx, headY + 5, 6, 0.35, Math.PI - 0.35);
   ctx.stroke();
 
+  ctx.restore();
+}
+
+function drawLiloPlayer() {
+  // World 12: Lilo herself, running in her red leaf dress
+  const BW = TILE * 0.62, BH = TILE * 0.8;
+  const s = player.big ? 1.32 : 1;
+  const cx = player.x + player.w / 2;
+  const feetY = player.y + player.h;
+  const py = feetY - BH, h = BH;
+  ctx.save();
+  if (player.facing < 0) {
+    ctx.translate(cx, 0);
+    ctx.scale(-1, 1);
+    ctx.translate(-cx, 0);
+  }
+  ctx.translate(cx, feetY);
+  ctx.scale(s, s);
+  ctx.translate(-cx, -feetY);
+  const bob = player.onGround && Math.abs(player.vx) > 0.5 ? Math.sin(player.runFrame * 4) * 2 : 0;
+  const jumpStretch = !player.onGround ? Math.min(4, Math.abs(player.vy) * 0.3) : 0;
+  const legSwing = player.onGround && Math.abs(player.vx) > 0.5 ? Math.sin(player.runFrame * 4) * 6 : 0;
+  const SKIN = '#d9976a', HAIR = '#1c1b22', DRESS = '#d63a2f';
+  const headY = py + h * 0.22 + bob - jumpStretch;
+
+  // long hair flowing behind
+  ctx.fillStyle = HAIR;
+  ctx.beginPath();
+  ctx.ellipse(cx - 2, headY + 4, 12, 13, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillRect(cx - 14, headY + 2, 24, h * 0.4);
+  // legs running
+  ctx.strokeStyle = SKIN;
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx - 5, py + h * 0.7 + bob);
+  ctx.lineTo(cx - 5 + legSwing, py + h - 2);
+  ctx.moveTo(cx + 5, py + h * 0.7 + bob);
+  ctx.lineTo(cx + 5 - legSwing, py + h - 2);
+  ctx.stroke();
+  // sandals
+  ctx.fillStyle = '#8a5a34';
+  ctx.fillRect(cx - 9 + legSwing, py + h - 4, 9, 4);
+  ctx.fillRect(cx + 1 - legSwing, py + h - 4, 9, 4);
+  // red dress with white leaves
+  ctx.fillStyle = DRESS;
+  ctx.beginPath();
+  ctx.moveTo(cx - 8, py + h * 0.38 + bob);
+  ctx.lineTo(cx + 8, py + h * 0.38 + bob);
+  ctx.lineTo(cx + 13, py + h * 0.74 + bob * 0.5);
+  ctx.lineTo(cx - 13, py + h * 0.74 + bob * 0.5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  for (const [dx2, dy2, rot] of [[-5, 0.52, 0.6], [4, 0.62, -0.4], [-1, 0.7, 0.9]]) {
+    ctx.save();
+    ctx.translate(cx + dx2, py + h * dy2 + bob * 0.5);
+    ctx.rotate(rot);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 1.8, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  // arms swinging (front hand may hold the pistol)
+  const armSwing = -legSwing;
+  ctx.strokeStyle = SKIN;
+  ctx.lineWidth = 4.5;
+  ctx.beginPath();
+  ctx.moveTo(cx - 7, py + h * 0.42 + bob);
+  ctx.lineTo(cx - 12 - armSwing * 0.4, py + h * 0.56 + bob);
+  ctx.moveTo(cx + 7, py + h * 0.42 + bob);
+  ctx.lineTo(cx + 12 + armSwing * 0.4, py + h * 0.56 + bob);
+  ctx.stroke();
+  if (player.gun) {
+    drawPistol(cx + 15, py + h * 0.52 + bob, 0.85, 1);
+    if (player.fireAnim) {
+      ctx.fillStyle = 'rgba(125,255,138,0.9)';
+      ctx.beginPath();
+      ctx.arc(cx + 28, py + h * 0.49 + bob, 3 + player.fireAnim, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  // face + bangs + flower
+  ctx.fillStyle = SKIN;
+  ctx.beginPath();
+  ctx.ellipse(cx + 1, headY, 9.5, 9, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = HAIR;
+  ctx.beginPath();
+  ctx.ellipse(cx, headY - 4, 10.5, 5.5, 0, Math.PI, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#f7f7fb';
+  for (let i = 0; i < 5; i++) {
+    const a = i / 5 * Math.PI * 2;
+    ctx.beginPath();
+    ctx.arc(cx + 8 + Math.cos(a) * 2.6, headY - 6 + Math.sin(a) * 2.6, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = '#ffd54d';
+  ctx.beginPath();
+  ctx.arc(cx + 8, headY - 6, 1.4, 0, Math.PI * 2);
+  ctx.fill();
+  // eyes + smile
+  ctx.fillStyle = '#26211f';
+  ctx.beginPath();
+  ctx.arc(cx + 4.5, headY + 0.5, 1.7, 0, Math.PI * 2);
+  ctx.arc(cx - 2, headY + 0.5, 1.7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#8a4b32';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.arc(cx + 2, headY + 3.5, 3.5, 0.3, Math.PI - 0.3);
+  ctx.stroke();
   ctx.restore();
 }
 
