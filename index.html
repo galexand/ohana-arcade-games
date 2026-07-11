@@ -42,6 +42,12 @@
   .btn:active, .btn.pressed { background: rgba(255,255,255,0.55); }
   #btnLeft  { left: max(20px, env(safe-area-inset-left)); }
   #btnRight { left: calc(max(20px, env(safe-area-inset-left)) + 90px); }
+  #btnWorld {
+    left: calc(max(20px, env(safe-area-inset-left)) + 184px);
+    width: 48px; height: 48px;
+    font-size: 22px;
+    bottom: calc(max(20px, env(safe-area-inset-bottom)) + 12px);
+  }
   #btnJump  {
     right: max(20px, env(safe-area-inset-right));
     width: 90px; height: 90px;
@@ -103,6 +109,7 @@
 <canvas id="game"></canvas>
 <div class="btn" id="btnLeft">◀</div>
 <div class="btn" id="btnRight">▶</div>
+<div class="btn" id="btnWorld">🌍</div>
 <div class="btn" id="btnJump">⬆</div>
 <div class="btn" id="btnFire">✦</div>
 <div id="scores">
@@ -474,6 +481,7 @@ window.addEventListener('keydown', e => {
     if (state.mode === 'play') state.mode = 'paused';
     else if (state.mode === 'paused') state.mode = 'play';
   }
+  if (e.code === 'KeyN') nextWorld();
 });
 window.addEventListener('keyup', e => {
   if (e.code === 'ArrowLeft' || e.code === 'KeyA') setKey('left', false);
@@ -498,6 +506,18 @@ bindButton('btnRight', 'right');
 bindButton('btnJump', 'jump');
 bindButton('btnFire', 'fire');
 const btnFireEl = document.getElementById('btnFire');
+
+// 🌍 world-switch: hop to the next world any time (score and powers stay)
+function nextWorld() {
+  if (state.mode !== 'play' && state.mode !== 'paused') return;
+  state.level = (state.level + 1) % LEVELS.length;
+  loadLevel(state.level);
+  state.mode = 'play';
+  sfx.aloha();
+}
+const btnWorldEl = document.getElementById('btnWorld');
+btnWorldEl.addEventListener('touchstart', e => { e.preventDefault(); initAudio(); nextWorld(); }, { passive: false });
+btnWorldEl.addEventListener('mousedown', e => { e.preventDefault(); initAudio(); nextWorld(); });
 
 // Tap anywhere to start / continue
 canvas.addEventListener('touchstart', e => { e.preventDefault(); initAudio(); handleTap(); }, { passive: false });
@@ -3279,9 +3299,9 @@ function drawOverlays() {
     ctx.fillText('Tap anywhere to start!', W / 2, line1);
     ctx.font = small * 0.8 + 'px -apple-system, sans-serif';
     ctx.fillStyle = '#bbb';
-    ctx.fillText('◀ ▶ to run  ·  ⬆ to jump  ·  stomp the baddies  ·  grab coins  ·  reach the flag!', W / 2, line2);
+    ctx.fillText('◀ ▶ run  ·  ⬆ jump  ·  🌍 switch world  ·  stomp baddies  ·  reach the house!', W / 2, line2);
     ctx.font = small * 0.75 + 'px -apple-system, sans-serif';
-    ctx.fillText('⌨  arrows / A D to run  ·  SPACE to jump  ·  F to fire  ·  P to pause', W / 2, line2 + small * 1.3);
+    ctx.fillText('⌨  arrows / A D run  ·  SPACE jump  ·  F fire  ·  N next world  ·  P pause', W / 2, line2 + small * 1.3);
     // top-3 leaderboard
     const best = loadScores();
     if (best.length) {

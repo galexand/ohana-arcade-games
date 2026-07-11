@@ -12,7 +12,7 @@ assets), and all sounds are generated with WebAudio, so there is nothing to down
 ### Play on this Mac
 
 ```bash
-cd ~/galexand/super-mario
+cd ~/galexand/super-jumpergame
 python3 serve.py
 ```
 
@@ -42,6 +42,7 @@ that works on any device. Re-upload the file whenever the game is updated.
 | Run left / right | ◀ ▶ buttons | ← → or `A` / `D` |
 | Jump (hold = higher) | ⬆ button | ↑, `Space`, or `W` |
 | Fire the pistol | green ✦ button (appears once found) | `F` or `X` |
+| Switch to the next world | small 🌍 button next to ▶ | `N` |
 | Pause / resume | tap the screen | `P` |
 
 Stitch fires in the direction he is facing. Jumps have hidden kid-friendly forgiveness
@@ -51,7 +52,7 @@ Stitch fires in the direction he is facing. Jumps have hidden kid-friendly forgi
 
 ## 🗺 The adventure — everything that was asked for
 
-### The worlds (11 levels, four lands)
+### The worlds (12 levels, five lands)
 
 | Worlds | Scenery |
 |---|---|
@@ -59,19 +60,24 @@ Stitch fires in the direction he is facing. Jumps have hidden kid-friendly forgi
 | 4 – 7 | **The beach** — ocean horizon with waves, sand dunes, beach umbrellas, sandy ground |
 | 8 – 10 | **Alien planet** (Jumba's homeworld vibes) — purple night sky, stars, two moons, crystal spires |
 | 11 | **Inside Lilo's house** — warm wooden walls, night windows with curtains, family photos, couch, lamp and bookshelf |
+| 12 | **Lilo's school** — ALOHA chalkboards, sunny windows, desks with books — and **you play as Lilo!** |
 
-Difficulty ramps up steadily: wider gaps, more villains, and armed enemies in the final worlds.
-World 10 is the no-friends final gauntlet.
+Difficulty ramps up steadily: wider gaps, more villains, and armed enemies in the later worlds.
+Levels also grow **longer**: +10% per level from World 4, +20% per level from World 7
+(World 12 is 2.5× its base length).
 
-### The hero
+### The heroes
 
 - **Stitch-inspired blue alien** — big floppy ears, four arms once Lilo joins the team.
-- 3 hearts (up to 5 with Nani), score, coins, and a flag at the end of every world.
+- **Lilo herself is the playable character in World 12**, red leaf dress, flower and all.
+- 3 hearts (up to 5 with Nani), score, coins, and **Lilo & Stitch's house** waiting at the end
+  of every world — reach it to finish the level.
 
 ### Power-ups
 
-- 🥪 **Panini blocks** — bump the sandwich block and a walking panini pops out. Eating it makes
-  Stitch **grow bigger**; while big, a hit only shrinks him back (no heart lost).
+- 🥪 **Panini blocks** — bump the sandwich block and a walking panini pops out — or, half the
+  time, an **ice cream cone** (same power, more points). Eating one makes Stitch **grow bigger**;
+  while big, a hit only shrinks him back (no heart lost).
 - 🔫 **Plasma pistol** (Worlds 7–10) — a floating ray-gun pickup. One bolt defeats most villains;
   Gantu takes two (first knocks him into his shell). Bolts can shoot enemy bolts out of the air.
 - 🛸 **Rideable spacecraft** (World 5) — walk into the parked saucer to board it and **fly**:
@@ -98,6 +104,11 @@ World 10 is the no-friends final gauntlet.
   when you approach. From World 9 he's armed too.
 - 🥪 **Reuben (X-625)** (Worlds 3–8) — the lazy golden clone who stands around and **throws
   sandwiches** at you. His sandwiches never hurt: they only shrink a big Stitch.
+- 😤 **Mertle Edmonds** (Worlds 2, 4, 11 and 12) — Lilo's rival: she plants her feet and
+  **screams**, and touching her puts you **to sleep for 10 seconds** (💤). She's just a kid, so
+  she can't be stomped or shot — go around her.
+- 💗 **From World 10, Gantu and Reuben turn good** — hearts overhead, no more shooting, and
+  friendly Reuben's sandwich throws become **snacks that make you grow** (+100).
 - 🧪 **The experiments** (they shoot, except Babyfier):
   - **Babyfier (151)** in World 6 — pink fluffball, behaves like the hamster (and cries when stomped).
   - **Amnesio (303)** in World 7 — touch or bolt wipes Stitch's memory: **back to World 3!**
