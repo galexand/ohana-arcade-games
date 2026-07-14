@@ -40,6 +40,19 @@
     touch-action: none;
   }
   .btn:active, .btn.pressed { background: rgba(255,255,255,0.55); }
+  #homeLink {
+    position: fixed;
+    top: max(10px, env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    font: 600 14px -apple-system, sans-serif;
+    color: #fff;
+    text-decoration: none;
+    background: rgba(0,0,0,0.35);
+    padding: 5px 12px;
+    border-radius: 14px;
+  }
   #btnLeft  { left: max(20px, env(safe-area-inset-left)); }
   #btnRight { left: calc(max(20px, env(safe-area-inset-left)) + 90px); }
   #btnWorld {
@@ -107,6 +120,7 @@
 </head>
 <body>
 <canvas id="game"></canvas>
+<a id="homeLink" href="index.html">← Games</a>
 <div class="btn" id="btnLeft">◀</div>
 <div class="btn" id="btnRight">▶</div>
 <div class="btn" id="btnWorld">🌍</div>
