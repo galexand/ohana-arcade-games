@@ -1,13 +1,44 @@
-# 🌺 Super Jumper
+# 🌺 Ohana Arcade
 
-A Mario-style platformer inspired by *Lilo & Stitch*, built as a single HTML file so it runs
-beautifully in Safari on **iPhone and iPad** (with big on-screen touch buttons) as well as on any
-desktop browser. All graphics are drawn in code (original, "inspired-by" characters — no copyrighted
-assets), and all sounds are generated with WebAudio, so there is nothing to download or install.
+A little collection of *Lilo & Stitch* inspired browser games, each built as a single HTML file so
+they run beautifully in Safari on **iPhone and iPad** (with big on-screen touch buttons) as well as
+on any desktop browser. All graphics are drawn in code (original, "inspired-by" characters — no
+copyrighted assets), and all sounds are generated with WebAudio, so there is nothing to download.
+
+**`index.html` is the home page** — it lists every game in alphabetical order. To add a new game,
+drop a new `.html` file in the folder and add one entry to the `GAMES` array in `index.html`.
+
+## 🕹 The games
+
+| Game | File | What it is |
+|---|---|---|
+| **Ohana Karts** | `ohana-karts.html` | Beach kart race: play Lilo or Stitch, dodge the villains, beat your rival to the finish |
+| **Super Jumper** | `super-jumper.html` | 12-world platform adventure with friends, experiments and a golden medal |
 
 ---
 
-## 🚀 How to start the game
+# 🏎 Ohana Karts
+
+Pick **Lilo or Stitch** — the other becomes your rival — and race along a two-lane beach road in
+Hawaii. Auto-accelerate; your only job is **switching lanes** to dodge trouble:
+
+- 🦈 **Gantu** guards a lane and **fires plasma bolts** down the road (bolt or crash = kart damage).
+- 🐹 **Hämsterviel** putters along as a rolling roadblock — stuck behind him you crawl at his pace.
+- 🥪 **Reuben (625)** lobs sandwiches onto the road from his beach mat — drive into one and it's a
+  sticky slowdown.
+- ⚡ **Boost pads** give a burst of speed; the kart has **3 hearts**, and losing them all means a
+  costly pit-repair stop while the race runs on.
+
+Best time per character is saved on the device. Controls: **⬆⬇ buttons** (or tap the top/bottom
+half of the road), keyboard **↑ ↓** or `W`/`S`; on the picker `1` = Stitch, `2` = Lilo.
+
+---
+
+# 🌺 Super Jumper
+
+---
+
+## 🚀 How to start the arcade
 
 ### Play on this Mac
 
@@ -16,7 +47,7 @@ cd ~/galexand/super-jumpergame
 python3 serve.py
 ```
 
-Then open <http://localhost:8642> in your browser.
+Then open <http://localhost:8642> in your browser — the home page lists all the games.
 
 `serve.py` is a tiny wrapper around Python's built-in web server that adds **no-cache headers**, so
 after any change to the game a simple page reload is always enough (no stale versions).
@@ -30,12 +61,12 @@ after any change to the game a simple page reload is always enough (no stale ver
 
 ### Play from anywhere (no Mac needed)
 
-Drag `index.html` onto [Netlify Drop](https://app.netlify.com/drop) — you get a free permanent URL
-that works on any device. Re-upload the file whenever the game is updated.
+Drag the whole folder onto [Netlify Drop](https://app.netlify.com/drop) (or enable GitHub Pages on
+this repo) — you get a permanent URL that works on any device.
 
 ---
 
-## 🎮 Controls
+## 🎮 Controls (Super Jumper)
 
 | Action | Touch (iPad/iPhone) | Keyboard |
 |---|---|---|
@@ -132,7 +163,9 @@ and awards Lilo & Stitch a **golden medal**. (Tap to skip the ceremony.)
 
 | File | Purpose |
 |---|---|
-| `index.html` | The entire game — engine, levels, art, sound, UI. Edit levels in the `LEVELS` array (legend in the comments above it). |
+| `index.html` | The arcade home page — lists all games alphabetically (`GAMES` array). |
+| `super-jumper.html` | The platformer — engine, levels, art, sound, UI. Edit levels in the `LEVELS` array (legend in the comments above it). |
+| `ohana-karts.html` | The beach kart racing game. |
 | `serve.py` | Dev server with no-cache headers on port 8642. |
 | `.claude/launch.json` | Preview-server config for Claude Code. |
 
