@@ -120,7 +120,7 @@ const LENS = [13000, 13000, 17000, 21000, 25000]; // race distances for tracks 1
 const TRACK_NAMES = ['BEACH', 'ISLAND', 'HOUSE', 'PLANET', 'SPACE'];
 let LEN = LENS[0];                // race distance (set per-race in startRace)
 const MAXSPD = 7, RIVALBASE = 6.15;
-const state = { mode: 'select', sel: 0, char: 'S', level: 1, countT: 0, raceT: 0, place: 1, bestMsg: '', endT: 0 };
+const state = { mode: 'select', sel: 0, char: 'S', level: 1, countT: 0, raceT: 0, place: 1, bestMsg: '', endT: 0, medalWon: false };
 const player = { x: 0, lane: 1, laneF: 1, speed: 0, hearts: 3, invuln: 0, stun: 0, sleepT: 0, finT: 0, boostT: 0 };
 const rival  = { x: 0, lane: 0, laneF: 0, speed: 0, weaveT: 120, finT: 0 };
 let hazards = [], pads = [], bolts = [], sandwiches = [], parts = [];
@@ -144,6 +144,7 @@ function startRace(c) {
   rival.x = 260; rival.lane = 0; rival.laneF = 0; rival.speed = 0; rival.weaveT = 150; rival.finT = 0;
   hazards = []; pads = []; bolts = []; sandwiches = []; parts = [];
   camX = 0; endRoll = 0;
+  state.medalWon = false;
   // build the track: Gantu, Hämsterviel, Reuben and boost pads take turns
   let x = 1000, i = 0, gCount = 0;
   while (x < LEN - 700) {
@@ -444,6 +445,7 @@ function update() {
       if (state.level === 5 && state.place === 1) {
         state.mode = 'ending';
         state.endT = 0;
+        state.medalWon = true;
       } else {
         state.mode = 'finish';
       }
@@ -689,8 +691,9 @@ function drawIslandScene(t) {
 // Track 3: Lilo's house — floor doubles as the road, split into 4 rooms in a fixed order:
 // kitchen -> bedroom -> living room -> spaceship tower bedroom.
 function roomAt(x) { return Math.min(3, Math.floor(Math.max(0, x) / (LEN / 4))); }
-const HOUSE_WALLS = ['#f2e2c4', '#dbe8f5', '#eed2a3', '#3a4258'];
-const HOUSE_FLOORS = ['', '#c9a06b', '#caa06b', '#5d6a8a'];
+const HOUSE_WALLS = ['#f7ecd9', '#eaf1fb', '#f5e6c8', '#2d3548'];
+const HOUSE_FLOORS = ['', '#b98450', '#a8763f', '#4a5570']; // room 0 (kitchen) floor is a checker, drawn separately
+const HOUSE_TRIM = ['#8a5a34', '#7c5930', '#6d4526', '#232a3a']; // solid wall/floor boundary edge per room
 
 function drawHouseScene(t) {
   const roomLen = LEN / 4;
@@ -718,9 +721,13 @@ function drawHouseScene(t) {
     if (sx < -60 || sx > W + 60) continue;
     drawRoomProp(roomAt(wxp), sx, wxp, rt, t);
   }
-  // dashed centerline
-  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  // dashed centerline — dark halo behind a white dash so it reads on every room's floor color
   const divY = (laneY(0) + laneY(1)) / 2 + 14 * K;
+  ctx.fillStyle = 'rgba(20,16,10,0.55)';
+  for (let dx = Math.floor(camX / 90) * 90; dx < camX + W + 90; dx += 90) {
+    ctx.fillRect(dx - camX - 1, divY - 1, 44, 6);
+  }
+  ctx.fillStyle = '#fff';
   for (let dx = Math.floor(camX / 90) * 90; dx < camX + W + 90; dx += 90) {
     ctx.fillRect(dx - camX, divY, 42, 4);
   }
@@ -732,7 +739,7 @@ function drawRoomFloor(room, sxL, sxR, rt, rb) {
     const sq = 26 * K;
     for (let y = rt; y < rb; y += sq) {
       for (let x = Math.floor(sxL / sq) * sq; x < sxR; x += sq) {
-        ctx.fillStyle = (Math.round(x / sq) + Math.round(y / sq)) % 2 ? '#e8d9b8' : '#d4a373';
+        ctx.fillStyle = (Math.round(x / sq) + Math.round(y / sq)) % 2 ? '#dba86a' : '#a8703f';
         ctx.fillRect(x, y, sq, Math.min(sq, rb - y));
       }
     }
@@ -748,7 +755,7 @@ function drawRoomFloor(room, sxL, sxR, rt, rb) {
       }
     }
   }
-  ctx.fillStyle = 'rgba(0,0,0,0.14)';
+  ctx.fillStyle = HOUSE_TRIM[room];
   ctx.fillRect(sxL, rt, sxR - sxL, 4);
   ctx.fillRect(sxL, rb - 4, sxR - sxL, 4);
 }
@@ -1549,36 +1556,81 @@ function drawHamKart4(sx, ly, wx) {
 }
 
 function drawLeroyGuard(sx, ly, firing) {
+  // Leroy is Stitch's evil clone: small compact rounded-alien build like Stitch
+  // (see drawStitchDriver), scaled up to guard height, recolored red/pink.
   const y = ly + 12 * K, w = 46 * K, h = 74 * K;
+  const RED = '#e0435c', DARK_RED = '#a52338', BELLY = '#f7c9d2', PINK = '#ffb3c6', EYE = '#1b2a45';
   ctx.fillStyle = 'rgba(0,0,0,0.15)';
   ctx.beginPath();
   ctx.ellipse(sx, y, w * 0.7, 7 * K, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#8a3a5d';
+  // stubby feet
+  ctx.fillStyle = DARK_RED;
   ctx.beginPath();
-  ctx.moveTo(sx - w * 0.5, y - h * 0.72);
-  ctx.quadraticCurveTo(sx - w * 0.58, y - h * 0.2, sx - w * 0.32, y);
-  ctx.lineTo(sx + w * 0.32, y);
-  ctx.quadraticCurveTo(sx + w * 0.58, y - h * 0.2, sx + w * 0.5, y - h * 0.72);
-  ctx.quadraticCurveTo(sx, y - h * 0.95, sx - w * 0.5, y - h * 0.72);
+  ctx.ellipse(sx - w * 0.18, y - 3 * K, 8 * K, 5 * K, 0, 0, Math.PI * 2);
+  ctx.ellipse(sx + w * 0.18, y - 3 * K, 8 * K, 5 * K, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#c62f42';
+  // round, compact torso (Stitch-proportioned, not Gantu's tank-block shape)
+  ctx.fillStyle = RED;
   ctx.beginPath();
-  ctx.moveTo(sx - w * 0.32, y - h * 0.5);
-  ctx.lineTo(sx + w * 0.32, y - h * 0.5);
-  ctx.lineTo(sx + w * 0.24, y - h * 0.04);
-  ctx.lineTo(sx - w * 0.24, y - h * 0.04);
+  ctx.ellipse(sx, y - h * 0.38, w * 0.44, h * 0.34, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = BELLY;
+  ctx.beginPath();
+  ctx.ellipse(sx, y - h * 0.3, w * 0.24, h * 0.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // arm reaching toward the blaster
+  ctx.fillStyle = RED;
+  ctx.beginPath();
+  ctx.ellipse(sx - w * 0.4, y - h * 0.4, 7 * K, 9 * K, 0.4, 0, Math.PI * 2);
+  ctx.fill();
+  // round head
+  ctx.fillStyle = RED;
+  ctx.beginPath();
+  ctx.ellipse(sx, y - h * 0.82, w * 0.3, h * 0.16, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // small dark tuft between the ears (evil-clone touch)
+  ctx.fillStyle = DARK_RED;
+  ctx.beginPath();
+  ctx.moveTo(sx - 3 * K, y - h * 0.97);
+  ctx.lineTo(sx, y - h * 1.05);
+  ctx.lineTo(sx + 3 * K, y - h * 0.97);
   ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = '#8a3a5d';
+  // big angled Stitch-style ears
+  for (const s of [-1, 1]) {
+    ctx.save();
+    ctx.translate(sx + s * w * 0.26, y - h * 0.88);
+    ctx.rotate(s * 0.95);
+    ctx.fillStyle = RED;
+    ctx.beginPath();
+    ctx.ellipse(0, -10 * K, 7 * K, 16 * K, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = PINK;
+    ctx.beginPath();
+    ctx.ellipse(0, -9 * K, 3.5 * K, 10 * K, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  // big round forward-facing eyes, slightly slanted for a mischievous look
+  ctx.fillStyle = EYE;
   ctx.beginPath();
-  ctx.ellipse(sx, y - h * 0.84, w * 0.26, h * 0.11, 0, 0, Math.PI * 2);
+  ctx.ellipse(sx - w * 0.12, y - h * 0.84, 4.2 * K, 5 * K, -0.2, 0, Math.PI * 2);
+  ctx.ellipse(sx + w * 0.12, y - h * 0.84, 4.2 * K, 5 * K, 0.2, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#dfe8f0';
+  ctx.fillStyle = '#fff';
   ctx.beginPath();
-  ctx.ellipse(sx - w * 0.12 - 2, y - h * 0.85, 3.4 * K, 2.4 * K, 0, 0, Math.PI * 2);
-  ctx.ellipse(sx + w * 0.08 - 2, y - h * 0.85, 3.4 * K, 2.4 * K, 0, 0, Math.PI * 2);
+  ctx.arc(sx - w * 0.1, y - h * 0.86, 1.3 * K, 0, Math.PI * 2);
+  ctx.arc(sx + w * 0.14, y - h * 0.86, 1.3 * K, 0, Math.PI * 2);
   ctx.fill();
+  // sharp grin
+  ctx.strokeStyle = DARK_RED;
+  ctx.lineWidth = 1.6 * K;
+  ctx.beginPath();
+  ctx.moveTo(sx - w * 0.09, y - h * 0.74);
+  ctx.quadraticCurveTo(sx, y - h * 0.7, sx + w * 0.09, y - h * 0.75);
+  ctx.stroke();
+  // blaster aimed down the road
   ctx.fillStyle = '#7d8898';
   ctx.fillRect(sx - w * 0.5 - 20 * K, y - h * 0.42, 24 * K, 7 * K);
   ctx.fillStyle = '#7dffcd';
@@ -2044,11 +2096,11 @@ function drawOverlays(t) {
     const big = Math.min(56, W * 0.09);
     ctx.font = 'bold ' + big + 'px -apple-system, sans-serif';
     ctx.fillStyle = state.place === 1 ? '#ffd700' : '#dce9f5';
-    ctx.fillText(state.place === 1 ? '🏆 1st PLACE!' : '🥈 2nd place…', W / 2, H * 0.34);
+    ctx.fillText(state.medalWon ? '🏅 GOLDEN MEDAL!' : (state.place === 1 ? '🏆 1st PLACE!' : '🥈 2nd place…'), W / 2, H * 0.34);
     ctx.font = 'bold ' + Math.min(26, W * 0.05) + 'px -apple-system, sans-serif';
     ctx.fillStyle = '#fff';
     ctx.fillText('Time: ' + (player.finT / 60).toFixed(1) + 's    ' + state.bestMsg, W / 2, H * 0.48);
-    ctx.fillText(state.place === 1 ? 'Ohana pride! 🌺' : 'So close — rematch?', W / 2, H * 0.58);
+    ctx.fillText(state.medalWon ? 'The Grand Councilwoman honors you! 🌺' : (state.place === 1 ? 'Ohana pride! 🌺' : 'So close — rematch?'), W / 2, H * 0.58);
     ctx.font = '17px -apple-system, sans-serif';
     ctx.fillStyle = '#ffe066';
     ctx.fillText('Tap to race again', W / 2, H * 0.7);
@@ -2140,6 +2192,21 @@ function drawEndingCeremony(t) {
     const medalY = (gy - 40 * K) - 26 * K * rise;
     ctx.globalAlpha = rise;
     drawWinnerMedal(anchorX, medalY, t);
+    ctx.globalAlpha = 1;
+  }
+
+  // beat 4: payoff caption once the medal has fully risen
+  if (state.endT >= 340) {
+    const captionIn = Math.min(1, (state.endT - 340) / 40);
+    ctx.globalAlpha = captionIn;
+    ctx.font = 'bold ' + Math.min(30, W * 0.05) + 'px -apple-system, sans-serif';
+    ctx.fillStyle = '#ffd700';
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+    ctx.lineWidth = 4;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.strokeText('🏅 Golden Medal earned!', W / 2, H * 0.72);
+    ctx.fillText('🏅 Golden Medal earned!', W / 2, H * 0.72);
     ctx.globalAlpha = 1;
   }
 
