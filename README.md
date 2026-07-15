@@ -13,6 +13,7 @@ drop a new `.html` file in the folder and add one entry to the `GAMES` array in 
 | Game | File | What it is |
 |---|---|---|
 | **Ohana Karts** | `ohana-karts.html` | Beach kart race: play Lilo or Stitch, dodge the villains, beat your rival to the finish |
+| **SpaceShip Racers** | `spaceship-racers.html` | 5-level pseudo-3D space racer: curves, laser guns, Leroy chases you |
 | **Super Jumper** | `super-jumper.html` | 12-world platform adventure with friends, experiments and a golden medal |
 | **Whack Hämsterviel** | `whack-hamsterviel.html` | Whack-a-mole: bonk Hämsterviel with your finger, spare the friends, beat the clock |
 
@@ -41,6 +42,28 @@ A classic whack-a-mole. **Hämsterviel** keeps popping out of burrows on the bea
 the head** to bonk him for points (chain hits for a combo bonus). But friends pop up too — hit
 **Stitch, Lilo or Angel** by mistake and you lose points *and* time. The game speeds up as the
 **45-second** clock runs down. Best score is saved on the device. Just tap — no other controls.
+
+---
+
+# 🚀 SpaceShip Racers
+
+Pick **Lilo or Stitch** and race through **five themed tracks** in a pseudo-3D spaceship racer
+inspired by classic arcade racers. Steer left and right to follow the curves — go off-road and
+you'll slow to a crawl.
+
+- **Level 1 – Beach Cruise**: gentle curves, dodge Hämsterviel and Reuben's sandwiches.
+- **Level 2 – Mountain Pass**: tighter turns, Gantu guards the road and shoots plasma bolts.
+- **Level 3 – Space Launch**: neon road among the stars. **Laser gun** pickups let you shoot
+  obstacles, and **Leroy** appears in a red spaceship behind you, firing bolts you must dodge.
+- **Level 4 – Alien Planet**: crystal spires, two moons, sharper curves, Leroy fires faster.
+- **Level 5 – Final Championship**: nebula sky, golden road, everything at maximum difficulty.
+  Win 1st place to become **Champion!**
+
+Beat each track in **1st place** to unlock the next. Best time per level per character is saved.
+
+Controls: **◀ ▶ buttons** or ← → / `A` / `D` to steer; **✦ button** or `F` / `X` to fire the
+laser (levels 3–5, after picking up the green gun). Tap left/right half of the screen as a
+shortcut.
 
 ---
 
@@ -180,6 +203,7 @@ and awards Lilo & Stitch a **golden medal**. (Tap to skip the ceremony.)
 | `index.html` | The arcade home page — lists all games alphabetically (`GAMES` array). |
 | `super-jumper.html` | The platformer — engine, levels, art, sound, UI. Edit levels in the `LEVELS` array (legend in the comments above it). |
 | `ohana-karts.html` | The beach kart racing game. |
+| `spaceship-racers.html` | The pseudo-3D spaceship racing game. |
 | `whack-hamsterviel.html` | The whack-a-mole game. |
 | `serve.py` | Dev server with no-cache headers on port 8642. |
 | `REFERENCES.md` | Character/scene reference links and the rules for adding new content. |
