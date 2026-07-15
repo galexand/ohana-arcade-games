@@ -110,16 +110,18 @@ const sfx = {
   splat() { beep(240, 0.2, 'triangle', 0.08, -140); },
   boost() { beep(500, 0.3, 'square', 0.07, 600); },
   fix()   { beep(880, 0.08, 'square', 0.05); },
+  yell()  { beep(600, 0.2, 'sawtooth', 0.07, -80); },
   win()   { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 0.22, 'square', 0.08), i * 140)); },
   lose()  { [392, 330, 262].forEach((f, i) => setTimeout(() => beep(f, 0.28, 'triangle', 0.07), i * 170)); },
 };
 
 // ============ GAME STATE ============
-const LENS = [9000, 13000, 17000]; // race distances for tracks 1/2/3
+const LENS = [13000, 13000, 17000, 21000, 25000]; // race distances for tracks 1-5
+const TRACK_NAMES = ['BEACH', 'ISLAND', 'HOUSE', 'PLANET', 'SPACE'];
 let LEN = LENS[0];                // race distance (set per-race in startRace)
 const MAXSPD = 7, RIVALBASE = 6.15;
-const state = { mode: 'select', sel: 0, char: 'S', level: 1, countT: 0, raceT: 0, place: 1, bestMsg: '' };
-const player = { x: 0, lane: 1, laneF: 1, speed: 0, hearts: 3, invuln: 0, stun: 0, finT: 0, boostT: 0 };
+const state = { mode: 'select', sel: 0, char: 'S', level: 1, countT: 0, raceT: 0, place: 1, bestMsg: '', endT: 0 };
+const player = { x: 0, lane: 1, laneF: 1, speed: 0, hearts: 3, invuln: 0, stun: 0, sleepT: 0, finT: 0, boostT: 0 };
 const rival  = { x: 0, lane: 0, laneF: 0, speed: 0, weaveT: 120, finT: 0 };
 let hazards = [], pads = [], bolts = [], sandwiches = [], parts = [];
 let camX = 0, endRoll = 0;
@@ -138,17 +140,22 @@ function startRace(c) {
   state.bestMsg = '';
   LEN = LENS[state.level - 1];
   player.x = 260; player.lane = 1; player.laneF = 1; player.speed = 0;
-  player.hearts = 3; player.invuln = 0; player.stun = 0; player.finT = 0; player.boostT = 0;
+  player.hearts = 3; player.invuln = 0; player.stun = 0; player.sleepT = 0; player.finT = 0; player.boostT = 0;
   rival.x = 260; rival.lane = 0; rival.laneF = 0; rival.speed = 0; rival.weaveT = 150; rival.finT = 0;
   hazards = []; pads = []; bolts = []; sandwiches = []; parts = [];
   camX = 0; endRoll = 0;
   // build the track: Gantu, Hämsterviel, Reuben and boost pads take turns
-  let x = 1000, i = 0;
+  let x = 1000, i = 0, gCount = 0;
   while (x < LEN - 700) {
     const lane = Math.random() < 0.5 ? 0 : 1;
     const r = i % 4;
     if (r === 0) hazards.push({ type: 'H', x, lane, sp: 2.2, cool: 0 });
-    else if (r === 1) hazards.push({ type: 'G', x, lane, gunT: 70, flash: 0 });
+    else if (r === 1) {
+      // on track 3, alternate between Gantu (heart loss) and Myrtle (sleep) so both are present
+      const sub = state.level === 3 ? (gCount % 2 === 0 ? 'gantu' : 'myrtle') : undefined;
+      hazards.push({ type: 'G', x, lane, gunT: 70, flash: 0, sub });
+      gCount++;
+    }
     else if (r === 2) hazards.push({ type: 'B', x, cd: 60, arm: 0 });
     else pads.push({ x, lane, cd: 0 });
     x += 430 + Math.random() * 340;
@@ -158,7 +165,7 @@ function startRace(c) {
 
 function setLane(l) {
   l = Math.max(0, Math.min(1, l));
-  if (l !== player.lane && state.mode === 'race' && player.stun <= 0) {
+  if (l !== player.lane && state.mode === 'race' && player.stun <= 0 && player.sleepT <= 0) {
     player.lane = l;
     sfx.tick();
   }
@@ -199,11 +206,11 @@ function laneY(l) {
 
 // track-length pill rects for the select-screen level picker (shared by draw + tap hit-testing)
 function trackPillRects() {
-  const pw = Math.min(88, W * 0.16), ph = H * 0.065, gap = Math.min(16, W * 0.025);
-  const totalW = pw * 3 + gap * 2;
+  const pw = Math.min(60, W * 0.15), ph = H * 0.075, gap = Math.min(10, W * 0.02);
+  const totalW = pw * 5 + gap * 4;
   const startX = W / 2 - totalW / 2, cy = H * 0.31;
   const rects = [];
-  for (let lvl = 1; lvl <= 3; lvl++) {
+  for (let lvl = 1; lvl <= 5; lvl++) {
     rects.push({ level: lvl, x: startX + (lvl - 1) * (pw + gap), y: cy - ph / 2, w: pw, h: ph });
   }
   return rects;
@@ -237,6 +244,8 @@ function tapAt(x, y) {
     setLane(y < H * 0.62 ? 0 : 1);
   } else if (state.mode === 'finish') {
     state.mode = 'select';
+  } else if (state.mode === 'ending') {
+    if (state.endT > 60) state.endT = 450;
   }
 }
 canvas.addEventListener('touchstart', e => {
@@ -251,7 +260,7 @@ window.addEventListener('keydown', e => {
   if (state.mode === 'select') {
     if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') { state.sel = 1 - state.sel; sfx.tick(); }
     if (e.code === 'ArrowUp' && state.level > 1) { state.level--; sfx.tick(); }
-    if (e.code === 'ArrowDown' && state.level < 3) { state.level++; sfx.tick(); }
+    if (e.code === 'ArrowDown' && state.level < 5) { state.level++; sfx.tick(); }
     if (e.code === 'Digit1') startRace('S');
     if (e.code === 'Digit2') startRace('L');
     if (e.code === 'Enter' || e.code === 'Space') startRace(state.sel === 0 ? 'S' : 'L');
@@ -260,6 +269,8 @@ window.addEventListener('keydown', e => {
     if (e.code === 'ArrowDown' || e.code === 'KeyS') setLane(player.lane + 1);
   } else if (state.mode === 'finish') {
     if (e.code === 'Enter' || e.code === 'Space') state.mode = 'select';
+  } else if (state.mode === 'ending') {
+    if ((e.code === 'Enter' || e.code === 'Space') && state.endT > 60) state.endT = 450;
   }
   if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
 });
@@ -279,6 +290,12 @@ function update() {
     if (state.countT >= 180) { state.mode = 'race'; sfx.go(); }
     return;
   }
+  if (state.mode === 'ending') {
+    state.endT++;
+    if (state.endT === 300) sfx.win(); // chime reprise as the medal appears
+    if (state.endT > 460) state.mode = 'finish';
+    return;
+  }
   if (state.mode !== 'race') return;
 
   state.raceT++;
@@ -289,6 +306,10 @@ function update() {
     player.speed = 0;
     if (player.stun % 30 === 0) sfx.fix();
     if (player.stun === 0) { player.hearts = 3; player.invuln = 120; }
+  } else if (player.sleepT > 0) {
+    player.sleepT--;
+    player.speed = 0;
+    if (player.sleepT === 0) player.invuln = Math.max(player.invuln, 60); // brief grace period waking up
   } else {
     const cap = player.boostT > 0 ? 10.5 : MAXSPD;
     if (player.speed < cap) player.speed = Math.min(cap, player.speed + 0.07);
@@ -324,19 +345,29 @@ function update() {
       }
     } else if (hz.type === 'G') {
       if (hz.flash > 0) hz.flash--;
-      // Gantu guards his lane and fires down the road
+      const isMyrtle = state.level === 3 && hz.sub === 'myrtle';
+      // Gantu (and his track re-skins) guards his lane and fires down the road;
+      // on track 3 Myrtle takes his place and "yells" a dodgeable sleep-bolt instead
       const dist = hz.x - player.x;
       if (dist > 120 && dist < 720) {
         if (--hz.gunT <= 0) {
           hz.gunT = 105;
           hz.flash = 8;
-          bolts.push({ x: hz.x - 40 * K, lane: hz.lane, vx: -6.2 });
-          sfx.zap();
+          if (isMyrtle) {
+            bolts.push({ x: hz.x - 40 * K, lane: hz.lane, vx: -6.2, sleep: true });
+            sfx.yell();
+          } else {
+            bolts.push({ x: hz.x - 40 * K, lane: hz.lane, vx: -6.2 });
+            sfx.zap();
+          }
         }
       }
-      // crashing into Gantu himself really hurts
+      // crashing into the guard himself really hurts — except Myrtle, who just startles you awake... to sleep
       if (Math.abs(player.laneF - hz.lane) < 0.4 && Math.abs(player.x - hz.x) < 55 * K) {
-        if (player.invuln <= 0) { damageKart(); player.x = hz.x - 70 * K; }
+        if (player.invuln <= 0) {
+          if (!isMyrtle) damageKart();
+          player.x = hz.x - 70 * K;
+        }
       }
     } else if (hz.type === 'B') {
       // Reuben lobs sandwiches onto the road ahead of you
@@ -358,9 +389,15 @@ function update() {
     const b = bolts[i];
     b.x += b.vx;
     if (b.x < camX - 300) { bolts.splice(i, 1); continue; }
-    if (Math.abs(player.laneF - b.lane) < 0.4 && Math.abs(b.x - player.x) < 40 * K && player.invuln <= 0 && player.stun <= 0) {
+    if (Math.abs(player.laneF - b.lane) < 0.4 && Math.abs(b.x - player.x) < 40 * K && player.invuln <= 0 && player.stun <= 0 && player.sleepT <= 0) {
       bolts.splice(i, 1);
-      damageKart();
+      if (b.sleep) {
+        player.sleepT = 300;
+        sfx.yell();
+        burst(player.x, laneY(player.laneF) - 20 * K, '#be8cff', 12);
+      } else {
+        damageKart();
+      }
     }
   }
 
@@ -404,7 +441,12 @@ function update() {
       } else {
         state.bestMsg = 'Best: ' + best.toFixed(1) + 's';
       }
-      state.mode = 'finish';
+      if (state.level === 5 && state.place === 1) {
+        state.mode = 'ending';
+        state.endT = 0;
+      } else {
+        state.mode = 'finish';
+      }
       if (state.place === 1) {
         sfx.win();
         for (let i = 0; i < 60; i++) parts.push({
@@ -424,6 +466,89 @@ function update() {
 // ============ DRAWING ============
 function draw() {
   const t = Date.now();
+  // per-track scenery (sky/backdrop, roadside decor, road surface + divider)
+  drawScenery(t);
+  // start + finish
+  drawCheckerLine(300 - camX);
+  drawFinish(LEN - camX, t);
+
+  // boost pads
+  for (const p of pads) drawPad(p.x - camX, laneY(p.lane), p.cd > 0, t);
+  // sandwiches
+  for (const s of sandwiches) {
+    const sx = s.x - camX;
+    if (sx < -80 || sx > W + 80) continue;
+    const drop = s.t < 0 ? (-s.t) * 6 * K : 0;
+    drawSandwichSm(sx, laneY(s.lane) + 8 * K - drop, 16 * K);
+  }
+  // bolts — recolored per track: orange blasters for 1/2, cyan lasers for 4 (Leroy) and 5 (alien sentry).
+  // Track 4's bolt reads as a "beam" (more elongated) rather than a round blast.
+  for (const b of bolts) {
+    const sx = b.x - camX;
+    const bolted = b.sleep
+      ? '#be8cff'
+      : state.level === 4 ? '#7dffcd'
+      : state.level === 5 ? '#7dffcd'
+      : '#ffb066';
+    ctx.fillStyle = bolted;
+    ctx.beginPath();
+    ctx.ellipse(sx, laneY(b.lane) - 16 * K, state.level === 4 ? 15 * K : 11 * K, state.level === 4 ? 3.6 * K : 5 * K, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.ellipse(sx, laneY(b.lane) - 16 * K, state.level === 4 ? 8 * K : 5 * K, 1.6 * K, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // villains — re-skinned per track (Track 3 swaps Gantu for Myrtle, Track 4 swaps him for Leroy)
+  for (const hz of hazards) {
+    const sx = hz.x - camX;
+    if (sx < -140 || sx > W + 140) continue;
+    if (hz.type === 'H') {
+      const fn = [drawHamKart, drawHamKart2, drawHamKart3, drawHamKart4, drawHamKart5][state.level - 1];
+      fn(sx, laneY(hz.lane), hz.x);
+    } else if (hz.type === 'G') {
+      if (state.level === 3 && hz.sub === 'myrtle') drawMyrtleGuard(sx, laneY(hz.lane), hz.flash > 0);
+      else if (state.level === 3 && hz.sub === 'gantu') drawGantuGuard(sx, laneY(hz.lane), hz.flash > 0);
+      else if (state.level === 4) drawLeroyGuard(sx, laneY(hz.lane), hz.flash > 0);
+      else if (state.level === 2) drawGantuGuard2(sx, laneY(hz.lane), hz.flash > 0);
+      else if (state.level === 5) drawGantuGuard5(sx, laneY(hz.lane), hz.flash > 0);
+      else drawGantuGuard(sx, laneY(hz.lane), hz.flash > 0);
+    } else {
+      const fn = [drawReubenSide, drawReubenSide2, drawReubenSide3, drawReubenSide4, drawReubenSide5][state.level - 1];
+      fn(sx, roadTop() - 6, hz.arm > 0, t);
+    }
+  }
+
+  // karts (draw far lane first)
+  const karts = [
+    { k: rival, who: state.char === 'S' ? 'L' : 'S', isP: false },
+    { k: player, who: state.char, isP: true },
+  ].sort((a, b) => a.k.laneF - b.k.laneF);
+  for (const kk of karts) drawKart(kk.k, kk.who, kk.isP, t);
+
+  // particles
+  for (const p of parts) {
+    ctx.globalAlpha = Math.min(1, p.life / 25);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.wx - camX - 3, p.sy - 3, 6, 6);
+    ctx.globalAlpha = 1;
+  }
+
+  drawHUD(t);
+  drawOverlays(t);
+}
+
+// ============ TRACK SCENERY ============
+function drawScenery(t) {
+  if (state.level === 1) drawBeachScene(t);
+  else if (state.level === 2) drawIslandScene(t);
+  else if (state.level === 3) drawHouseScene(t);
+  else if (state.level === 4) drawPlanetScene(t);
+  else drawSpaceScene(t);
+}
+
+// Track 1: beach — verbatim original background, unmoved (only its length changed via LENS[0]).
+function drawBeachScene(t) {
   // sky
   const grad = ctx.createLinearGradient(0, 0, 0, H);
   grad.addColorStop(0, '#3f9bd9');
@@ -483,57 +608,413 @@ function draw() {
   for (let wx = Math.floor(camX / 90) * 90; wx < camX + W + 90; wx += 90) {
     ctx.fillRect(wx - camX, divY, 42, 4);
   }
-  // start + finish
-  drawCheckerLine(300 - camX);
-  drawFinish(LEN - camX, t);
+}
 
-  // boost pads
-  for (const p of pads) drawPad(p.x - camX, laneY(p.lane), p.cd > 0, t);
-  // sandwiches
-  for (const s of sandwiches) {
-    const sx = s.x - camX;
-    if (sx < -80 || sx > W + 80) continue;
-    const drop = s.t < 0 ? (-s.t) * 6 * K : 0;
-    drawSandwichSm(sx, laneY(s.lane) + 8 * K - drop, 16 * K);
-  }
-  // bolts
-  for (const b of bolts) {
-    const sx = b.x - camX;
-    ctx.fillStyle = '#ffb066';
+// shared: draws a wrapped, parallax-scrolling band of hill humps (used by the island scene)
+function drawHillLayer(baseY, height, factor, color, spacing) {
+  ctx.fillStyle = color;
+  const count = Math.ceil(W / spacing) + 3;
+  for (let i = 0; i < count; i++) {
+    const cx = ((i * spacing - camX * factor) % (W + spacing * 2) + W + spacing * 2) % (W + spacing * 2) - spacing;
     ctx.beginPath();
-    ctx.ellipse(sx, laneY(b.lane) - 16 * K, 11 * K, 5 * K, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.ellipse(sx, laneY(b.lane) - 16 * K, 5 * K, 2.2 * K, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, baseY, spacing * 0.7, height, 0, Math.PI, 0);
     ctx.fill();
   }
-  // villains
-  for (const hz of hazards) {
-    const sx = hz.x - camX;
-    if (sx < -140 || sx > W + 140) continue;
-    if (hz.type === 'H') drawHamKart(sx, laneY(hz.lane), hz.x);
-    else if (hz.type === 'G') drawGantuGuard(sx, laneY(hz.lane), hz.flash > 0);
-    else drawReubenSide(sx, roadTop() - 6, hz.arm > 0, t);
+}
+
+function drawFernSm(x, gy) {
+  ctx.strokeStyle = '#2f6b2a';
+  ctx.lineWidth = 3.5 * K;
+  ctx.lineCap = 'round';
+  for (let a = 0; a < 4; a++) {
+    const ang = -Math.PI * 0.75 + a * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(x, gy);
+    ctx.quadraticCurveTo(
+      x + Math.cos(ang) * 10 * K, gy - 14 * K,
+      x + Math.cos(ang) * 20 * K, gy - 26 * K + Math.sin(ang) * 6 * K);
+    ctx.stroke();
   }
+}
 
-  // karts (draw far lane first)
-  const karts = [
-    { k: rival, who: state.char === 'S' ? 'L' : 'S', isP: false },
-    { k: player, who: state.char, isP: true },
-  ].sort((a, b) => a.k.laneF - b.k.laneF);
-  for (const kk of karts) drawKart(kk.k, kk.who, kk.isP, t);
-
-  // particles
-  for (const p of parts) {
-    ctx.globalAlpha = Math.min(1, p.life / 25);
-    ctx.fillStyle = p.color;
-    ctx.fillRect(p.wx - camX - 3, p.sy - 3, 6, 6);
-    ctx.globalAlpha = 1;
+// Track 2: island — same tropical sky as the beach (continuity: same island chain, different route),
+// jungle interior with parallax hills, dense canopy, and a dirt-trail road.
+function drawIslandScene(t) {
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#3f9bd9');
+  grad.addColorStop(0.45, '#8fd0ee');
+  grad.addColorStop(1, '#ffe9c4');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#ffd94d';
+  ctx.beginPath();
+  ctx.arc(W * 0.82, H * 0.12, 26 * K, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  for (let i = 0; i < 5; i++) {
+    const cx = ((i * 340 + 120 - camX * 0.15) % (W + 300) + W + 300) % (W + 300) - 150;
+    const cy = H * 0.07 + (i % 3) * H * 0.05;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 16 * K, 0, Math.PI * 2);
+    ctx.arc(cx + 20 * K, cy - 6 * K, 19 * K, 0, Math.PI * 2);
+    ctx.arc(cx + 40 * K, cy, 15 * K, 0, Math.PI * 2);
+    ctx.fill();
   }
+  // parallax rolling jungle hills
+  drawHillLayer(H * 0.40, H * 0.14, 0.05, '#6ab04c', 340);
+  drawHillLayer(H * 0.44, H * 0.13, 0.1, '#4aa32e', 260);
+  drawHillLayer(roadTop(), H * 0.14, 0.18, '#3d8c28', 200);
+  // dense jungle canopy lining both roadsides (tighter than the beach's palms)
+  for (let i = 0; i < 90; i++) {
+    const wx = i * 260 + 130;
+    const sx = wx - camX * 0.85;
+    if (sx < -120 || sx > W + 120) continue;
+    if (i % 3 === 1) drawFernSm(sx, roadTop() - 2);
+    else drawPalmSm(sx, roadTop() - 2);
+  }
+  // road (dirt trail)
+  ctx.fillStyle = '#8a6238';
+  ctx.fillRect(0, roadTop(), W, roadBot() - roadTop());
+  ctx.fillStyle = '#6d4a26';
+  ctx.fillRect(0, roadTop(), W, 5);
+  ctx.fillRect(0, roadBot() - 5, W, 5);
+  // dashed divider, pale leaf-green tint
+  ctx.fillStyle = 'rgba(214,255,196,0.65)';
+  const divY = (laneY(0) + laneY(1)) / 2 + 14 * K;
+  for (let wx = Math.floor(camX / 90) * 90; wx < camX + W + 90; wx += 90) {
+    ctx.fillRect(wx - camX, divY, 42, 4);
+  }
+}
 
-  drawHUD(t);
-  drawOverlays(t);
+// Track 3: Lilo's house — floor doubles as the road, split into 4 rooms in a fixed order:
+// kitchen -> bedroom -> living room -> spaceship tower bedroom.
+function roomAt(x) { return Math.min(3, Math.floor(Math.max(0, x) / (LEN / 4))); }
+const HOUSE_WALLS = ['#f2e2c4', '#dbe8f5', '#eed2a3', '#3a4258'];
+const HOUSE_FLOORS = ['', '#c9a06b', '#caa06b', '#5d6a8a'];
+
+function drawHouseScene(t) {
+  const roomLen = LEN / 4;
+  const rt = roadTop(), rb = roadBot();
+  const rightEdgeWorld = camX + W;
+  // wall + floor, walked in room-sized chunks across the visible span
+  let wx = Math.floor(camX / roomLen) * roomLen;
+  for (; wx < rightEdgeWorld; wx += roomLen) {
+    const room = roomAt(wx + roomLen / 2);
+    const segL = Math.max(wx, camX), segR = Math.min(wx + roomLen, rightEdgeWorld);
+    if (segR <= segL) continue;
+    const sxL = segL - camX, sxR = segR - camX;
+    ctx.fillStyle = HOUSE_WALLS[room];
+    ctx.fillRect(sxL, 0, sxR - sxL, rt);
+    drawRoomFloor(room, sxL, sxR, rt, rb);
+  }
+  // doorframes at the 3 internal room boundaries
+  for (let i = 1; i <= 3; i++) {
+    const sx = i * roomLen - camX;
+    if (sx > -50 && sx < W + 50) drawDoorFrame(sx, rt);
+  }
+  // tiled room props (every ~260 world units, style follows the room they land in)
+  for (let wxp = Math.floor(camX / 260) * 260; wxp < rightEdgeWorld; wxp += 260) {
+    const sx = wxp - camX;
+    if (sx < -60 || sx > W + 60) continue;
+    drawRoomProp(roomAt(wxp), sx, wxp, rt, t);
+  }
+  // dashed centerline
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  const divY = (laneY(0) + laneY(1)) / 2 + 14 * K;
+  for (let dx = Math.floor(camX / 90) * 90; dx < camX + W + 90; dx += 90) {
+    ctx.fillRect(dx - camX, divY, 42, 4);
+  }
+}
+
+function drawRoomFloor(room, sxL, sxR, rt, rb) {
+  if (room === 0) {
+    // kitchen: soft two-tone tile checker (deliberately not the sharp finish-line checker)
+    const sq = 26 * K;
+    for (let y = rt; y < rb; y += sq) {
+      for (let x = Math.floor(sxL / sq) * sq; x < sxR; x += sq) {
+        ctx.fillStyle = (Math.round(x / sq) + Math.round(y / sq)) % 2 ? '#e8d9b8' : '#d4a373';
+        ctx.fillRect(x, y, sq, Math.min(sq, rb - y));
+      }
+    }
+  } else {
+    ctx.fillStyle = HOUSE_FLOORS[room];
+    ctx.fillRect(sxL, rt, sxR - sxL, rb - rt);
+    if (room === 3) {
+      // grated metal deck texture
+      ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+      ctx.lineWidth = 1;
+      for (let y = rt + 8; y < rb; y += 9) {
+        ctx.beginPath(); ctx.moveTo(sxL, y); ctx.lineTo(sxR, y); ctx.stroke();
+      }
+    }
+  }
+  ctx.fillStyle = 'rgba(0,0,0,0.14)';
+  ctx.fillRect(sxL, rt, sxR - sxL, 4);
+  ctx.fillRect(sxL, rb - 4, sxR - sxL, 4);
+}
+
+function drawDoorFrame(sx, rt) {
+  ctx.fillStyle = '#6d4526';
+  ctx.fillRect(sx - 32 * K, rt - 88 * K, 9 * K, 88 * K);
+  ctx.fillRect(sx + 23 * K, rt - 88 * K, 9 * K, 88 * K);
+  ctx.fillRect(sx - 32 * K, rt - 96 * K, 64 * K, 10 * K);
+}
+
+function drawRoomProp(room, sx, wxp, rt, t) {
+  const kind = Math.floor(wxp / 260) % 3;
+  if (room === 0) {
+    // kitchen: hanging pot + fruit bowl along the upper wall
+    ctx.fillStyle = '#8a5a34';
+    ctx.fillRect(sx - 3, rt - 46 * K, 6, 20 * K);
+    ctx.fillStyle = '#7d8898';
+    ctx.beginPath(); ctx.arc(sx, rt - 48 * K, 9 * K, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#e0763a';
+    ctx.beginPath();
+    ctx.arc(sx - 3 * K, rt - 12 * K, 4 * K, 0, Math.PI * 2);
+    ctx.arc(sx + 4 * K, rt - 11 * K, 4 * K, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (room === 1) {
+    if (kind === 1) {
+      // dresser
+      ctx.fillStyle = '#8a5a34';
+      ctx.fillRect(sx - 16 * K, rt - 34 * K, 32 * K, 34 * K);
+      ctx.fillStyle = '#6d4526';
+      ctx.fillRect(sx - 12 * K, rt - 24 * K, 24 * K, 4 * K);
+      ctx.fillRect(sx - 12 * K, rt - 14 * K, 24 * K, 4 * K);
+    } else {
+      // bed silhouette (headboard + pillow) + warm lamp glow
+      ctx.fillStyle = '#e8b8cf';
+      ctx.fillRect(sx - 26 * K, rt - 30 * K, 52 * K, 30 * K);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(sx - 20 * K, rt - 28 * K, 16 * K, 10 * K);
+      ctx.fillStyle = 'rgba(255,214,140,0.45)';
+      ctx.beginPath(); ctx.arc(sx + 36 * K, rt - 24 * K, 12 * K, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (room === 2) {
+    if (kind === 0) {
+      // window onto the Hawaiian night sky
+      ctx.fillStyle = '#1d2a52';
+      ctx.fillRect(sx - 22 * K, rt - 50 * K, 44 * K, 40 * K);
+      ctx.fillStyle = 'rgba(255,230,150,0.55)';
+      ctx.beginPath(); ctx.arc(sx + 8 * K, rt - 34 * K, 8 * K, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        ctx.arc(sx - 16 * K + i * 8 * K, rt - 44 * K + (i % 3) * 6 * K, 1.2 * K, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.strokeStyle = '#caa06b';
+      ctx.lineWidth = 3 * K;
+      ctx.strokeRect(sx - 22 * K, rt - 50 * K, 44 * K, 40 * K);
+    } else if (kind === 1) {
+      // couch
+      ctx.fillStyle = '#b8524a';
+      ctx.fillRect(sx - 26 * K, rt - 24 * K, 52 * K, 24 * K);
+      ctx.fillRect(sx - 26 * K, rt - 34 * K, 12 * K, 14 * K);
+      ctx.fillRect(sx + 14 * K, rt - 34 * K, 12 * K, 14 * K);
+    } else {
+      // bookshelf + glowing floor lamp
+      ctx.fillStyle = '#8a5a34';
+      ctx.fillRect(sx - 20 * K, rt - 44 * K, 24 * K, 44 * K);
+      const spineColors = ['#e04438', '#f2b035', '#3d9c4f', '#3d7bc9'];
+      for (let i = 0; i < 4; i++) {
+        ctx.fillStyle = spineColors[i];
+        ctx.fillRect(sx - 18 * K + i * 5 * K, rt - 40 * K, 4 * K, 30 * K);
+      }
+      ctx.fillStyle = '#dcd0b0';
+      ctx.fillRect(sx + 10 * K, rt - 38 * K, 3 * K, 34 * K);
+      ctx.fillStyle = 'rgba(255,224,150,0.55)';
+      ctx.beginPath(); ctx.arc(sx + 11 * K, rt - 38 * K, 8 * K, 0, Math.PI * 2); ctx.fill();
+    }
+  } else {
+    if (kind === 0) {
+      // porthole onto the alien night sky
+      ctx.fillStyle = '#241040';
+      ctx.beginPath(); ctx.arc(sx, rt - 34 * K, 20 * K, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      for (let i = 0; i < 4; i++) {
+        const a = i / 4 * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(sx + Math.cos(a) * 10 * K, rt - 34 * K + Math.sin(a) * 10 * K, 1 * K, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = 'rgba(220,200,255,0.5)';
+      ctx.beginPath(); ctx.arc(sx - 4 * K, rt - 38 * K, 5 * K, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#7d8898';
+      ctx.lineWidth = 4 * K;
+      ctx.beginPath(); ctx.arc(sx, rt - 34 * K, 20 * K, 0, Math.PI * 2); ctx.stroke();
+    } else if (kind === 1) {
+      // Stitch's blue-tinted and Lilo's red-tinted bed/hammock silhouettes, side by side
+      ctx.fillStyle = 'rgba(80,140,220,0.6)';
+      ctx.fillRect(sx - 30 * K, rt - 24 * K, 24 * K, 24 * K);
+      ctx.fillStyle = 'rgba(220,90,90,0.6)';
+      ctx.fillRect(sx + 6 * K, rt - 24 * K, 24 * K, 24 * K);
+    } else {
+      // control panel with a few blinking amber dots
+      ctx.fillStyle = '#4a5570';
+      ctx.fillRect(sx - 20 * K, rt - 30 * K, 40 * K, 30 * K);
+      for (let i = 0; i < 4; i++) {
+        const on = Math.floor(t / 260 + i) % 2 === 0;
+        ctx.fillStyle = on ? '#ffd94d' : 'rgba(255,217,77,0.2)';
+        ctx.beginPath();
+        ctx.arc(sx - 12 * K + i * 8 * K, rt - 16 * K, 2.4 * K, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
+// Track 4: alien planet — matches Super Jumper's W8-10 alien-planet palette.
+function drawPlanetScene(t) {
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#241040');
+  grad.addColorStop(0.5, '#4a2470');
+  grad.addColorStop(1, '#7a4694');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+  // stars
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  for (let i = 0; i < 40; i++) {
+    const sx = ((i * 97 - camX * 0.05) % (W + 100) + W + 100) % (W + 100) - 50;
+    const sy = (i * 53) % (H * 0.55);
+    ctx.fillRect(sx, sy, 1.6, 1.6);
+  }
+  // two moons
+  ctx.fillStyle = '#e8d9f7';
+  ctx.beginPath(); ctx.arc(W * 0.2, H * 0.14, 22 * K, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#b9e0d9';
+  ctx.beginPath(); ctx.arc(W * 0.75, H * 0.2, 15 * K, 0, Math.PI * 2); ctx.fill();
+  // jagged violet spires far in the background
+  ctx.fillStyle = '#33184f';
+  for (let i = 0; i < 12; i++) {
+    const wx = i * 260;
+    const sx = ((wx - camX * 0.2) % (W + 200) + W + 200) % (W + 200) - 100;
+    const hgt = 40 + (i % 3) * 26;
+    ctx.beginPath();
+    ctx.moveTo(sx - 20 * K, roadTop() - 4);
+    ctx.lineTo(sx, roadTop() - 4 - hgt * K);
+    ctx.lineTo(sx + 20 * K, roadTop() - 4);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // glowing crystal shards lining the roadside
+  for (let i = 0; i < 90; i++) {
+    const wx = i * 300 + 150;
+    const sx = wx - camX * 0.85;
+    if (sx < -60 || sx > W + 60) continue;
+    drawCrystalShard(sx, roadTop() - 2, i % 2 === 0);
+  }
+  // road (alien dirt)
+  ctx.fillStyle = '#6d4090';
+  ctx.fillRect(0, roadTop(), W, roadBot() - roadTop());
+  ctx.fillStyle = '#54307a';
+  ctx.fillRect(0, roadTop(), W, 5);
+  ctx.fillRect(0, roadBot() - 5, W, 5);
+  // dashed divider, teal glow tint
+  ctx.fillStyle = 'rgba(111,227,193,0.75)';
+  const divY = (laneY(0) + laneY(1)) / 2 + 14 * K;
+  for (let wx = Math.floor(camX / 90) * 90; wx < camX + W + 90; wx += 90) {
+    ctx.fillRect(wx - camX, divY, 42, 4);
+  }
+}
+
+function drawCrystalShard(x, gy, teal) {
+  ctx.fillStyle = teal ? 'rgba(125,255,205,0.7)' : 'rgba(190,140,255,0.7)';
+  ctx.beginPath();
+  ctx.moveTo(x, gy);
+  ctx.lineTo(x - 6 * K, gy - 22 * K);
+  ctx.lineTo(x, gy - 34 * K);
+  ctx.lineTo(x + 6 * K, gy - 22 * K);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// Track 5: deep space between planets — starfield, no ground terrain, fixed one-time planet flybys.
+function drawSpaceScene(t) {
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#05030f');
+  grad.addColorStop(0.5, '#120a24');
+  grad.addColorStop(1, '#1c1440');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+  // dense starfield
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  for (let i = 0; i < 70; i++) {
+    const sx = ((i * 71 - camX * 0.05) % (W + 100) + W + 100) % (W + 100) - 50;
+    const sy = (i * 37) % (H * 0.7);
+    const s = i % 5 === 0 ? 2.2 : 1.3;
+    ctx.fillRect(sx, sy, s, s);
+  }
+  ctx.fillStyle = 'rgba(140,170,255,0.7)';
+  for (let i = 0; i < 40; i++) {
+    const sx = ((i * 53 - camX * 0.08) % (W + 100) + W + 100) % (W + 100) - 50;
+    const sy = (i * 29) % (H * 0.6);
+    ctx.fillRect(sx, sy, 1.4, 1.4);
+  }
+  // soft nebula blobs
+  ctx.fillStyle = 'rgba(220,80,220,0.10)';
+  ctx.beginPath();
+  ctx.ellipse(((2200 - camX * 0.1) % (W + 800) + W + 800) % (W + 800) - 400, H * 0.2, 220 * K, 110 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(80,220,220,0.10)';
+  ctx.beginPath();
+  ctx.ellipse(((900 - camX * 0.15) % (W + 700) + W + 700) % (W + 700) - 350, H * 0.35, 180 * K, 90 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // distant planets at fixed world positions — passed once, not tiled
+  drawSpacePlanet(4000, H * 0.18, 0.12, 34 * K, '#c9a06b', true);
+  drawSpacePlanet(12000, H * 0.24, 0.25, 26 * K, '#4aa3a0', false);
+  drawSpacePlanet(20000, H * 0.5, 0.5, 16 * K, '#b0554a', false);
+  // floating asteroid clusters along the road
+  for (let i = 0; i < 60; i++) {
+    const wx = i * 500 + 250;
+    const sx = wx - camX * 0.9;
+    if (sx < -60 || sx > W + 60) continue;
+    drawAsteroidCluster(sx, roadTop() - 10);
+  }
+  // road: glowing translucent energy-trail strip, not solid ground
+  const rt = roadTop(), rb = roadBot();
+  const rgrad = ctx.createLinearGradient(0, rt, 0, rb);
+  rgrad.addColorStop(0, 'rgba(140,110,255,0.35)');
+  rgrad.addColorStop(1, 'rgba(110,220,255,0.35)');
+  ctx.fillStyle = rgrad;
+  ctx.fillRect(0, rt, W, rb - rt);
+  // pulsing cyan-glow dashed centerline
+  const pulse = 0.55 + Math.sin(t / 220) * 0.25;
+  ctx.fillStyle = 'rgba(110,240,255,' + pulse + ')';
+  const divY = (laneY(0) + laneY(1)) / 2 + 14 * K;
+  for (let wx = Math.floor(camX / 90) * 90; wx < camX + W + 90; wx += 90) {
+    ctx.fillRect(wx - camX, divY, 42, 4);
+  }
+}
+
+function drawSpacePlanet(wx, cy, factor, r, color, ringed) {
+  const sx = wx - camX * factor;
+  if (sx < -r * 4 || sx > W + r * 4) return;
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(sx, cy, r, 0, Math.PI * 2); ctx.fill();
+  if (ringed) {
+    ctx.strokeStyle = 'rgba(230,210,170,0.7)';
+    ctx.lineWidth = 3 * K;
+    ctx.beginPath();
+    ctx.ellipse(sx, cy, r * 1.7, r * 0.5, -0.3, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+function drawAsteroidCluster(x, gy) {
+  ctx.fillStyle = '#6b6558';
+  ctx.beginPath();
+  ctx.moveTo(x - 10 * K, gy);
+  ctx.lineTo(x - 4 * K, gy - 12 * K);
+  ctx.lineTo(x + 6 * K, gy - 10 * K);
+  ctx.lineTo(x + 12 * K, gy - 2 * K);
+  ctx.lineTo(x + 4 * K, gy + 6 * K);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#524d43';
+  ctx.beginPath();
+  ctx.arc(x + 16 * K, gy - 4 * K, 5 * K, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawPalmSm(x, gy) {
@@ -747,6 +1228,516 @@ function drawReubenSide(sx, gy, throwing, t) {
   drawSandwichSm(ax, ay, 12 * K);
 }
 
+// ---- Track 2 (Island) re-skins ----
+function drawHamKart2(sx, ly, wx) {
+  const y = ly;
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.beginPath();
+  ctx.ellipse(sx, y + 12 * K, 34 * K, 7 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#4a7c3f';
+  ctx.fillRect(sx - 28 * K, y - 10 * K, 56 * K, 16 * K);
+  // leaf-tuft accents
+  ctx.fillStyle = '#6ab04c';
+  ctx.beginPath();
+  ctx.ellipse(sx - 24 * K, y - 2 * K, 5 * K, 3 * K, 0.6, 0, Math.PI * 2);
+  ctx.ellipse(sx + 24 * K, y - 2 * K, 5 * K, 3 * K, -0.6, 0, Math.PI * 2);
+  ctx.fill();
+  wheel(sx - 18 * K, y + 8 * K, 9 * K, wx);
+  wheel(sx + 18 * K, y + 8 * K, 9 * K, wx);
+  // cape (stays his signature red)
+  ctx.fillStyle = '#c62f42';
+  ctx.beginPath();
+  ctx.moveTo(sx - 8 * K, y - 24 * K);
+  ctx.quadraticCurveTo(sx - 34 * K, y - 16 * K, sx - 26 * K, y - 4 * K);
+  ctx.lineTo(sx - 8 * K, y - 10 * K);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#f4f4f6';
+  ctx.beginPath();
+  ctx.arc(sx, y - 22 * K, 13 * K, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(sx - 8 * K, y - 33 * K, 5.5 * K, 0, Math.PI * 2);
+  ctx.arc(sx + 8 * K, y - 33 * K, 5.5 * K, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#f3aec6';
+  ctx.beginPath();
+  ctx.arc(sx - 8 * K, y - 33 * K, 3 * K, 0, Math.PI * 2);
+  ctx.arc(sx + 8 * K, y - 33 * K, 3 * K, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#d8283c';
+  ctx.beginPath();
+  ctx.arc(sx - 4.5 * K, y - 23 * K, 2.4 * K, 0, Math.PI * 2);
+  ctx.arc(sx + 4.5 * K, y - 23 * K, 2.4 * K, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawGantuGuard2(sx, ly, firing) {
+  const y = ly + 12 * K, w = 46 * K, h = 74 * K;
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.beginPath();
+  ctx.ellipse(sx, y, w * 0.7, 7 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#5c7a4a';
+  ctx.beginPath();
+  ctx.moveTo(sx - w * 0.5, y - h * 0.72);
+  ctx.quadraticCurveTo(sx - w * 0.58, y - h * 0.2, sx - w * 0.32, y);
+  ctx.lineTo(sx + w * 0.32, y);
+  ctx.quadraticCurveTo(sx + w * 0.58, y - h * 0.2, sx + w * 0.5, y - h * 0.72);
+  ctx.quadraticCurveTo(sx, y - h * 0.95, sx - w * 0.5, y - h * 0.72);
+  ctx.fill();
+  ctx.fillStyle = '#2e3c4e';
+  ctx.beginPath();
+  ctx.moveTo(sx - w * 0.32, y - h * 0.5);
+  ctx.lineTo(sx + w * 0.32, y - h * 0.5);
+  ctx.lineTo(sx + w * 0.24, y - h * 0.04);
+  ctx.lineTo(sx - w * 0.24, y - h * 0.04);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#5c7a4a';
+  ctx.beginPath();
+  ctx.ellipse(sx, y - h * 0.84, w * 0.26, h * 0.11, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#dfe8f0';
+  ctx.beginPath();
+  ctx.ellipse(sx - w * 0.12 - 2, y - h * 0.85, 3.4 * K, 2.4 * K, 0, 0, Math.PI * 2);
+  ctx.ellipse(sx + w * 0.08 - 2, y - h * 0.85, 3.4 * K, 2.4 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#7d8898';
+  ctx.fillRect(sx - w * 0.5 - 20 * K, y - h * 0.42, 24 * K, 7 * K);
+  ctx.fillStyle = '#e8762e';
+  ctx.fillRect(sx - w * 0.5, y - h * 0.42 + 6 * K, 7 * K, 10 * K);
+  if (firing) {
+    ctx.fillStyle = 'rgba(255,214,102,0.9)';
+    ctx.beginPath();
+    ctx.arc(sx - w * 0.5 - 24 * K, y - h * 0.38, 8 * K, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawReubenSide2(sx, gy, throwing, t) {
+  const w = 34 * K;
+  ctx.fillStyle = '#4a7c3f';
+  ctx.fillRect(sx - w, gy - 4 * K, w * 2, 5 * K);
+  // tropical-flower dots
+  ctx.fillStyle = '#f2789a';
+  ctx.beginPath();
+  ctx.arc(sx - w + 6 * K, gy - 8 * K, 2.4 * K, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#ffd94d';
+  ctx.beginPath();
+  ctx.arc(sx + w - 8 * K, gy - 7 * K, 2.4 * K, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#e0b13e';
+  ctx.beginPath();
+  ctx.ellipse(sx, gy - 18 * K, w * 0.62, 17 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#f2dca4';
+  ctx.beginPath();
+  ctx.ellipse(sx, gy - 13 * K, w * 0.36, 9 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#e0b13e';
+  ctx.beginPath();
+  ctx.ellipse(sx - 9 * K, gy - 34 * K, 4 * K, 6 * K, -0.4, 0, Math.PI * 2);
+  ctx.ellipse(sx + 9 * K, gy - 34 * K, 4 * K, 6 * K, 0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#2b2013';
+  ctx.beginPath();
+  ctx.arc(sx - 5 * K, gy - 26 * K, 1.8 * K, 0, Math.PI * 2);
+  ctx.arc(sx + 5 * K, gy - 26 * K, 1.8 * K, 0, Math.PI * 2);
+  ctx.fill();
+  const ax = throwing ? sx - 20 * K : sx - 16 * K;
+  const ay = throwing ? gy - 38 * K : gy - 20 * K;
+  drawSandwichSm(ax, ay, 12 * K);
+}
+
+// ---- Track 3 (House) re-skins ----
+function drawHamKart3(sx, ly, wx) {
+  const y = ly;
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.beginPath();
+  ctx.ellipse(sx, y + 12 * K, 34 * K, 7 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#c9a0dc';
+  ctx.fillRect(sx - 28 * K, y - 10 * K, 56 * K, 16 * K);
+  // basket-weave hint
+  ctx.strokeStyle = '#9a6db0';
+  ctx.lineWidth = 1.4 * K;
+  for (let i = -1; i <= 1; i++) {
+    ctx.beginPath();
+    ctx.moveTo(sx - 26 * K, y - 4 * K + i * 6 * K);
+    ctx.quadraticCurveTo(sx, y - 2 * K + i * 6 * K, sx + 26 * K, y - 4 * K + i * 6 * K);
+    ctx.stroke();
+  }
+  wheel(sx - 18 * K, y + 8 * K, 9 * K, wx);
+  wheel(sx + 18 * K, y + 8 * K, 9 * K, wx);
+  // towel cape
+  ctx.fillStyle = '#c62f42';
+  ctx.beginPath();
+  ctx.moveTo(sx - 8 * K, y - 24 * K);
+  ctx.quadraticCurveTo(sx - 34 * K, y - 16 * K, sx - 26 * K, y - 4 * K);
+  ctx.lineTo(sx - 8 * K, y - 10 * K);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#f4f4f6';
+  ctx.beginPath();
+  ctx.arc(sx, y - 22 * K, 13 * K, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(sx - 8 * K, y - 33 * K, 5.5 * K, 0, Math.PI * 2);
+  ctx.arc(sx + 8 * K, y - 33 * K, 5.5 * K, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#f3aec6';
+  ctx.beginPath();
+  ctx.arc(sx - 8 * K, y - 33 * K, 3 * K, 0, Math.PI * 2);
+  ctx.arc(sx + 8 * K, y - 33 * K, 3 * K, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#d8283c';
+  ctx.beginPath();
+  ctx.arc(sx - 4.5 * K, y - 23 * K, 2.4 * K, 0, Math.PI * 2);
+  ctx.arc(sx + 4.5 * K, y - 23 * K, 2.4 * K, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawMyrtleGuard(sx, ly, screaming) {
+  const y = ly + 12 * K, h = 68 * K;
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.beginPath();
+  ctx.ellipse(sx, y, 24 * K, 7 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // legs
+  ctx.fillStyle = '#f2c9a4';
+  ctx.fillRect(sx - 8 * K, y - 16 * K, 6 * K, 16 * K);
+  ctx.fillRect(sx + 2 * K, y - 16 * K, 6 * K, 16 * K);
+  // dress
+  ctx.fillStyle = '#e8d44d';
+  ctx.beginPath();
+  ctx.moveTo(sx - 16 * K, y - h * 0.55);
+  ctx.lineTo(sx + 16 * K, y - h * 0.55);
+  ctx.lineTo(sx + 20 * K, y - 14 * K);
+  ctx.lineTo(sx - 20 * K, y - 14 * K);
+  ctx.closePath();
+  ctx.fill();
+  // arms
+  ctx.strokeStyle = '#f2c9a4';
+  ctx.lineWidth = 6 * K;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(sx - 16 * K, y - h * 0.5);
+  ctx.lineTo(sx - 28 * K, y - h * 0.62);
+  ctx.moveTo(sx + 16 * K, y - h * 0.5);
+  ctx.lineTo(sx + 28 * K, y - h * 0.62);
+  ctx.stroke();
+  // head
+  ctx.fillStyle = '#f2c9a4';
+  ctx.beginPath();
+  ctx.arc(sx, y - h * 0.72, 13 * K, 0, Math.PI * 2);
+  ctx.fill();
+  // red curly hair
+  ctx.fillStyle = '#c9502e';
+  ctx.beginPath();
+  ctx.arc(sx - 9 * K, y - h * 0.82, 6 * K, 0, Math.PI * 2);
+  ctx.arc(sx + 9 * K, y - h * 0.82, 6 * K, 0, Math.PI * 2);
+  ctx.arc(sx, y - h * 0.88, 8 * K, 0, Math.PI * 2);
+  ctx.fill();
+  // glasses
+  ctx.strokeStyle = 'rgba(60,40,30,0.55)';
+  ctx.lineWidth = 1.2 * K;
+  ctx.beginPath();
+  ctx.arc(sx - 4.5 * K, y - h * 0.73, 3 * K, 0, Math.PI * 2);
+  ctx.arc(sx + 4.5 * K, y - h * 0.73, 3 * K, 0, Math.PI * 2);
+  ctx.moveTo(sx - 1.5 * K, y - h * 0.73);
+  ctx.lineTo(sx + 1.5 * K, y - h * 0.73);
+  ctx.stroke();
+  // eyes + freckles
+  ctx.fillStyle = '#2b2013';
+  ctx.beginPath();
+  ctx.arc(sx - 4.5 * K, y - h * 0.73, 1.4 * K, 0, Math.PI * 2);
+  ctx.arc(sx + 4.5 * K, y - h * 0.73, 1.4 * K, 0, Math.PI * 2);
+  ctx.fill();
+  // mouth — open wide when yelling
+  ctx.fillStyle = '#c9502e';
+  if (screaming) {
+    ctx.beginPath();
+    ctx.ellipse(sx, y - h * 0.66, 3 * K, 4 * K, 0, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.fillRect(sx - 3 * K, y - h * 0.67, 6 * K, 1.6 * K);
+  }
+  // scream sound-wave arcs
+  if (screaming) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+    ctx.lineWidth = 2 * K;
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.arc(sx, y - h * 0.7, (16 + i * 8) * K, -0.9, 0.9);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawReubenSide3(sx, gy, throwing, t) {
+  const w = 34 * K;
+  ctx.fillStyle = '#b8524a';
+  ctx.fillRect(sx - w, gy - 4 * K, w * 2, 5 * K);
+  ctx.fillStyle = '#e0b13e';
+  ctx.beginPath();
+  ctx.ellipse(sx, gy - 18 * K, w * 0.62, 17 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#f2dca4';
+  ctx.beginPath();
+  ctx.ellipse(sx, gy - 13 * K, w * 0.36, 9 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#e0b13e';
+  ctx.beginPath();
+  ctx.ellipse(sx - 9 * K, gy - 34 * K, 4 * K, 6 * K, -0.4, 0, Math.PI * 2);
+  ctx.ellipse(sx + 9 * K, gy - 34 * K, 4 * K, 6 * K, 0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#2b2013';
+  ctx.beginPath();
+  ctx.arc(sx - 5 * K, gy - 26 * K, 1.8 * K, 0, Math.PI * 2);
+  ctx.arc(sx + 5 * K, gy - 26 * K, 1.8 * K, 0, Math.PI * 2);
+  ctx.fill();
+  const ax = throwing ? sx - 20 * K : sx - 16 * K;
+  const ay = throwing ? gy - 38 * K : gy - 20 * K;
+  drawSandwichSm(ax, ay, 12 * K);
+}
+
+// ---- Track 4 (Planet) re-skins ----
+function drawHamKart4(sx, ly, wx) {
+  const y = ly;
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.beginPath();
+  ctx.ellipse(sx, y + 12 * K, 34 * K, 7 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // soft glow rim (UFO hover)
+  ctx.fillStyle = 'rgba(138,92,255,0.25)';
+  ctx.beginPath();
+  ctx.ellipse(sx, y - 2 * K, 34 * K, 14 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#8a5cff';
+  ctx.fillRect(sx - 28 * K, y - 10 * K, 56 * K, 16 * K);
+  wheel(sx - 18 * K, y + 8 * K, 9 * K, wx);
+  wheel(sx + 18 * K, y + 8 * K, 9 * K, wx);
+  // glowing cyan cape
+  ctx.fillStyle = '#7dffcd';
+  ctx.beginPath();
+  ctx.moveTo(sx - 8 * K, y - 24 * K);
+  ctx.quadraticCurveTo(sx - 34 * K, y - 16 * K, sx - 26 * K, y - 4 * K);
+  ctx.lineTo(sx - 8 * K, y - 10 * K);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#f4f4f6';
+  ctx.beginPath();
+  ctx.arc(sx, y - 22 * K, 13 * K, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(sx - 8 * K, y - 33 * K, 5.5 * K, 0, Math.PI * 2);
+  ctx.arc(sx + 8 * K, y - 33 * K, 5.5 * K, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#f3aec6';
+  ctx.beginPath();
+  ctx.arc(sx - 8 * K, y - 33 * K, 3 * K, 0, Math.PI * 2);
+  ctx.arc(sx + 8 * K, y - 33 * K, 3 * K, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#d8283c';
+  ctx.beginPath();
+  ctx.arc(sx - 4.5 * K, y - 23 * K, 2.4 * K, 0, Math.PI * 2);
+  ctx.arc(sx + 4.5 * K, y - 23 * K, 2.4 * K, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawLeroyGuard(sx, ly, firing) {
+  const y = ly + 12 * K, w = 46 * K, h = 74 * K;
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.beginPath();
+  ctx.ellipse(sx, y, w * 0.7, 7 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#8a3a5d';
+  ctx.beginPath();
+  ctx.moveTo(sx - w * 0.5, y - h * 0.72);
+  ctx.quadraticCurveTo(sx - w * 0.58, y - h * 0.2, sx - w * 0.32, y);
+  ctx.lineTo(sx + w * 0.32, y);
+  ctx.quadraticCurveTo(sx + w * 0.58, y - h * 0.2, sx + w * 0.5, y - h * 0.72);
+  ctx.quadraticCurveTo(sx, y - h * 0.95, sx - w * 0.5, y - h * 0.72);
+  ctx.fill();
+  ctx.fillStyle = '#c62f42';
+  ctx.beginPath();
+  ctx.moveTo(sx - w * 0.32, y - h * 0.5);
+  ctx.lineTo(sx + w * 0.32, y - h * 0.5);
+  ctx.lineTo(sx + w * 0.24, y - h * 0.04);
+  ctx.lineTo(sx - w * 0.24, y - h * 0.04);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#8a3a5d';
+  ctx.beginPath();
+  ctx.ellipse(sx, y - h * 0.84, w * 0.26, h * 0.11, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#dfe8f0';
+  ctx.beginPath();
+  ctx.ellipse(sx - w * 0.12 - 2, y - h * 0.85, 3.4 * K, 2.4 * K, 0, 0, Math.PI * 2);
+  ctx.ellipse(sx + w * 0.08 - 2, y - h * 0.85, 3.4 * K, 2.4 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#7d8898';
+  ctx.fillRect(sx - w * 0.5 - 20 * K, y - h * 0.42, 24 * K, 7 * K);
+  ctx.fillStyle = '#7dffcd';
+  ctx.fillRect(sx - w * 0.5, y - h * 0.42 + 6 * K, 7 * K, 10 * K);
+  if (firing) {
+    ctx.fillStyle = 'rgba(125,255,205,0.9)';
+    ctx.beginPath();
+    ctx.arc(sx - w * 0.5 - 24 * K, y - h * 0.38, 8 * K, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawReubenSide4(sx, gy, throwing, t) {
+  const w = 34 * K;
+  ctx.fillStyle = '#be8cff';
+  ctx.fillRect(sx - w, gy - 4 * K, w * 2, 5 * K);
+  ctx.fillStyle = '#e0b13e';
+  ctx.beginPath();
+  ctx.ellipse(sx, gy - 18 * K, w * 0.62, 17 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#f2dca4';
+  ctx.beginPath();
+  ctx.ellipse(sx, gy - 13 * K, w * 0.36, 9 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#e0b13e';
+  ctx.beginPath();
+  ctx.ellipse(sx - 9 * K, gy - 34 * K, 4 * K, 6 * K, -0.4, 0, Math.PI * 2);
+  ctx.ellipse(sx + 9 * K, gy - 34 * K, 4 * K, 6 * K, 0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#2b2013';
+  ctx.beginPath();
+  ctx.arc(sx - 5 * K, gy - 26 * K, 1.8 * K, 0, Math.PI * 2);
+  ctx.arc(sx + 5 * K, gy - 26 * K, 1.8 * K, 0, Math.PI * 2);
+  ctx.fill();
+  const ax = throwing ? sx - 20 * K : sx - 16 * K;
+  const ay = throwing ? gy - 38 * K : gy - 20 * K;
+  drawSandwichSm(ax, ay, 12 * K);
+}
+
+// ---- Track 5 (Space) re-skins ----
+function drawHamKart5(sx, ly, wx) {
+  const y = ly;
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.beginPath();
+  ctx.ellipse(sx, y + 12 * K, 34 * K, 7 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#9aa7c7';
+  ctx.fillRect(sx - 28 * K, y - 10 * K, 56 * K, 16 * K);
+  // cockpit-bubble highlight
+  ctx.fillStyle = 'rgba(200,230,255,0.55)';
+  ctx.beginPath();
+  ctx.ellipse(sx + 6 * K, y - 6 * K, 10 * K, 5 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  wheel(sx - 18 * K, y + 8 * K, 9 * K, wx);
+  wheel(sx + 18 * K, y + 8 * K, 9 * K, wx);
+  ctx.fillStyle = '#c62f42';
+  ctx.beginPath();
+  ctx.moveTo(sx - 8 * K, y - 24 * K);
+  ctx.quadraticCurveTo(sx - 34 * K, y - 16 * K, sx - 26 * K, y - 4 * K);
+  ctx.lineTo(sx - 8 * K, y - 10 * K);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#f4f4f6';
+  ctx.beginPath();
+  ctx.arc(sx, y - 22 * K, 13 * K, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(sx - 8 * K, y - 33 * K, 5.5 * K, 0, Math.PI * 2);
+  ctx.arc(sx + 8 * K, y - 33 * K, 5.5 * K, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#f3aec6';
+  ctx.beginPath();
+  ctx.arc(sx - 8 * K, y - 33 * K, 3 * K, 0, Math.PI * 2);
+  ctx.arc(sx + 8 * K, y - 33 * K, 3 * K, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#d8283c';
+  ctx.beginPath();
+  ctx.arc(sx - 4.5 * K, y - 23 * K, 2.4 * K, 0, Math.PI * 2);
+  ctx.arc(sx + 4.5 * K, y - 23 * K, 2.4 * K, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawGantuGuard5(sx, ly, firing) {
+  const y = ly + 12 * K, w = 46 * K, h = 74 * K;
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.beginPath();
+  ctx.ellipse(sx, y, w * 0.7, 7 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#5d3580';
+  ctx.beginPath();
+  ctx.moveTo(sx - w * 0.5, y - h * 0.72);
+  ctx.quadraticCurveTo(sx - w * 0.58, y - h * 0.2, sx - w * 0.32, y);
+  ctx.lineTo(sx + w * 0.32, y);
+  ctx.quadraticCurveTo(sx + w * 0.58, y - h * 0.2, sx + w * 0.5, y - h * 0.72);
+  ctx.quadraticCurveTo(sx, y - h * 0.95, sx - w * 0.5, y - h * 0.72);
+  ctx.fill();
+  ctx.fillStyle = '#2e3c4e';
+  ctx.beginPath();
+  ctx.moveTo(sx - w * 0.32, y - h * 0.5);
+  ctx.lineTo(sx + w * 0.32, y - h * 0.5);
+  ctx.lineTo(sx + w * 0.24, y - h * 0.04);
+  ctx.lineTo(sx - w * 0.24, y - h * 0.04);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#5d3580';
+  ctx.beginPath();
+  ctx.ellipse(sx, y - h * 0.84, w * 0.26, h * 0.11, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#dfe8f0';
+  ctx.beginPath();
+  ctx.ellipse(sx - w * 0.12 - 2, y - h * 0.85, 3.4 * K, 2.4 * K, 0, 0, Math.PI * 2);
+  ctx.ellipse(sx + w * 0.08 - 2, y - h * 0.85, 3.4 * K, 2.4 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#7d8898';
+  ctx.fillRect(sx - w * 0.5 - 20 * K, y - h * 0.42, 24 * K, 7 * K);
+  ctx.fillStyle = '#7dffcd';
+  ctx.fillRect(sx - w * 0.5, y - h * 0.42 + 6 * K, 7 * K, 10 * K);
+  if (firing) {
+    ctx.fillStyle = 'rgba(125,255,205,0.9)';
+    ctx.beginPath();
+    ctx.arc(sx - w * 0.5 - 24 * K, y - h * 0.38, 8 * K, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawReubenSide5(sx, gy, throwing, t) {
+  const w = 34 * K;
+  ctx.fillStyle = '#3a4258';
+  ctx.fillRect(sx - w, gy - 4 * K, w * 2, 5 * K);
+  // tiny star-dot decorations
+  ctx.fillStyle = '#fff';
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.arc(sx - w + 8 * K + i * (w * 2 - 16 * K) / 3, gy - 1.5 * K, 1 * K, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = '#e0b13e';
+  ctx.beginPath();
+  ctx.ellipse(sx, gy - 18 * K, w * 0.62, 17 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#f2dca4';
+  ctx.beginPath();
+  ctx.ellipse(sx, gy - 13 * K, w * 0.36, 9 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#e0b13e';
+  ctx.beginPath();
+  ctx.ellipse(sx - 9 * K, gy - 34 * K, 4 * K, 6 * K, -0.4, 0, Math.PI * 2);
+  ctx.ellipse(sx + 9 * K, gy - 34 * K, 4 * K, 6 * K, 0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#2b2013';
+  ctx.beginPath();
+  ctx.arc(sx - 5 * K, gy - 26 * K, 1.8 * K, 0, Math.PI * 2);
+  ctx.arc(sx + 5 * K, gy - 26 * K, 1.8 * K, 0, Math.PI * 2);
+  ctx.fill();
+  const ax = throwing ? sx - 20 * K : sx - 16 * K;
+  const ay = throwing ? gy - 38 * K : gy - 20 * K;
+  drawSandwichSm(ax, ay, 12 * K);
+}
+
 function wheel(x, y, r, wx) {
   ctx.fillStyle = '#222';
   ctx.beginPath();
@@ -820,6 +1811,13 @@ function drawKart(k, who, isP, t) {
     ctx.arc(sx - 20 * K, y - 40 * K, 7 * K, 0, Math.PI * 2);
     ctx.arc(sx - 32 * K, y - 50 * K, 5 * K, 0, Math.PI * 2);
     ctx.fill();
+  }
+  // asleep (Myrtle's scream, track 3)
+  if (isP && k.sleepT > 0) {
+    ctx.font = 'bold ' + 20 * K + 'px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('💤', sx, y - 58 * K + Math.sin(t / 160) * 4);
   }
 }
 
@@ -990,17 +1988,21 @@ function drawOverlays(t) {
     ctx.fillStyle = '#fff';
     ctx.fillText('Who is racing today? Tap a driver!', W / 2, H * 0.21);
     // track-length picker
+    const pillRects = trackPillRects();
     ctx.font = 'bold ' + Math.min(14, W * 0.028) + 'px -apple-system, sans-serif';
     ctx.fillStyle = '#dce9f5';
-    ctx.fillText('TRACK', W / 2, H * 0.31 - (H * 0.065) / 2 - 12);
-    for (const r of trackPillRects()) {
+    ctx.fillText('TRACK', W / 2, pillRects[0].y - 12);
+    for (const r of pillRects) {
       ctx.fillStyle = state.level === r.level ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.18)';
       ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(r.x, r.y, r.w, r.h, 12) : ctx.rect(r.x, r.y, r.w, r.h);
+      ctx.roundRect ? ctx.roundRect(r.x, r.y, r.w, r.h, 10) : ctx.rect(r.x, r.y, r.w, r.h);
       ctx.fill();
-      ctx.font = 'bold ' + Math.min(20, W * 0.04) + 'px -apple-system, sans-serif';
+      ctx.font = 'bold ' + Math.min(18, W * 0.036) + 'px -apple-system, sans-serif';
       ctx.fillStyle = '#fff';
-      ctx.fillText(String(r.level), r.x + r.w / 2, r.y + r.h / 2 + 1);
+      ctx.fillText(String(r.level), r.x + r.w / 2, r.y + r.h / 2 - 5);
+      ctx.font = 'bold ' + Math.min(9, W * 0.02) + 'px -apple-system, sans-serif';
+      ctx.fillStyle = '#dce9f5';
+      ctx.fillText(TRACK_NAMES[r.level - 1], r.x + r.w / 2, r.y + r.h / 2 + 10);
     }
     // two picks
     for (const [i, who] of [[0, 'S'], [1, 'L']]) {
@@ -1050,6 +2052,190 @@ function drawOverlays(t) {
     ctx.font = '17px -apple-system, sans-serif';
     ctx.fillStyle = '#ffe066';
     ctx.fillText('Tap to race again', W / 2, H * 0.7);
+  } else if (state.mode === 'ending') {
+    drawEndingCeremony(t);
+  }
+}
+
+// ============ TRACK 5 WIN CEREMONY ============
+// Grand Councilwoman's ship descends, she walks out, and a medal rises —
+// mirroring super-jumper.html's World 12 finale, palette-matched.
+function drawEndingCeremony(t) {
+  const sx = player.x - camX;
+  const anchorX = Math.max(W * 0.15, Math.min(sx, W * 0.85));
+  const gy = roadTop();
+  const shipX = anchorX + 60 * K;
+
+  // --- beat 1: ship descends (endT 0 -> ~150) ---
+  const descendP = Math.min(1, state.endT / 150);
+  const eased = 1 - Math.pow(1 - descendP, 3); // ease-out
+  const shipTargetY = gy - 130 * K;
+  const shipY = -140 * K + (shipTargetY - -140 * K) * eased;
+  const landed = descendP >= 1;
+
+  // thruster glow while still descending
+  if (!landed) {
+    ctx.fillStyle = 'rgba(125,220,255,0.5)';
+    ctx.beginPath();
+    ctx.ellipse(shipX, shipY + 46 * K, 22 * K, 34 * K, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ship hull (saucer-ish body)
+  ctx.fillStyle = '#9aa7c7';
+  ctx.strokeStyle = '#5d6a8a';
+  ctx.lineWidth = 2 * K;
+  ctx.beginPath();
+  ctx.moveTo(shipX - 60 * K, shipY);
+  ctx.quadraticCurveTo(shipX - 66 * K, shipY + 26 * K, shipX - 30 * K, shipY + 32 * K);
+  ctx.lineTo(shipX + 30 * K, shipY + 32 * K);
+  ctx.quadraticCurveTo(shipX + 66 * K, shipY + 26 * K, shipX + 60 * K, shipY);
+  ctx.quadraticCurveTo(shipX, shipY - 18 * K, shipX - 60 * K, shipY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // glass dome
+  ctx.fillStyle = 'rgba(170,225,255,0.5)';
+  ctx.beginPath();
+  ctx.ellipse(shipX, shipY - 4 * K, 26 * K, 16 * K, 0, Math.PI, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // blinking amber lights along the hull rim
+  const blink = Math.floor(t / 10) % 2;
+  for (let i = -1; i <= 1; i++) {
+    if ((i + 1) % 2 === blink) continue;
+    ctx.fillStyle = '#ffd94d';
+    ctx.beginPath();
+    ctx.arc(shipX + i * 34 * K, shipY + 30 * K, 3.5 * K, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // landing ramp, once landed
+  if (landed) {
+    ctx.fillStyle = '#b9c7d6';
+    ctx.beginPath();
+    ctx.moveTo(shipX - 20 * K, shipY + 30 * K);
+    ctx.lineTo(shipX - 40 * K, gy + 4 * K);
+    ctx.lineTo(shipX - 18 * K, gy + 4 * K);
+    ctx.lineTo(shipX - 4 * K, shipY + 30 * K);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  if (!landed) return;
+
+  // --- beat 2: the Grand Councilwoman walks out (endT ~150 -> ~280) ---
+  const walk = Math.min(1, Math.max(0, (state.endT - 150) / 100));
+  if (walk > 0) {
+    const cwX = shipX - 30 * K + (anchorX - (shipX - 30 * K)) * walk;
+    const cwY = gy + 2 * K;
+    drawGrandCouncilwoman(cwX, cwY, t);
+  }
+
+  // --- beat 3: medal rises above the kart driver (endT ~280+) ---
+  if (state.endT >= 280) {
+    const rise = Math.min(1, (state.endT - 280) / 60);
+    const medalY = (gy - 40 * K) - 26 * K * rise;
+    ctx.globalAlpha = rise;
+    drawWinnerMedal(anchorX, medalY, t);
+    ctx.globalAlpha = 1;
+  }
+
+  // skip hint
+  ctx.font = '17px -apple-system, sans-serif';
+  ctx.fillStyle = '#ffe066';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Tap to skip', W / 2, H * 0.93);
+}
+
+function drawGrandCouncilwoman(x, gy, t) {
+  const ROBE = '#4a3f7a', TRIM = '#5d5296', SKIN = '#cfc4e8';
+  const sway = Math.sin(t / 140) * 2 * K;
+  // long robe silhouette
+  ctx.fillStyle = ROBE;
+  ctx.beginPath();
+  ctx.moveTo(x - 16 * K, gy);
+  ctx.quadraticCurveTo(x - 20 * K, gy - 40 * K, x - 10 * K, gy - 68 * K);
+  ctx.lineTo(x + 10 * K, gy - 68 * K);
+  ctx.quadraticCurveTo(x + 20 * K, gy - 40 * K, x + 16 * K, gy);
+  ctx.closePath();
+  ctx.fill();
+  // center-stripe trim
+  ctx.fillStyle = TRIM;
+  ctx.fillRect(x - 3 * K + sway, gy - 66 * K, 6 * K, 64 * K);
+  // elongated neck
+  ctx.fillStyle = SKIN;
+  ctx.fillRect(x - 5 * K, gy - 84 * K, 10 * K, 18 * K);
+  // high collar
+  ctx.fillStyle = TRIM;
+  ctx.beginPath();
+  ctx.moveTo(x - 13 * K, gy - 68 * K);
+  ctx.lineTo(x - 8 * K, gy - 80 * K);
+  ctx.lineTo(x + 8 * K, gy - 80 * K);
+  ctx.lineTo(x + 13 * K, gy - 68 * K);
+  ctx.closePath();
+  ctx.fill();
+  // elongated head
+  ctx.fillStyle = SKIN;
+  ctx.beginPath();
+  ctx.ellipse(x, gy - 96 * K, 10 * K, 15 * K, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // serene closed eyes
+  ctx.strokeStyle = '#3a2f60';
+  ctx.lineWidth = 1.4 * K;
+  ctx.beginPath();
+  ctx.moveTo(x - 5 * K, gy - 96 * K);
+  ctx.quadraticCurveTo(x - 2 * K, gy - 94 * K, x + 1 * K, gy - 96 * K);
+  ctx.stroke();
+}
+
+function drawWinnerMedal(x, y, t) {
+  // ribbon tails
+  ctx.fillStyle = '#c62f42';
+  ctx.beginPath();
+  ctx.moveTo(x - 8 * K, y - 6 * K);
+  ctx.lineTo(x - 1 * K, y - 6 * K);
+  ctx.lineTo(x - 5 * K, y + 12 * K);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x + 1 * K, y - 6 * K);
+  ctx.lineTo(x + 8 * K, y - 6 * K);
+  ctx.lineTo(x + 5 * K, y + 12 * K);
+  ctx.closePath();
+  ctx.fill();
+
+  // gold disc
+  ctx.fillStyle = '#ffd24a';
+  ctx.strokeStyle = '#d4a017';
+  ctx.lineWidth = 2 * K;
+  ctx.beginPath();
+  ctx.arc(x, y, 14 * K, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // 5-point star cutout
+  ctx.fillStyle = '#b8860b';
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const a = -Math.PI / 2 + i * (Math.PI * 2 / 5);
+    const a2 = a + Math.PI / 5;
+    const ox = x + Math.cos(a) * 6 * K, oy = y + Math.sin(a) * 6 * K;
+    const ix = x + Math.cos(a2) * 2.4 * K, iy = y + Math.sin(a2) * 2.4 * K;
+    if (i === 0) ctx.moveTo(ox, oy); else ctx.lineTo(ox, oy);
+    ctx.lineTo(ix, iy);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // orbiting sparkles
+  ctx.fillStyle = '#fff8d0';
+  for (let i = 0; i < 4; i++) {
+    const a = t / 40 + i * (Math.PI / 2);
+    ctx.fillRect(x + Math.cos(a) * 22 * K - 1.5 * K, y + Math.sin(a) * 22 * K - 1.5 * K, 3 * K, 3 * K);
   }
 }
 
