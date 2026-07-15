@@ -115,17 +115,18 @@ const sfx = {
 };
 
 // ============ GAME STATE ============
-const LEN = 9000;                 // race distance
+const LENS = [9000, 13000, 17000]; // race distances for tracks 1/2/3
+let LEN = LENS[0];                // race distance (set per-race in startRace)
 const MAXSPD = 7, RIVALBASE = 6.15;
-const state = { mode: 'select', sel: 0, char: 'S', countT: 0, raceT: 0, place: 1, bestMsg: '' };
+const state = { mode: 'select', sel: 0, char: 'S', level: 1, countT: 0, raceT: 0, place: 1, bestMsg: '' };
 const player = { x: 0, lane: 1, laneF: 1, speed: 0, hearts: 3, invuln: 0, stun: 0, finT: 0, boostT: 0 };
 const rival  = { x: 0, lane: 0, laneF: 0, speed: 0, weaveT: 120, finT: 0 };
 let hazards = [], pads = [], bolts = [], sandwiches = [], parts = [];
 let camX = 0, endRoll = 0;
 
-function bestKey(c) { return 'ohanaKartsBest' + c; }
-function getBest(c) {
-  const v = parseFloat(localStorage.getItem(bestKey(c)));
+function bestKey(c, lvl) { return 'ohanaKartsBest' + c + 'L' + lvl; }
+function getBest(c, lvl) {
+  const v = parseFloat(localStorage.getItem(bestKey(c, lvl)));
   return isNaN(v) ? null : v;
 }
 
@@ -135,6 +136,7 @@ function startRace(c) {
   state.countT = 0;
   state.raceT = 0;
   state.bestMsg = '';
+  LEN = LENS[state.level - 1];
   player.x = 260; player.lane = 1; player.laneF = 1; player.speed = 0;
   player.hearts = 3; player.invuln = 0; player.stun = 0; player.finT = 0; player.boostT = 0;
   rival.x = 260; rival.lane = 0; rival.laneF = 0; rival.speed = 0; rival.weaveT = 150; rival.finT = 0;
@@ -195,6 +197,18 @@ function laneY(l) {
   return t + (b - t) * (0.30 + 0.42 * l);
 }
 
+// track-length pill rects for the select-screen level picker (shared by draw + tap hit-testing)
+function trackPillRects() {
+  const pw = Math.min(88, W * 0.16), ph = H * 0.065, gap = Math.min(16, W * 0.025);
+  const totalW = pw * 3 + gap * 2;
+  const startX = W / 2 - totalW / 2, cy = H * 0.31;
+  const rects = [];
+  for (let lvl = 1; lvl <= 3; lvl++) {
+    rects.push({ level: lvl, x: startX + (lvl - 1) * (pw + gap), y: cy - ph / 2, w: pw, h: ph });
+  }
+  return rects;
+}
+
 // ============ INPUT ============
 function bindButton(id, dir) {
   const el = document.getElementById(id);
@@ -212,6 +226,12 @@ bindButton('btnDown', 1);
 function tapAt(x, y) {
   initAudio();
   if (state.mode === 'select') {
+    for (const r of trackPillRects()) {
+      if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) {
+        if (state.level !== r.level) { state.level = r.level; sfx.tick(); }
+        return;
+      }
+    }
     startRace(x < W / 2 ? 'S' : 'L');
   } else if (state.mode === 'race') {
     setLane(y < H * 0.62 ? 0 : 1);
@@ -230,6 +250,8 @@ window.addEventListener('keydown', e => {
   initAudio();
   if (state.mode === 'select') {
     if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') { state.sel = 1 - state.sel; sfx.tick(); }
+    if (e.code === 'ArrowUp' && state.level > 1) { state.level--; sfx.tick(); }
+    if (e.code === 'ArrowDown' && state.level < 3) { state.level++; sfx.tick(); }
     if (e.code === 'Digit1') startRace('S');
     if (e.code === 'Digit2') startRace('L');
     if (e.code === 'Enter' || e.code === 'Space') startRace(state.sel === 0 ? 'S' : 'L');
@@ -375,9 +397,9 @@ function update() {
     if (endRoll > 55) {
       state.place = rival.finT && rival.finT < player.finT ? 2 : 1;
       const secs = player.finT / 60;
-      const best = getBest(state.char);
+      const best = getBest(state.char, state.level);
       if (best === null || secs < best) {
-        try { localStorage.setItem(bestKey(state.char), secs.toFixed(2)); } catch (e) {}
+        try { localStorage.setItem(bestKey(state.char, state.level), secs.toFixed(2)); } catch (e) {}
         state.bestMsg = '🎉 New best time!';
       } else {
         state.bestMsg = 'Best: ' + best.toFixed(1) + 's';
@@ -963,16 +985,29 @@ function drawOverlays(t) {
     const big = Math.min(52, W * 0.085);
     ctx.font = 'bold ' + big + 'px -apple-system, sans-serif';
     ctx.fillStyle = '#ffd700';
-    ctx.fillText('🏎 OHANA KARTS 🏁', W / 2, H * 0.16);
+    ctx.fillText('🏎 OHANA KARTS 🏁', W / 2, H * 0.13);
     ctx.font = 'bold ' + Math.min(22, W * 0.04) + 'px -apple-system, sans-serif';
     ctx.fillStyle = '#fff';
-    ctx.fillText('Who is racing today? Tap a driver!', W / 2, H * 0.27);
+    ctx.fillText('Who is racing today? Tap a driver!', W / 2, H * 0.21);
+    // track-length picker
+    ctx.font = 'bold ' + Math.min(14, W * 0.028) + 'px -apple-system, sans-serif';
+    ctx.fillStyle = '#dce9f5';
+    ctx.fillText('TRACK', W / 2, H * 0.31 - (H * 0.065) / 2 - 12);
+    for (const r of trackPillRects()) {
+      ctx.fillStyle = state.level === r.level ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.18)';
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(r.x, r.y, r.w, r.h, 12) : ctx.rect(r.x, r.y, r.w, r.h);
+      ctx.fill();
+      ctx.font = 'bold ' + Math.min(20, W * 0.04) + 'px -apple-system, sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(String(r.level), r.x + r.w / 2, r.y + r.h / 2 + 1);
+    }
     // two picks
     for (const [i, who] of [[0, 'S'], [1, 'L']]) {
-      const cx = W * (i === 0 ? 0.3 : 0.7), cy = H * 0.52;
+      const cx = W * (i === 0 ? 0.3 : 0.7), cy = H * 0.58;
       ctx.fillStyle = state.sel === i ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.18)';
       ctx.beginPath();
-      const rw = Math.min(220, W * 0.36), rh = H * 0.34;
+      const rw = Math.min(220, W * 0.36), rh = H * 0.32;
       ctx.roundRect ? ctx.roundRect(cx - rw / 2, cy - rh / 2, rw, rh, 18) : ctx.rect(cx - rw / 2, cy - rh / 2, rw, rh);
       ctx.fill();
       const fake = { x: camX + cx, laneF: 0, invuln: 0, stun: 0, boostT: 0 };
@@ -985,14 +1020,14 @@ function drawOverlays(t) {
       ctx.font = 'bold ' + Math.min(24, W * 0.045) + 'px -apple-system, sans-serif';
       ctx.fillStyle = '#fff';
       ctx.fillText(who === 'S' ? 'STITCH' : 'LILO', cx, cy + rh / 2 - 40);
-      const best = getBest(who);
+      const best = getBest(who, state.level);
       ctx.font = '14px -apple-system, sans-serif';
       ctx.fillStyle = '#ffe066';
       ctx.fillText(best ? 'best: ' + best.toFixed(1) + 's' : 'no time yet', cx, cy + rh / 2 - 18);
     }
     ctx.font = '14px -apple-system, sans-serif';
     ctx.fillStyle = '#dce9f5';
-    ctx.fillText('⌨  1 = Stitch · 2 = Lilo · ↑ ↓ or ⬆⬇ switch lanes · dodge Gantu, Hämsterviel & Reuben!', W / 2, H * 0.86);
+    ctx.fillText('⌨  1 = Stitch · 2 = Lilo · ↑ ↓ pick track · dodge Gantu, Hämsterviel & Reuben!', W / 2, H * 0.88);
   } else if (state.mode === 'count') {
     const n = 3 - Math.floor(state.countT / 60);
     ctx.font = 'bold ' + Math.min(110, W * 0.2) + 'px -apple-system, sans-serif';
