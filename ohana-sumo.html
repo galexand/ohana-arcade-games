@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Ohana Sumo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #000;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    position: fixed;
+  }
+  #game { display: block; width: 100%; height: 100%; }
+  #homeLink {
+    position: fixed;
+    top: max(10px, env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    font: 600 14px -apple-system, sans-serif;
+    color: #fff;
+    text-decoration: none;
+    background: rgba(0,0,0,0.35);
+    padding: 5px 12px;
+    border-radius: 14px;
+  }
+  #joyBase {
+    position: fixed;
+    left: max(20px, env(safe-area-inset-left));
+    bottom: max(20px, env(safe-area-inset-bottom));
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: transparent;
+    z-index: 10;
+    touch-action: none;
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<a id="homeLink" href="index.html">← Games</a>
+<div id="joyBase"></div>
+
+<script>
+'use strict';
+
+// ============ SETUP ============
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, K = 1;
+let ringCX = 0, ringCY = 0, ringR = 0;
+
+function layoutRing() {
+  ringCX = W / 2;
+  ringCY = H * 0.30 + (H * 0.70) / 2;
+  ringR = Math.min(W, H) * 0.34;
+}
+
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  K = Math.max(0.8, Math.min(1.5, H / 460)); // sprite scale
+  layoutRing();
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 100));
+resize();
+
+// ============ SOUND ============
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+function beep(freq, dur, type, vol, slide) {
+  if (!audioCtx) return;
+  type = type || 'square'; vol = vol || 0.07; slide = slide || 0;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), audioCtx.currentTime + dur);
+  g.gain.setValueAtTime(vol, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start(); o.stop(audioCtx.currentTime + dur);
+}
+const sfx = {
+  tick()      { beep(700, 0.06, 'square', 0.05); },
+  count()     { beep(440, 0.18, 'square', 0.08); },
+  hajime()    { beep(880, 0.4, 'square', 0.09); },
+  thud()      { beep(150, 0.15, 'sawtooth', 0.09, -80); },
+  roundWin()  { [523, 659, 784].forEach((f, i) => setTimeout(() => beep(f, 0.18, 'square', 0.08), i * 120)); },
+  matchWin()  { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 0.22, 'square', 0.09), i * 140)); },
+  outOfRing() { beep(300, 0.3, 'sawtooth', 0.08, -200); },
+};
+
+// ============ GAME STATE ============
+const BODY_R = 26;      // base collision/sprite radius (scaled by K)
+const PUSH_COEF = 0.6;  // how hard a full-speed charge shoves the opponent
+const state = { mode: 'select', sel: 0, char: 'S', countT: 0, endT: 0, round: 1, wins: { S: 0, R: 0 }, roundWinner: null, matchWinner: null };
+const stitch = { id: 'S', x: 0, y: 0, vx: 0, vy: 0, bodyR: BODY_R, armT: 0, pushing: false, aimT: 0, noiseX: 0, noiseY: 0 };
+const reuben = { id: 'R', x: 0, y: 0, vx: 0, vy: 0, bodyR: BODY_R, armT: 0, pushing: false, aimT: 0, noiseX: 0, noiseY: 0 };
+let parts = [];
+let wasColliding = false;
+
+function playerFighter() { return state.char === 'S' ? stitch : reuben; }
+function cpuFighter() { return state.char === 'S' ? reuben : stitch; }
+
+function recordKey(c) { return 'ohanaSumoRecord' + c; }
+function getRecord(c) {
+  try {
+    const raw = localStorage.getItem(recordKey(c));
+    if (!raw) return { w: 0, l: 0 };
+    const parts2 = raw.split(',').map(Number);
+    return { w: parts2[0] || 0, l: parts2[1] || 0 };
+  } catch (e) { return { w: 0, l: 0 }; }
+}
+function addRecordResult(c, won) {
+  const r = getRecord(c);
+  if (won) r.w++; else r.l++;
+  try { localStorage.setItem(recordKey(c), r.w + ',' + r.l); } catch (e) {}
+}
+
+function burst(x, y, color, n) {
+  for (let i = 0; i < n; i++) {
+    parts.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 5,
+      vy: -Math.random() * 5 - 1,
+      life: 28 + Math.random() * 18,
+      color,
+    });
+  }
+}
+
+function startMatch(c) {
+  state.char = c;
+  state.wins = { S: 0, R: 0 };
+  state.round = 1;
+  state.matchWinner = null;
+  startRound();
+}
+
+function startRound() {
+  state.mode = 'count';
+  state.countT = 0;
+  state.roundWinner = null;
+  heldUp = false; heldDown = false; heldLeft = false; heldRight = false;
+  stitch.x = ringCX; stitch.y = ringCY + ringR * 0.55;
+  stitch.vx = 0; stitch.vy = 0; stitch.armT = 0; stitch.pushing = false;
+  stitch.bodyR = BODY_R * K; stitch.aimT = 0; stitch.noiseX = 0; stitch.noiseY = 0;
+  reuben.x = ringCX; reuben.y = ringCY - ringR * 0.55;
+  reuben.vx = 0; reuben.vy = 0; reuben.armT = 0; reuben.pushing = false;
+  reuben.bodyR = BODY_R * K; reuben.aimT = 0; reuben.noiseX = 0; reuben.noiseY = 0;
+  wasColliding = false;
+  parts = [];
+}
+
+// ============ INPUT ============
+const joyBase = document.getElementById('joyBase');
+let joyDir = { x: 0, y: 0 };
+let joyActive = false;
+let joyKnobOffset = { x: 0, y: 0 };
+
+function joyUpdate(clientX, clientY) {
+  const r = joyBase.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const maxR = r.width / 2;
+  let dx = clientX - cx, dy = clientY - cy;
+  const dist = Math.hypot(dx, dy);
+  if (dist > maxR) { dx = dx / dist * maxR; dy = dy / dist * maxR; }
+  joyKnobOffset = { x: dx, y: dy };
+  joyDir = { x: dx / maxR, y: dy / maxR };
+}
+function joyReset() {
+  joyActive = false;
+  joyDir = { x: 0, y: 0 };
+  joyKnobOffset = { x: 0, y: 0 };
+}
+joyBase.addEventListener('touchstart', e => {
+  e.preventDefault();
+  initAudio();
+  joyActive = true;
+  const t = e.touches[0];
+  joyUpdate(t.clientX, t.clientY);
+}, { passive: false });
+joyBase.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!joyActive) return;
+  const t = e.touches[0];
+  joyUpdate(t.clientX, t.clientY);
+}, { passive: false });
+joyBase.addEventListener('touchend', e => { e.preventDefault(); joyReset(); }, { passive: false });
+joyBase.addEventListener('touchcancel', e => { e.preventDefault(); joyReset(); }, { passive: false });
+joyBase.addEventListener('mousedown', e => { initAudio(); joyActive = true; joyUpdate(e.clientX, e.clientY); });
+window.addEventListener('mousemove', e => { if (joyActive) joyUpdate(e.clientX, e.clientY); });
+window.addEventListener('mouseup', () => { if (joyActive) joyReset(); });
+
+let heldUp = false, heldDown = false, heldLeft = false, heldRight = false;
+function getInputDir() {
+  const kx = (heldRight ? 1 : 0) - (heldLeft ? 1 : 0);
+  const ky = (heldDown ? 1 : 0) - (heldUp ? 1 : 0);
+  if (kx !== 0 || ky !== 0) {
+    const len = Math.hypot(kx, ky);
+    return { x: kx / len, y: ky / len };
+  }
+  return joyDir;
+}
+
+function tapAt(x, y) {
+  initAudio();
+  if (state.mode === 'select') {
+    startMatch(x < W / 2 ? 'S' : 'R');
+  } else if (state.mode === 'finish') {
+    state.mode = 'select';
+  }
+}
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  tapAt(t.clientX, t.clientY);
+}, { passive: false });
+canvas.addEventListener('mousedown', e => tapAt(e.clientX, e.clientY));
+
+window.addEventListener('keydown', e => {
+  initAudio();
+  if (e.code === 'ArrowUp' || e.code === 'KeyW') heldUp = true;
+  if (e.code === 'ArrowDown' || e.code === 'KeyS') heldDown = true;
+  if (e.code === 'ArrowLeft' || e.code === 'KeyA') heldLeft = true;
+  if (e.code === 'ArrowRight' || e.code === 'KeyD') heldRight = true;
+  if (state.mode === 'select') {
+    if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') { state.sel = 1 - state.sel; sfx.tick(); }
+    if (e.code === 'Digit1') startMatch('S');
+    if (e.code === 'Digit2') startMatch('R');
+    if (e.code === 'Enter' || e.code === 'Space') startMatch(state.sel === 0 ? 'S' : 'R');
+  } else if (state.mode === 'finish') {
+    if (e.code === 'Enter' || e.code === 'Space') state.mode = 'select';
+  }
+  if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
+});
+window.addEventListener('keyup', e => {
+  if (e.code === 'ArrowUp' || e.code === 'KeyW') heldUp = false;
+  if (e.code === 'ArrowDown' || e.code === 'KeyS') heldDown = false;
+  if (e.code === 'ArrowLeft' || e.code === 'KeyA') heldLeft = false;
+  if (e.code === 'ArrowRight' || e.code === 'KeyD') heldRight = false;
+});
+function resetInputState() {
+  heldUp = false; heldDown = false; heldLeft = false; heldRight = false;
+  joyReset();
+}
+window.addEventListener('blur', resetInputState);
+document.addEventListener('visibilitychange', () => { if (document.hidden) resetInputState(); });
+
+// ============ AI ============
+function cpuDir(cpu, target) {
+  cpu.aimT--;
+  if (cpu.aimT <= 0) {
+    cpu.aimT = 40 + Math.random() * 30;
+    cpu.noiseX = (Math.random() - 0.5) * 50;
+    cpu.noiseY = (Math.random() - 0.5) * 50;
+  }
+  const dx0 = target.x - ringCX, dy0 = target.y - ringCY;
+  const distC = Math.hypot(dx0, dy0) || 0.0001;
+  const aimX = ringCX + (dx0 / distC) * (distC * 1.15 + 20) + cpu.noiseX;
+  const aimY = ringCY + (dy0 / distC) * (distC * 1.15 + 20) + cpu.noiseY;
+  const dx = aimX - cpu.x, dy = aimY - cpu.y;
+  const len = Math.hypot(dx, dy) || 0.0001;
+  return { x: dx / len, y: dy / len };
+}
+
+// ============ PHYSICS ============
+function updateFighter(f, dir, maxspd) {
+  const ACCEL = 0.55 * K;
+  const FRICTION = 0.90;
+  f.vx += dir.x * ACCEL;
+  f.vy += dir.y * ACCEL;
+  const spd = Math.hypot(f.vx, f.vy);
+  if (spd > maxspd) { f.vx = f.vx / spd * maxspd; f.vy = f.vy / spd * maxspd; }
+  f.vx *= FRICTION; f.vy *= FRICTION;
+  f.x += f.vx; f.y += f.vy;
+}
+
+function resolveCollision() {
+  const dx = reuben.x - stitch.x, dy = reuben.y - stitch.y;
+  let dist = Math.hypot(dx, dy);
+  let nx, ny;
+  if (dist < 0.5) { nx = 1; ny = 0; dist = 0.5; } else { nx = dx / dist; ny = dy / dist; }
+  const minDist = stitch.bodyR + reuben.bodyR;
+  const colliding = dist < minDist;
+  let sPush = false, rPush = false;
+  if (colliding) {
+    const overlap = minDist - dist;
+    stitch.x -= nx * overlap / 2; stitch.y -= ny * overlap / 2;
+    reuben.x += nx * overlap / 2; reuben.y += ny * overlap / 2;
+    const velS = stitch.vx * nx + stitch.vy * ny;
+    const velR = reuben.vx * nx + reuben.vy * ny;
+    const pushOnR = Math.max(0, velS) * PUSH_COEF;
+    reuben.vx += nx * pushOnR; reuben.vy += ny * pushOnR;
+    const pushOnS = Math.max(0, -velR) * PUSH_COEF;
+    stitch.vx -= nx * pushOnS; stitch.vy -= ny * pushOnS;
+    sPush = velS > 0.05;
+    rPush = velR < -0.05;
+    if (!wasColliding) {
+      sfx.thud();
+      burst((stitch.x + reuben.x) / 2, (stitch.y + reuben.y) / 2, '#e8d2a0', 10);
+    }
+  }
+  wasColliding = colliding;
+  stitch.pushing = sPush; reuben.pushing = rPush;
+  stitch.armT += ((sPush ? 1 : 0) - stitch.armT) * 0.25;
+  reuben.armT += ((rPush ? 1 : 0) - reuben.armT) * 0.25;
+}
+
+function checkRingOut() {
+  const distS = Math.hypot(stitch.x - ringCX, stitch.y - ringCY);
+  const distR = Math.hypot(reuben.x - ringCX, reuben.y - ringCY);
+  if (distS > ringR) return 'S';
+  if (distR > ringR) return 'R';
+  return null;
+}
+
+// ============ UPDATE ============
+function update() {
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.25; p.life--;
+    if (p.life <= 0) parts.splice(i, 1);
+  }
+
+  if (state.mode === 'count') {
+    state.countT++;
+    if (state.countT === 1 || state.countT === 45 || state.countT === 90) sfx.count();
+    if (state.countT === 135) sfx.hajime();
+    if (state.countT >= 180) { state.mode = 'round'; }
+    return;
+  }
+  if (state.mode === 'roundEnd') {
+    state.endT++;
+    if (state.endT >= 75) {
+      if (state.matchWinner) { state.mode = 'finish'; }
+      else { state.round++; startRound(); }
+    }
+    return;
+  }
+  if (state.mode !== 'round') return;
+
+  const MAXSPD = 4.2 * K;
+  stitch.bodyR = BODY_R * K; reuben.bodyR = BODY_R * K;
+
+  const pf = playerFighter(), cf = cpuFighter();
+  const inputDir = getInputDir();
+  updateFighter(pf, inputDir, MAXSPD);
+  const aiDir = cpuDir(cf, pf);
+  updateFighter(cf, aiDir, MAXSPD * 0.9);
+
+  resolveCollision();
+
+  const outChar = checkRingOut();
+  if (outChar) {
+    const winner = outChar === 'S' ? 'R' : 'S';
+    const loser = outChar === 'S' ? stitch : reuben;
+    state.roundWinner = winner;
+    state.wins[winner]++;
+    sfx.outOfRing();
+    burst(loser.x, loser.y, '#f0d998', 18);
+    state.mode = 'roundEnd';
+    state.endT = 0;
+    if (state.wins[winner] >= 2) {
+      state.matchWinner = winner;
+      addRecordResult(winner, true);
+      addRecordResult(winner === 'S' ? 'R' : 'S', false);
+      sfx.matchWin();
+    } else {
+      sfx.roundWin();
+    }
+  }
+}
+
+// ============ DRAWING: SCENERY & RING ============
+function drawPalmCorner(x, gy, mirror) {
+  ctx.save();
+  if (mirror) { ctx.translate(x, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
+  ctx.strokeStyle = '#9a6a3a';
+  ctx.lineWidth = 7 * K;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x, gy);
+  ctx.quadraticCurveTo(x + 8 * K, gy - 50 * K, x + 26 * K, gy - 78 * K);
+  ctx.stroke();
+  ctx.strokeStyle = '#3d9c4f';
+  ctx.lineWidth = 5 * K;
+  for (let a = 0; a < 5; a++) {
+    const ang = -Math.PI * 0.9 + a * 0.42;
+    ctx.beginPath();
+    ctx.moveTo(x + 26 * K, gy - 78 * K);
+    ctx.quadraticCurveTo(
+      x + 26 * K + Math.cos(ang) * 22 * K, gy - 90 * K + Math.sin(ang) * 22 * K,
+      x + 26 * K + Math.cos(ang) * 44 * K, gy - 70 * K + Math.sin(ang) * 44 * K);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawScenery(t) {
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#3f9bd9');
+  grad.addColorStop(0.45, '#8fd0ee');
+  grad.addColorStop(1, '#ffe9c4');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+  // sun
+  ctx.fillStyle = '#ffd94d';
+  ctx.beginPath();
+  ctx.arc(W * 0.85, H * 0.1, 24 * K, 0, Math.PI * 2);
+  ctx.fill();
+  // clouds
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  for (let i = 0; i < 4; i++) {
+    const cx = W * 0.15 + i * W * 0.26 + Math.sin(t / 4000 + i) * 10;
+    const cy = H * 0.08 + (i % 2) * H * 0.04;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 14 * K, 0, Math.PI * 2);
+    ctx.arc(cx + 18 * K, cy - 5 * K, 17 * K, 0, Math.PI * 2);
+    ctx.arc(cx + 36 * K, cy, 13 * K, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // ocean strip
+  const hor = H * 0.20, beachY = H * 0.30;
+  ctx.fillStyle = '#2e86c9';
+  ctx.fillRect(0, hor, W, beachY - hor);
+  // dry sand fills the rest of the canvas (ring is painted on top)
+  ctx.fillStyle = '#f0d998';
+  ctx.fillRect(0, beachY, W, H - beachY);
+  // palm trees framing the corners
+  drawPalmCorner(30 * K, H - 6, false);
+  drawPalmCorner(W - 30 * K, H - 6, true);
+}
+
+function drawTikiTorch(x, y, t, seed) {
+  // post
+  ctx.fillStyle = '#6d4526';
+  ctx.fillRect(x - 4 * K, y - 46 * K, 8 * K, 46 * K);
+  // bowl
+  ctx.fillStyle = '#4a2f1a';
+  ctx.beginPath();
+  ctx.moveTo(x - 10 * K, y - 46 * K);
+  ctx.lineTo(x + 10 * K, y - 46 * K);
+  ctx.lineTo(x + 5 * K, y - 58 * K);
+  ctx.lineTo(x - 5 * K, y - 58 * K);
+  ctx.closePath();
+  ctx.fill();
+  // flickering flame
+  const pulse = 0.6 + Math.sin(t / 140 + seed * 2) * 0.4;
+  ctx.fillStyle = pulse > 0.6 ? '#ffb347' : '#ff8a3d';
+  ctx.beginPath();
+  ctx.moveTo(x, y - 58 * K - 18 * K * pulse);
+  ctx.quadraticCurveTo(x - 8 * K, y - 58 * K - 6 * K, x - 5 * K, y - 58 * K);
+  ctx.quadraticCurveTo(x, y - 58 * K - 4 * K, x + 5 * K, y - 58 * K);
+  ctx.quadraticCurveTo(x + 8 * K, y - 58 * K - 6 * K, x, y - 58 * K - 18 * K * pulse);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,224,150,' + (0.3 + pulse * 0.3) + ')';
+  ctx.beginPath();
+  ctx.arc(x, y - 64 * K, 14 * K, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawRing(t) {
+  // sand pit — richer tan than the surrounding beach so the boundary reads clearly
+  ctx.fillStyle = '#d8ae62';
+  ctx.beginPath();
+  ctx.arc(ringCX, ringCY, ringR, 0, Math.PI * 2);
+  ctx.fill();
+  // subtle raked-sand texture
+  ctx.strokeStyle = 'rgba(138,90,52,0.18)';
+  ctx.lineWidth = 2 * K;
+  for (let r = ringR * 0.2; r < ringR; r += ringR * 0.16) {
+    ctx.beginPath();
+    ctx.arc(ringCX, ringCY, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  // thick twisted-rope boundary
+  ctx.strokeStyle = '#8a5a34';
+  ctx.lineWidth = 10 * K;
+  ctx.beginPath();
+  ctx.arc(ringCX, ringCY, ringR, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.strokeStyle = '#caa06b';
+  ctx.lineWidth = 4 * K;
+  const segs = 48;
+  for (let i = 0; i < segs; i++) {
+    const a0 = (i / segs) * Math.PI * 2, a1 = a0 + (Math.PI * 2 / segs) * 0.5;
+    ctx.beginPath();
+    ctx.arc(ringCX, ringCY, ringR, a0, a1);
+    ctx.stroke();
+  }
+  // tiki torches around the ring
+  const torchN = 4;
+  for (let i = 0; i < torchN; i++) {
+    const a = (i / torchN) * Math.PI * 2 + Math.PI / 4;
+    const tx = ringCX + Math.cos(a) * (ringR + 26 * K);
+    const ty = ringCY + Math.sin(a) * (ringR + 26 * K);
+    drawTikiTorch(tx, ty, t, i);
+  }
+}
+
+// ============ DRAWING: FIGHTERS ============
+function drawArmPair(r, xBase, extend, alpha, colorArm, colorDark) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = colorArm;
+  ctx.strokeStyle = colorDark;
+  ctx.lineWidth = 1.4 * K;
+  for (const s of [-1, 1]) {
+    ctx.save();
+    ctx.translate(xBase, s * r * 0.55);
+    ctx.rotate(s * (0.9 - extend * 0.3));
+    const len = r * (0.55 + extend * 0.35);
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.1, -r * 0.14);
+    ctx.lineTo(len, -r * 0.14);
+    ctx.lineTo(len, r * 0.14);
+    ctx.lineTo(-r * 0.1, r * 0.14);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(len, 0, r * 0.16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawStitchTop(f) {
+  const r = f.bodyR;
+  const BLUE = '#3d7bc9', DARK = '#26508f', BELLY = '#bfe0f4', PINK = '#e88db4';
+  ctx.lineWidth = 1.6 * K;
+  ctx.strokeStyle = DARK;
+  // default arm pair, always visible
+  drawArmPair(r, -r * 0.1, 0.15, 1, BLUE, DARK);
+  // stubby feet peeking from the back
+  ctx.fillStyle = DARK;
+  ctx.beginPath();
+  ctx.ellipse(-r * 0.75, -r * 0.28, r * 0.2, r * 0.14, 0, 0, Math.PI * 2);
+  ctx.ellipse(-r * 0.75, r * 0.28, r * 0.2, r * 0.14, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // round/stout body
+  ctx.fillStyle = BLUE;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 1.05, r * 0.9, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // belly patch
+  ctx.fillStyle = BELLY;
+  ctx.beginPath();
+  ctx.ellipse(r * 0.2, 0, r * 0.5, r * 0.46, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // large pointed ears sticking from the sides of the head
+  for (const s of [-1, 1]) {
+    ctx.save();
+    ctx.translate(r * 0.25, s * r * 0.68);
+    ctx.rotate(s * 0.6);
+    ctx.fillStyle = BLUE;
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.32, r * 0.2, r * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = PINK;
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.3, r * 0.1, r * 0.28, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  // head, toward the front (facing the opponent)
+  ctx.fillStyle = BLUE;
+  ctx.beginPath();
+  ctx.ellipse(r * 0.65, 0, r * 0.48, r * 0.44, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#14181f';
+  ctx.beginPath();
+  ctx.ellipse(r * 0.82, -r * 0.15, r * 0.09, r * 0.13, 0, 0, Math.PI * 2);
+  ctx.ellipse(r * 0.82, r * 0.15, r * 0.09, r * 0.13, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#1b2a45';
+  ctx.beginPath();
+  ctx.ellipse(r * 1.02, 0, r * 0.12, r * 0.09, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // second arm pair, fades and extends in while actively pushing
+  if (f.armT > 0.02) drawArmPair(r, r * 0.08, f.armT, f.armT, BLUE, DARK);
+}
+
+function drawReubenTop(f) {
+  const r = f.bodyR;
+  const GOLD = '#e0b13e', BELLY = '#f2dca4', DARK = '#a8792a';
+  ctx.lineWidth = 1.6 * K;
+  ctx.strokeStyle = DARK;
+  // default arm pair, always visible
+  drawArmPair(r, -r * 0.05, 0.15, 1, GOLD, DARK);
+  // stubby feet peeking from the back
+  ctx.fillStyle = DARK;
+  ctx.beginPath();
+  ctx.ellipse(-r * 0.7, -r * 0.3, r * 0.22, r * 0.16, 0, 0, Math.PI * 2);
+  ctx.ellipse(-r * 0.7, r * 0.3, r * 0.22, r * 0.16, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // chubby, gopher-like round body
+  ctx.fillStyle = GOLD;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 1.1, r * 1.0, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // lighter belly
+  ctx.fillStyle = BELLY;
+  ctx.beginPath();
+  ctx.ellipse(r * 0.15, 0, r * 0.58, r * 0.55, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // long floppy ears trailing from the sides
+  for (const s of [-1, 1]) {
+    ctx.save();
+    ctx.translate(-r * 0.1, s * r * 0.85);
+    ctx.rotate(s * 1.1);
+    ctx.fillStyle = GOLD;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(-r * 0.3, -r * 0.1, -r * 0.55, r * 0.15);
+    ctx.quadraticCurveTo(-r * 0.35, r * 0.35, 0, r * 0.2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+  // head, toward the front (facing the opponent)
+  ctx.fillStyle = GOLD;
+  ctx.beginPath();
+  ctx.ellipse(r * 0.6, 0, r * 0.5, r * 0.46, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // big googly eyes
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(r * 0.78, -r * 0.16, r * 0.16, 0, Math.PI * 2);
+  ctx.arc(r * 0.78, r * 0.16, r * 0.16, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = DARK;
+  ctx.lineWidth = 1 * K;
+  ctx.stroke();
+  ctx.fillStyle = '#1b1610';
+  ctx.beginPath();
+  ctx.arc(r * 0.83, -r * 0.16, r * 0.08, 0, Math.PI * 2);
+  ctx.arc(r * 0.83, r * 0.16, r * 0.08, 0, Math.PI * 2);
+  ctx.fill();
+  // 3 small antennae
+  ctx.strokeStyle = DARK;
+  ctx.lineWidth = 1.4 * K;
+  for (const s of [-0.6, 0, 0.6]) {
+    const bx = r * 0.55 + s * r * 0.1, by = -r * 0.6;
+    ctx.beginPath();
+    ctx.moveTo(r * 0.5, -r * 0.38);
+    ctx.lineTo(bx, by);
+    ctx.stroke();
+    ctx.fillStyle = GOLD;
+    ctx.beginPath();
+    ctx.arc(bx, by, r * 0.05, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // second arm pair, fades and extends in while actively pushing
+  if (f.armT > 0.02) drawArmPair(r, r * 0.12, f.armT, f.armT, GOLD, DARK);
+}
+
+function drawFighterOnRing(f, opp, t) {
+  const ang = Math.atan2(opp.y - f.y, opp.x - f.x);
+  ctx.save();
+  ctx.translate(f.x, f.y);
+  // drop shadow (unrotated, stays under the body)
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.beginPath();
+  ctx.ellipse(0, f.bodyR * 0.55, f.bodyR * 1.1, f.bodyR * 0.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.rotate(ang);
+  if (f.id === 'S') drawStitchTop(f); else drawReubenTop(f);
+  ctx.restore();
+}
+
+// ============ DRAWING: HUD & JOYSTICK ============
+function drawHUD() {
+  if (state.mode === 'select' || state.mode === 'finish') return;
+  const pad = Math.max(14, H * 0.02);
+  drawNameHUD('S', pad, pad, false);
+  drawNameHUD('R', W - pad, pad, true);
+  ctx.font = 'bold ' + Math.min(18, W * 0.036) + 'px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = '#fff';
+  ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+  ctx.lineWidth = 4;
+  const label = 'Round ' + state.round;
+  ctx.strokeText(label, W / 2, pad + 34);
+  ctx.fillText(label, W / 2, pad + 34);
+}
+
+function drawNameHUD(c, x, y, alignRight) {
+  ctx.textAlign = alignRight ? 'right' : 'left';
+  ctx.textBaseline = 'top';
+  ctx.font = 'bold ' + Math.min(16, W * 0.032) + 'px -apple-system, sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+  ctx.lineWidth = 3;
+  const name = c === 'S' ? 'STITCH' : 'REUBEN';
+  ctx.strokeText(name, x, y);
+  ctx.fillText(name, x, y);
+  for (let i = 0; i < 2; i++) {
+    const dx = alignRight ? x - 10 - i * 18 : x + 10 + i * 18;
+    ctx.beginPath();
+    ctx.arc(dx, y + 28, 6, 0, Math.PI * 2);
+    ctx.fillStyle = i < state.wins[c] ? (c === 'S' ? '#3d7bc9' : '#e0b13e') : 'rgba(255,255,255,0.3)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+}
+
+function drawJoystick() {
+  if (state.mode !== 'round') return;
+  const r = joyBase.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2, baseR = r.width / 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, baseR, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx + joyKnobOffset.x, cy + joyKnobOffset.y, 22, 0, Math.PI * 2);
+  ctx.fillStyle = joyActive ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.4)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+// ============ DRAWING: OVERLAYS ============
+function drawOverlays(t) {
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  if (state.mode === 'select') {
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillRect(0, 0, W, H);
+    const big = Math.min(46, W * 0.08);
+    ctx.font = 'bold ' + big + 'px -apple-system, sans-serif';
+    ctx.fillStyle = '#ffd700';
+    ctx.fillText('🌺 OHANA SUMO', W / 2, H * 0.12);
+    ctx.font = 'bold ' + Math.min(20, W * 0.038) + 'px -apple-system, sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.fillText("Who's fighting today? Tap a fighter!", W / 2, H * 0.19);
+    for (const [i, c] of [[0, 'S'], [1, 'R']]) {
+      const cx = W * (i === 0 ? 0.3 : 0.7), cy = H * 0.5;
+      ctx.fillStyle = state.sel === i ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.18)';
+      const rw = Math.min(220, W * 0.36), rh = H * 0.4;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(cx - rw / 2, cy - rh / 2, rw, rh, 18) : ctx.rect(cx - rw / 2, cy - rh / 2, rw, rh);
+      ctx.fill();
+      ctx.save();
+      ctx.translate(cx, cy - 10);
+      const fake = { x: 0, y: 0, bodyR: 30 * K, armT: 0.5 + Math.sin(t / 240 + i * 3) * 0.5, id: c };
+      if (c === 'S') drawStitchTop(fake); else drawReubenTop(fake);
+      ctx.restore();
+      ctx.font = 'bold ' + Math.min(22, W * 0.042) + 'px -apple-system, sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(c === 'S' ? 'STITCH' : 'REUBEN', cx, cy + rh / 2 - 46);
+      const rec = getRecord(c);
+      ctx.font = '13px -apple-system, sans-serif';
+      ctx.fillStyle = '#ffe066';
+      ctx.fillText('wins: ' + rec.w + '  losses: ' + rec.l, cx, cy + rh / 2 - 22);
+    }
+    ctx.font = '14px -apple-system, sans-serif';
+    ctx.fillStyle = '#dce9f5';
+    ctx.fillText('⌨  1 = Stitch · 2 = Reuben · Enter to fight!', W / 2, H * 0.9);
+  } else if (state.mode === 'count') {
+    const stage = Math.floor(state.countT / 45);
+    const txt = stage < 3 ? String(3 - stage) : 'HAJIME!';
+    ctx.font = 'bold ' + Math.min(100, W * 0.18) + 'px -apple-system, sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+    ctx.lineWidth = 8;
+    ctx.strokeText(txt, W / 2, H * 0.4);
+    ctx.fillText(txt, W / 2, H * 0.4);
+  } else if (state.mode === 'roundEnd') {
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillRect(0, 0, W, H);
+    const big = Math.min(48, W * 0.09);
+    ctx.font = 'bold ' + big + 'px -apple-system, sans-serif';
+    ctx.fillStyle = '#ffd700';
+    const name = state.roundWinner === 'S' ? 'STITCH' : 'REUBEN';
+    ctx.fillText(name + ' wins the round!', W / 2, H * 0.42);
+    ctx.font = 'bold ' + Math.min(24, W * 0.045) + 'px -apple-system, sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(state.wins.S + ' - ' + state.wins.R, W / 2, H * 0.54);
+  } else if (state.mode === 'finish') {
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(0, 0, W, H);
+    const big = Math.min(52, W * 0.09);
+    ctx.font = 'bold ' + big + 'px -apple-system, sans-serif';
+    ctx.fillStyle = '#ffd700';
+    const name = state.matchWinner === 'S' ? 'STITCH' : 'REUBEN';
+    ctx.fillText('🏆 ' + name + ' WINS!', W / 2, H * 0.36);
+    ctx.font = 'bold ' + Math.min(26, W * 0.05) + 'px -apple-system, sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.fillText('Final score: ' + state.wins.S + ' - ' + state.wins.R, W / 2, H * 0.48);
+    ctx.font = '17px -apple-system, sans-serif';
+    ctx.fillStyle = '#ffe066';
+    ctx.fillText('Tap to play again', W / 2, H * 0.6);
+  }
+}
+
+// ============ DRAWING ============
+function draw() {
+  const t = Date.now();
+  drawScenery(t);
+  drawRing(t);
+  if (state.mode !== 'select') {
+    const order = [stitch, reuben].sort((a, b) => a.y - b.y);
+    for (const f of order) {
+      const opp = f === stitch ? reuben : stitch;
+      drawFighterOnRing(f, opp, t);
+    }
+    for (const p of parts) {
+      ctx.globalAlpha = Math.min(1, p.life / 25);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x - 3, p.y - 3, 6, 6);
+      ctx.globalAlpha = 1;
+    }
+  }
+  drawHUD();
+  drawJoystick();
+  drawOverlays(t);
+}
+
+// ============ MAIN LOOP ============
+let last = 0, acc = 0;
+const STEP = 1000 / 60;
+function loop(t) {
+  requestAnimationFrame(loop);
+  if (!last) last = t;
+  acc += Math.min(t - last, 100);
+  last = t;
+  while (acc >= STEP) {
+    update();
+    acc -= STEP;
+  }
+  draw();
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
