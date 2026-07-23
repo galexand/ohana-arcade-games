@@ -50,7 +50,7 @@ const T = {
   en: {
     title1: 'SUPER',
     title2: 'COOKING 🍳',
-    howTo: 'Cook with Stitch! Mix, boil and fry real recipes.',
+    howTo: 'Cook with Capy! Mix, boil and fry real recipes.',
     tapToStart: 'Tap the screen to start!',
     keyHint: '(or press Space)',
     pickRecipe: 'Pick a recipe',
@@ -89,7 +89,7 @@ const T = {
   ro: {
     title1: 'SUPER',
     title2: 'GĂTIT 🍳',
-    howTo: 'Gătește cu Stitch! Amestecă, fierbe și prăjește rețete adevărate.',
+    howTo: 'Gătește cu Capi! Amestecă, fierbe și prăjește rețete adevărate.',
     tapToStart: 'Atinge ecranul ca să începi!',
     keyHint: '(sau apasă Space)',
     pickRecipe: 'Alege o rețetă',
@@ -866,40 +866,60 @@ function drawCustomerBust(name, x, y, r, bounce) {
   ctx.restore();
 }
 
-function drawStitchChef(x, y, r, armPhase) {
+function drawCapybaraChef(x, y, r, armPhase) {
   const s = r / 34;
-  const BLUE = '#3d7bc9', BELLY = '#bfe0f4', PINK = '#e88db4';
+  const BODY = '#9a6b45', BELLY = '#b07d52', DARK = '#6f4a2d';
   armPhase = armPhase || 0;
+  // arms (stubby, swinging)
   for (const sg of [-1, 1]) {
     ctx.save();
     ctx.translate(x + sg * 22 * s, y - 4 * s);
     ctx.rotate(sg * (0.5 + Math.sin(armPhase) * 0.35));
-    ctx.fillStyle = BLUE;
-    ctx.beginPath(); ctx.ellipse(0, 10 * s, 7 * s, 17 * s, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = BODY;
+    ctx.beginPath(); ctx.ellipse(0, 10 * s, 7 * s, 16 * s, 0, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
+  // small rounded ears
   for (const sg of [-1, 1]) {
     ctx.save();
     ctx.translate(x + sg * 16 * s, y - 34 * s);
-    ctx.rotate(sg * 1.1);
-    ctx.fillStyle = BLUE;
-    ctx.beginPath(); ctx.ellipse(0, -8 * s, 7 * s, 15 * s, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = PINK;
-    ctx.beginPath(); ctx.ellipse(0, -7 * s, 3.5 * s, 9 * s, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = DARK;
+    ctx.beginPath(); ctx.ellipse(0, -6 * s, 5 * s, 6 * s, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = BODY;
+    ctx.beginPath(); ctx.ellipse(0, -5 * s, 3 * s, 3.5 * s, 0, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
-  ctx.fillStyle = BLUE;
-  ctx.beginPath(); ctx.ellipse(x, y - 8 * s, 28 * s, 27 * s, 0, 0, Math.PI * 2); ctx.fill();
+  // round body/head base
+  ctx.fillStyle = BODY;
+  ctx.beginPath(); ctx.ellipse(x, y - 6 * s, 27 * s, 26 * s, 0, 0, Math.PI * 2); ctx.fill();
+  // blunt rectangular-ish muzzle (capybara signature look)
   ctx.fillStyle = BELLY;
-  ctx.beginPath(); ctx.ellipse(x, y - 1 * s, 15 * s, 13 * s, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#14181f';
-  ctx.beginPath(); ctx.ellipse(x - 9 * s, y - 12 * s, 4.5 * s, 6 * s, 0, 0, Math.PI * 2); ctx.ellipse(x + 9 * s, y - 12 * s, 4.5 * s, 6 * s, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(x - 15 * s, y - 2 * s, 30 * s, 20 * s, 10 * s); ctx.fill();
+  // belly patch
+  ctx.fillStyle = BELLY;
+  ctx.beginPath(); ctx.ellipse(x, y - 12 * s, 13 * s, 9 * s, 0, 0, Math.PI * 2); ctx.fill();
+  // small dark oval eyes (calm/chill expression)
+  ctx.fillStyle = '#26211f';
+  ctx.beginPath(); ctx.ellipse(x - 9 * s, y - 13 * s, 2.6 * s, 3.2 * s, 0, 0, Math.PI * 2); ctx.ellipse(x + 9 * s, y - 13 * s, 2.6 * s, 3.2 * s, 0, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.arc(x - 10 * s, y - 14 * s, 1.6 * s, 0, Math.PI * 2); ctx.arc(x + 8 * s, y - 14 * s, 1.6 * s, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#1b2a45';
-  ctx.beginPath(); ctx.ellipse(x, y - 5 * s, 4.5 * s, 3 * s, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = '#1b2a45'; ctx.lineWidth = 1.8 * s;
-  ctx.beginPath(); ctx.arc(x, y - 3 * s, 7 * s, 0.3, Math.PI - 0.3); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x - 8 * s, y - 14 * s, 0.9 * s, 0, Math.PI * 2); ctx.arc(x + 10 * s, y - 14 * s, 0.9 * s, 0, Math.PI * 2); ctx.fill();
+  // big dark nose
+  ctx.fillStyle = DARK;
+  ctx.beginPath(); ctx.ellipse(x, y - 1 * s, 5.5 * s, 4 * s, 0, 0, Math.PI * 2); ctx.fill();
+  // gentle mouth
+  ctx.strokeStyle = DARK; ctx.lineWidth = 1.6 * s;
+  ctx.beginPath(); ctx.arc(x, y + 3 * s, 5 * s, 0.3, Math.PI - 0.3); ctx.stroke();
+  // tiny hibiscus flower by the ear
+  ctx.save();
+  ctx.translate(x - 20 * s, y - 22 * s);
+  ctx.fillStyle = '#e8607a';
+  for (let i = 0; i < 5; i++) {
+    const a = i / 5 * Math.PI * 2;
+    ctx.beginPath(); ctx.ellipse(Math.cos(a) * 3 * s, Math.sin(a) * 3 * s, 2.4 * s, 3.2 * s, a, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = '#ffe066';
+  ctx.beginPath(); ctx.arc(0, 0, 2 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
   // chef hat
   ctx.fillStyle = '#fff';
   ctx.beginPath(); ctx.roundRect(x - 16 * s, y - 40 * s, 32 * s, 8 * s, 3 * s); ctx.fill();
@@ -1019,7 +1039,7 @@ function drawCookScene() {
   else if (cook.bowlItems.length && cook.phase !== 'act') drawBowlSwirl(0);
 
   const armPhase = cook.phase === 'act' && cook.act && cook.act.kind === 'mix' ? cook.act.spoonRot : (Date.now() / 400);
-  drawStitchChef(W / 2, H * 0.42, Math.min(W, H) * 0.09, cook.phase === 'act' ? armPhase : Math.sin(Date.now() / 900));
+  drawCapybaraChef(W / 2, H * 0.42, Math.min(W, H) * 0.09, cook.phase === 'act' ? armPhase : Math.sin(Date.now() / 900));
 
   const custX = W * 0.15, custY = H * 0.34;
   const bounce = cook.phase === 'intro' ? Math.abs(Math.sin(Date.now() / 300)) * 6 : 0;

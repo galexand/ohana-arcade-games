@@ -15,7 +15,7 @@ drop a new `.html` file in the folder and add one entry to the `GAMES` array in 
 | **Ohana Karts** | `ohana-karts.html` | Beach kart race across five selectable tracks: play Lilo or Stitch, dodge the villains, beat your rival to the finish |
 | **Ohana Sumo** | `ohana-sumo.html` | Beach sumo duel: Stitch vs Experiment 625, push your opponent out of the shrinking ring, best of 3 rounds |
 | **SpaceShip Racers** | `spaceship-racers.html` | 5-level pseudo-3D space racer: curves, laser guns, Leroy chases you |
-| **Super Cooking** | `super-cooking.html` | Cook with Stitch: mix, boil and fry 6 recipes for the Ohana, one step at a time |
+| **Super Cooking** | `super-cooking.html` | Cook with Capy: mix, boil and fry 6 recipes for the Ohana, one step at a time |
 | **Super Jumper** | `super-jumper.html` | 12-world platform adventure with friends, experiments and a golden medal |
 | **Whack Hämsterviel** | `whack-hamsterviel.html` | Whack-a-mole: bonk Hämsterviel with your finger, spare the friends, beat the clock |
 
@@ -117,7 +117,7 @@ shortcut.
 
 # 🍳 Super Cooking
 
-**Stitch** is the chef in a sunny Hawaiian kitchen. A family member drops by with a speech-bubble
+**Capy the capybara** is the chef in a sunny Hawaiian kitchen. A family member drops by with a speech-bubble
 order — pick the recipe card and cook it, step by step. There is no shopping and no fail state:
 every ingredient you need is already waiting on the counter.
 
