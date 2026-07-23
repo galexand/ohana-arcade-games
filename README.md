@@ -15,6 +15,7 @@ drop a new `.html` file in the folder and add one entry to the `GAMES` array in 
 | **Ohana Karts** | `ohana-karts.html` | Beach kart race across five selectable tracks: play Lilo or Stitch, dodge the villains, beat your rival to the finish |
 | **Ohana Sumo** | `ohana-sumo.html` | Beach sumo duel: Stitch vs Experiment 625, push your opponent out of the shrinking ring, best of 3 rounds |
 | **SpaceShip Racers** | `spaceship-racers.html` | 5-level pseudo-3D space racer: curves, laser guns, Leroy chases you |
+| **Super Cooking** | `super-cooking.html` | Cook with Stitch: mix, boil and fry 6 recipes for the Ohana, one step at a time |
 | **Super Jumper** | `super-jumper.html` | 12-world platform adventure with friends, experiments and a golden medal |
 | **Whack Hämsterviel** | `whack-hamsterviel.html` | Whack-a-mole: bonk Hämsterviel with your finger, spare the friends, beat the clock |
 
@@ -111,6 +112,51 @@ Beat each track in **1st place** to unlock the next. Best time per level per cha
 Controls: **◀ ▶ buttons** or ← → / `A` / `D` to steer; **✦ button** or `F` / `X` to fire the
 laser (levels 3–5, after picking up the green gun). Tap left/right half of the screen as a
 shortcut.
+
+---
+
+# 🍳 Super Cooking
+
+**Stitch** is the chef in a sunny Hawaiian kitchen. A family member drops by with a speech-bubble
+order — pick the recipe card and cook it, step by step. There is no shopping and no fail state:
+every ingredient you need is already waiting on the counter.
+
+### The flow
+
+1. **Pick a recipe** from 6 cards, unlocked one at a time (finishing a recipe unlocks the next).
+   Each card shows the best star rating earned so far; locked cards show 🔒.
+2. The **customer** (rotating through **Lilo, Pleakley, Jumba and Nani**) orders the dish in a
+   speech bubble.
+3. The recipe plays as a **sequence of steps**, one at a time, shown in a big banner:
+   - **Ingredient steps** — tap the correct ingredient among several on the counter to drop it
+     into the bowl/pot/pan (or stack it on the plate for the sandwich). A wrong tap just wobbles
+     with a soft buzz — no penalty beyond a small precision dip.
+   - **Action steps** — one of three minigames:
+     - 🥣 **AMESTECI / MIX** — drag in a circle around the bowl (or hold `Space`) to fill the mix
+       meter; the spoon spins and the ingredients swirl.
+     - 🍲 **FIERBI / BOIL** — tap when the moving needle sits in the green zone on the gauge; miss
+       badly and the pot boils over (funny, not punishing) — retry once with a wider zone.
+     - 🍳 **PRĂJEȘTI / FRY** — the food browns from raw to golden to burnt over ~6 seconds; tap to
+       flip at golden, twice per step (both sides). Burn it and retry that side once, slower.
+4. Each step earns a **precision score (0-100)**; the recipe's average becomes **1-3 stars**
+   (≥85 = 3⭐, ≥60 = 2⭐, else 1⭐, always generous). The customer reacts — jumping with hearts on a
+   3⭐ result. Finishing recipe 6 shows an Ohana feast celebration, and earning 3⭐ on *all six*
+   recipes unlocks a golden **MASTER CHEF** screen.
+
+### The six recipes (progressive difficulty)
+
+1. **Suc de ananas / Pineapple Juice** — 2 ingredients + MIX
+2. **Clătite hawaiiene / Hawaiian Pancakes** — 3 ingredients + MIX + FRY
+3. **Sandvișul lui Reuben / Reuben's Sandwich** — 4 ingredients (stacked on the plate!) + FRY
+4. **Supă de legume / Veggie Soup** — 4 ingredients + MIX + BOIL
+5. **Spaghete / Spaghetti** — 4 ingredients + BOIL + MIX (sauce)
+6. **Festinul Ohana / Ohana Feast** — 5 ingredients + MIX + BOIL + FRY (all three!)
+
+Controls: tap/click everywhere (ingredients, gauge, flip); drag in a circle for MIX, or hold
+`Space` as a keyboard alternative for MIX, BOIL and FRY taps.
+
+Progress is saved in `localStorage`: `superCookingUnlocked` (how many recipes are open) and
+`superCookingStars0` through `superCookingStars5` (best stars per recipe).
 
 ---
 
@@ -268,6 +314,7 @@ any game, without having to choose again.
 | `ohana-karts.html` | The beach kart racing game (five selectable tracks). |
 | `ohana-sumo.html` | The beach sumo duel game. |
 | `spaceship-racers.html` | The pseudo-3D spaceship racing game. |
+| `super-cooking.html` | The cooking game — recipes in the `RECIPES` array, ingredients drawn in `drawIngredientIcon`. |
 | `whack-hamsterviel.html` | The whack-a-mole game. |
 | `serve.py` | Dev server with no-cache headers on port 8642. |
 | `REFERENCES.md` | Character/scene reference links and the rules for adding new content. |
