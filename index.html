@@ -16,7 +16,7 @@
     background-attachment: fixed;
   }
   .wrap {
-    max-width: 560px;
+    max-width: 940px;
     margin: 0 auto;
     padding: max(28px, env(safe-area-inset-top)) 20px 60px;
     text-align: center;
@@ -34,43 +34,33 @@
     margin-bottom: 30px;
     text-shadow: 0 1px 0 rgba(0,0,0,0.15);
   }
-  #games { display: flex; flex-direction: column; gap: 18px; }
-  .card {
+  #games { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 14px; }
+  .tile {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 16px;
-    background: rgba(255,255,255,0.93);
-    border-radius: 20px;
-    padding: 18px 20px;
+    gap: 8px;
+    background: rgba(255,255,255,0.94);
+    border-radius: 22px;
+    padding: 20px 12px 16px;
     text-decoration: none;
     color: #23364a;
     box-shadow: 0 6px 18px rgba(20,60,90,0.18);
-    transition: transform 0.12s ease;
-    text-align: left;
+    transition: transform .12s ease;
   }
-  .card:active { transform: scale(0.97); }
-  .card .icon {
-    font-size: 44px;
-    flex: 0 0 64px;
-    height: 64px;
+  .tile:active { transform: scale(0.96); }
+  .tile .icon {
+    font-size: 50px;
+    width: 90px;
+    height: 90px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: linear-gradient(180deg, #eaf6ff, #d2ecff);
-    border-radius: 16px;
+    border-radius: 24px;
   }
-  .card h2 { font-size: 21px; margin-bottom: 3px; }
-  .card p { font-size: 14px; color: #55708a; line-height: 1.35; }
-  .card .play {
-    margin-left: auto;
-    flex: 0 0 auto;
-    background: #2ecc71;
-    color: #fff;
-    font-weight: 800;
-    font-size: 15px;
-    padding: 10px 16px;
-    border-radius: 12px;
-  }
+  .tile h2 { font-size: 18px; text-wrap: balance; }
+  .tile p { font-size: 12.5px; color: #55708a; line-height: 1.3; }
   footer {
     margin-top: 44px;
     color: rgba(35,54,74,0.75);
@@ -126,6 +116,8 @@ const GAMES = [
     icon: '🌺',
     desc: '12-world platform adventure: Stitch (and Lilo!), friends with powers, experiment villains and a golden medal.',
     descRo: 'Aventură de platforme cu 12 lumi: Stitch (și Lilo!), prieteni cu puteri speciale, experimente răufăcătoare și o medalie de aur.',
+    short: '12-world platform adventure',
+    shortRo: 'Aventură de platforme, 12 lumi',
   },
   {
     title: 'Ohana Karts',
@@ -133,6 +125,8 @@ const GAMES = [
     icon: '🏎️',
     desc: 'Race Lilo or Stitch along the Hawaiian beach — dodge Gantu, Hämsterviel and Reuben to reach the finish line first!',
     descRo: 'Cursă cu Lilo sau Stitch pe plaja din Hawaii — ferește-te de Gantu, Hämsterviel și Reuben ca să ajungi primul la linia de sosire!',
+    short: 'Race on the Hawaiian beach',
+    shortRo: 'Cursă pe plaja din Hawaii',
   },
   {
     title: 'Whack Hämsterviel',
@@ -140,6 +134,8 @@ const GAMES = [
     icon: '🔨',
     desc: 'Bonk Hämsterviel on the head as he pops out of his burrows — but do not hit Stitch, Lilo or Angel! Beat the clock.',
     descRo: 'Pocnește-l pe Hämsterviel în cap când iese din vizuină — dar ai grijă să nu-i lovești pe Stitch, Lilo sau Angel! Bate ceasul.',
+    short: 'Bonk Hämsterviel',
+    shortRo: 'Pocnește-l pe Hämsterviel',
   },
   {
     title: 'SpaceShip Racers',
@@ -147,6 +143,8 @@ const GAMES = [
     icon: '🚀',
     desc: '5-level pseudo-3D space race: pilot Lilo or Stitch through curves, dodge villains, grab laser guns, and outrun Leroy!',
     descRo: 'Cursă spațială pseudo-3D cu 5 niveluri: pilotează-i pe Lilo sau Stitch prin curbe, ferește-te de răufăcători, prinde pistoale laser și fugi de Leroy!',
+    short: 'Pseudo-3D space race',
+    shortRo: 'Cursă spațială pseudo-3D',
   },
   {
     title: 'Ohana Sumo',
@@ -154,6 +152,8 @@ const GAMES = [
     icon: '🤼',
     desc: 'Stitch takes on Experiment 625 in a beach sumo ring — push each other out using all four arms. Best of 3 wins!',
     descRo: 'Stitch se luptă cu Experimentul 625 într-un ring de sumo pe plajă — împingeți-vă afară folosind toate cele patru brațe. Câștigă cine reușește primul 2 din 3!',
+    short: 'Push them out of the ring',
+    shortRo: 'Împinge-l afară din ring',
   },
   {
     title: 'Super Cooking',
@@ -161,6 +161,8 @@ const GAMES = [
     icon: '🍳',
     desc: 'Cook with Capy: mix, boil and fry real recipes — all the ingredients are ready, you do the magic!',
     descRo: 'Gătește cu Capi: amestecă, fierbe și prăjește rețete adevărate — toate ingredientele sunt pregătite, tu faci magia!',
+    short: 'Cook with Capy',
+    shortRo: 'Gătește cu Capi',
   },
   {
     title: 'Super Roll',
@@ -168,6 +170,8 @@ const GAMES = [
     icon: '🌀',
     desc: 'Stitch rolls as a ball — steer with your finger, jump through the flying rings and reach the goal across 20 levels!',
     descRo: 'Stitch se face bilă — îl miști cu degetul, sari prin cercurile din aer și ajungi la final prin 20 de nivele!',
+    short: "Stitch's ball, 20 levels",
+    shortRo: 'Bila lui Stitch, 20 de nivele',
   },
 ];
 
@@ -210,13 +214,12 @@ function render(lang) {
   box.innerHTML = '';
   sortedGames.forEach(g => {
     const a = document.createElement('a');
-    a.className = 'card';
+    a.className = 'tile';
     a.href = g.href;
-    a.innerHTML = '<div class="icon"></div><div><h2></h2><p></p></div><div class="play"></div>';
+    a.innerHTML = '<div class="icon"></div><h2></h2><p></p>';
     a.querySelector('.icon').textContent = g.icon;
     a.querySelector('h2').textContent = g.title;
-    a.querySelector('p').textContent = lang === 'ro' ? g.descRo : g.desc;
-    a.querySelector('.play').textContent = t.play;
+    a.querySelector('p').textContent = lang === 'ro' ? g.shortRo : g.short;
     box.appendChild(a);
   });
   document.querySelectorAll('#langToggle button').forEach(btn => {
