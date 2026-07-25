@@ -12,6 +12,7 @@ drop a new `.html` file in the folder and add one entry to the `GAMES` array in 
 
 | Game | File | What it is |
 |---|---|---|
+| **Jazz Jackrabbit** | `jazz-jackrabbit.html` | Fast 2-player arcade platform shooter: P1 (Arrows), P2 (WASD), dash, jump, shoot blasters, 5 themed levels, boss battle |
 | **Ohana Karts** | `ohana-karts.html` | Beach kart race across five selectable tracks: play Lilo or Stitch, dodge the villains, beat your rival to the finish |
 | **Ohana Sumo** | `ohana-sumo.html` | Beach sumo duel: Stitch vs Experiment 625, push your opponent out of the shrinking ring, best of 3 rounds |
 | **SpaceShip Racers** | `spaceship-racers.html` | 5-level pseudo-3D space racer: curves, laser guns, Leroy chases you |
@@ -361,6 +362,26 @@ and awards Lilo & Stitch a **golden medal**. (Tap to skip the ceremony.)
 
 ---
 
+# 🐰 Jazz Jackrabbit
+
+A fast 2-player arcade platform shooter inspired by the 1994 classic *Jazz Jackrabbit*. Play solo or with a friend simultaneously on the same screen!
+
+### Controls
+
+- **Player 1**: **Arrow Keys** (← → to run, ↑ to jump, ↓ to duck), **Right Command / Period (.) / Right Shift / Enter / M** to fire blaster.
+- **Player 2**: **WASD** (A/D to run, W to jump, S to duck), **Left Tab / Left Shift / Space / F** to fire blaster.
+- **Touch**: Full on-screen D-pad and Jump/Fire buttons on iPhone and iPad.
+
+### 5 Themed Levels
+
+1. **Level 1 – Carrotus**: Green hills, grassy platforms, wooden crates, turtle grunts, waterfalls.
+2. **Level 2 – Diamondus**: Glowing purple crystal caverns, gems, bouncy mushroom springs, bat-bots.
+3. **Level 3 – Tubeopolis**: High-tech neon city, metal platforms, conveyor belts, speed pads, turrets.
+4. **Level 4 – Jungleville**: Ancient stone ruins, mud hazards, toxic spikes, heavy turtles.
+5. **Level 5 – Devastator Fortress**: Volcanic castle, lava traps, climaxing in the **Devastator Boss Battle**!
+
+---
+
 ## 🌍 Language
 
 The whole arcade is **bilingual, English and Romanian**. The **EN / RO switch** on the home page
@@ -375,6 +396,7 @@ any game, without having to choose again.
 | File | Purpose |
 |---|---|
 | `index.html` | The arcade home page — lists all games alphabetically (`GAMES` array) and hosts the EN/RO language switch. |
+| `jazz-jackrabbit.html` | The 2-player platform shooter — 5 levels, P1 Arrow / P2 WASD controls, procedural canvas art, WebAudio. |
 | `super-jumper.html` | The platformer — engine, levels, art, sound, UI. Edit levels in the `LEVELS` array (legend in the comments above it). |
 | `ohana-karts.html` | The beach kart racing game (five selectable tracks). |
 | `ohana-sumo.html` | The beach sumo duel game. |
