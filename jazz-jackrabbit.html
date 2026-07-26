@@ -216,6 +216,9 @@ const TEXT = {
     playAgain: 'PLAY AGAIN',
     bossHp: 'DEVASTATOR BOSS',
     catchUp: 'CATCH UP!',
+    defeatLeroyFirst: 'DEFEAT LEROY FIRST! 🔒',
+    teamVictory: 'TEAM VICTORY! 🎉',
+    revived: 'TEAMMATE REVIVED! 💚',
   },
   ro: {
     title: 'JAZZ JACKRABBIT',
@@ -249,6 +252,9 @@ const TEXT = {
     playAgain: 'JOACĂ DIN NOU',
     bossHp: 'BOSS DEVASTATOR',
     catchUp: 'PRINDE-L!',
+    defeatLeroyFirst: 'ÎNVINGE-L PE LEROY MAI ÎNTÂI! 🔒',
+    teamVictory: 'VICTORIE ÎN ECHIPĂ! 🎉',
+    revived: 'COECHIPIER REVENIT! 💚',
   }
 };
 const t = key => (TEXT[LANG] && TEXT[LANG][key]) ? TEXT[LANG][key] : TEXT['en'][key];
@@ -384,8 +390,8 @@ window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 100));
 resize();
 
-// Detect touch device
-const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+// Detect touch device / mobile-tablet screen
+const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || window.matchMedia('(pointer: coarse)').matches || (window.innerWidth <= 1024);
 function updateTouchVisibility() {
   const p1Zone = document.getElementById('touchP1');
   const actionZone = document.getElementById('touchActionP1');
@@ -393,7 +399,7 @@ function updateTouchVisibility() {
   const actionZone2 = document.getElementById('touchActionP2');
   if (!p1Zone || !actionZone || !p2Zone || !actionZone2) return;
 
-  const showP1 = isTouchDevice && gameState === 'PLAYING';
+  const showP1 = (isTouchDevice || window.innerWidth <= 1024) && gameState === 'PLAYING';
   const showP2 = showP1 && gameMode === '2P';
 
   p1Zone.style.display = showP1 ? 'flex' : 'none';
@@ -1002,15 +1008,21 @@ class Enemy {
       // Leroy Boss Art - Stitch's cute-menacing red clone
       const cx = this.x + 36, cy = this.y + 40;
       const bob = Math.sin(this.timer * 4) * 3;
-      // HP bar above head - clear dark track + green->red fill
+      // HP bar above head - clear dark track + green->red fill + LEROY label
       const hpPct = Math.max(0, this.hp / this.maxHp);
-      ctx.fillStyle = '#333';
-      ctx.fillRect(this.x + 6, this.y - 14, 60, 8);
-      ctx.fillStyle = `hsl(${hpPct * 120}, 75%, 50%)`;
-      ctx.fillRect(this.x + 6, this.y - 14, 60 * hpPct, 8);
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(this.x + 6, this.y - 14, 60, 8);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(this.x - 8, this.y - 28, 88, 18);
+      ctx.fillStyle = `hsl(${hpPct * 120}, 85%, 50%)`;
+      ctx.fillRect(this.x - 6, this.y - 26, 84 * hpPct, 14);
+      ctx.strokeStyle = '#f1c40f';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(this.x - 8, this.y - 28, 88, 18);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 11px -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`LEROY: ${this.hp}/${this.maxHp}`, this.x + 36, this.y - 19);
 
       ctx.save();
       ctx.translate(cx, cy + bob);
@@ -1246,6 +1258,13 @@ function createParticles(x, y, color, count) {
 
 let stateCooldown = 0;
 let pendingState = null;
+let warningTimer = 0;
+let warningMsg = '';
+
+function showWarningMessage(msg) {
+  warningMsg = msg;
+  warningTimer = 2.5;
+}
 
 function setGameState(newState) {
   pendingState = newState;
@@ -1313,6 +1332,8 @@ function update(dt) {
   camera.x += (targetX - W / 2 - camera.x) * 0.1;
   camera.x = Math.max(0, Math.min(mapCols * TILE_SIZE - W, camera.x));
 
+  if (warningTimer > 0) warningTimer -= dt;
+
   // Update Projectiles
   for (let i = projectiles.length - 1; i >= 0; i--) {
     const p = projectiles[i];
@@ -1334,8 +1355,27 @@ function update(dt) {
             pl.gems++;
             playSfx('gem');
           } else if (ent.kind === 'carrot') {
-            pl.hp = Math.min(pl.maxHp, pl.hp + 1);
             playSfx('carrot');
+            if (pl.hp < pl.maxHp) {
+              pl.hp++;
+            } else if (gameMode === '2P') {
+              // Teammate health share / revive!
+              const teammate = pl.id === 1 ? player2 : player1;
+              if (teammate) {
+                if (!teammate.active) {
+                  teammate.active = true;
+                  teammate.hp = 1;
+                  teammate.x = pl.x;
+                  teammate.y = pl.y;
+                  createParticles(pl.x, pl.y, '#2ecc71', 25);
+                  playSfx('win');
+                  showWarningMessage(t('revived'));
+                } else if (teammate.hp < teammate.maxHp) {
+                  teammate.hp++;
+                  createParticles(teammate.x, teammate.y, '#e74c3c', 12);
+                }
+              }
+            }
           } else if (ent.kind === 'weapon_triple') {
             pl.weapon = 'triple';
             playSfx('gem');
@@ -1361,10 +1401,23 @@ function update(dt) {
 
           if (ent.hp <= 0) {
             playSfx('explode');
-            createParticles(ent.x + ent.w/2, ent.y + ent.h/2, '#f39c12', 16);
-            if (player1) player1.score += 300;
+            const scoreGain = ent.type === 'boss' ? 2000 : (ent.type === 'turtle' ? 300 : 150);
+            if (player1) player1.score += scoreGain;
+            if (player2) player2.score += scoreGain;
+            createParticles(ent.x + ent.w/2, ent.y + ent.h/2, ent.type === 'boss' ? '#e74c3c' : '#f39c12', ent.type === 'boss' ? 40 : 16);
+            
+            const killedType = ent.type;
             entities.splice(i, 1);
             entKilled = true;
+
+            if (killedType === 'boss' && currentLevelIdx === 4) {
+              playSfx('win');
+              if (currentLevelIdx + 1 > unlockedLevels) {
+                unlockedLevels = Math.min(5, currentLevelIdx + 2);
+                saveProgress();
+              }
+              setGameState('VICTORY');
+            }
             break;
           }
         }
@@ -1395,14 +1448,24 @@ function update(dt) {
   // Check Exit Flag Reach
   const exitCol = mapCols - 4;
   const exitX = exitCol * TILE_SIZE;
+  const isLevel5 = currentLevelIdx === 4;
+  const bossAlive = entities.some(e => e instanceof Enemy && e.type === 'boss');
+
   [player1, player2].forEach(pl => {
     if (pl && pl.active && pl.x > exitX) {
-      playSfx('win');
-      if (currentLevelIdx + 1 > unlockedLevels) {
-        unlockedLevels = Math.min(5, currentLevelIdx + 2);
-        saveProgress();
+      if (isLevel5 && bossAlive) {
+        // Mandatory Boss Defeat for Level 5!
+        pl.x = exitX - 16;
+        pl.vx = -120;
+        showWarningMessage(t('defeatLeroyFirst'));
+      } else {
+        playSfx('win');
+        if (currentLevelIdx + 1 > unlockedLevels) {
+          unlockedLevels = Math.min(5, currentLevelIdx + 2);
+          saveProgress();
+        }
+        setGameState(isLevel5 ? 'VICTORY' : 'LEVEL_CLEAR');
       }
-      setGameState(currentLevelIdx === 4 ? 'VICTORY' : 'LEVEL_CLEAR');
     }
   });
 }
@@ -1450,16 +1513,34 @@ function render() {
         } else if (tile === 4) { // Spring
           ctx.fillStyle = '#f1c40f';
           ctx.fillRect(tx + 8, ty + TILE_SIZE - 12, TILE_SIZE - 16, 12);
-        } else if (tile === 8) { // Exit Flag
-          ctx.fillStyle = '#2ecc71';
-          ctx.fillRect(tx + 18, ty, 4, TILE_SIZE);
-          ctx.fillStyle = '#e74c3c';
-          ctx.beginPath();
-          ctx.moveTo(tx + 22, ty);
-          ctx.lineTo(tx + 36, ty + 10);
-          ctx.lineTo(tx + 22, ty + 20);
-          ctx.closePath();
-          ctx.fill();
+        } else if (tile === 8) { // Exit Flag / Gate
+          const isLevel5 = currentLevelIdx === 4;
+          const bossAlive = entities.some(e => e instanceof Enemy && e.type === 'boss');
+
+          if (isLevel5 && bossAlive) {
+            // Glowing red forcefield barrier for Level 5 Leroy Boss
+            ctx.fillStyle = 'rgba(231, 76, 60, 0.4)';
+            ctx.fillRect(tx - 6, ty - 50, 20, 90);
+            ctx.strokeStyle = '#e74c3c';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(tx - 6, ty - 50, 20, 90);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('🔒 LEROY', tx + 4, ty - 25);
+          } else {
+            // Standard Green Goal Flag
+            ctx.fillStyle = '#2ecc71';
+            ctx.fillRect(tx + 18, ty, 4, TILE_SIZE);
+            ctx.fillStyle = '#e74c3c';
+            ctx.beginPath();
+            ctx.moveTo(tx + 22, ty);
+            ctx.lineTo(tx + 36, ty + 10);
+            ctx.lineTo(tx + 22, ty + 20);
+            ctx.closePath();
+            ctx.fill();
+          }
         }
       }
     }
@@ -1559,6 +1640,24 @@ function drawHUD() {
   ctx.textBaseline = 'middle';
   ctx.fillText(titleText, W / 2, 57);
 
+  // On-Screen Warning Toast / Banner
+  if (warningTimer > 0 && warningMsg) {
+    ctx.font = 'bold 15px -apple-system, sans-serif';
+    const mw = ctx.measureText(warningMsg).width;
+    ctx.fillStyle = 'rgba(192, 57, 43, 0.9)';
+    ctx.strokeStyle = '#f1c40f';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(W / 2 - mw / 2 - 16, 78, mw + 32, 32, 16);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(warningMsg, W / 2, 94);
+  }
+
   ctx.restore();
 }
 
@@ -1605,7 +1704,7 @@ function drawModalOverlays() {
       setGameState('MODE_SELECT');
     });
   } else if (gameState === 'VICTORY') {
-    title = t('victory');
+    title = gameMode === '2P' ? t('teamVictory') : t('victory');
     sub = `🏆 ${t('totalScore')}: ${totalScore}`;
     drawMenuBtn(W / 2, cardY + 160, 240, 48, t('playAgain'), () => {
       setGameState('LEVEL_SELECT');
