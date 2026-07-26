@@ -79,6 +79,19 @@
   }
   #touchP1 { left: max(16px, env(safe-area-inset-left)); }
   #touchActionP1 { right: max(16px, env(safe-area-inset-right)); }
+  #touchP2 { right: max(16px, env(safe-area-inset-right)); }
+  #touchActionP2 { right: max(16px, env(safe-area-inset-right)); }
+
+  /* 2-Player layout: P1 clusters pinned to left half, P2 clusters to right half */
+  body.mode-2p #touchP1 { left: max(10px, env(safe-area-inset-left)); }
+  body.mode-2p #touchActionP1 { left: 190px; right: auto; }
+  body.mode-2p #touchP2 { right: 190px; left: auto; }
+  body.mode-2p #touchActionP2 { right: max(10px, env(safe-area-inset-right)); }
+  body.mode-2p .tbtn { width: 56px; height: 56px; font-size: 22px; }
+  body.mode-2p .tbtn.jump { width: 66px; height: 66px; }
+  body.mode-2p .tbtn.fire { width: 60px; height: 60px; }
+  body.mode-2p #touchP1 .tbtn, body.mode-2p #touchActionP1 .tbtn { border-color: rgba(46, 204, 113, 0.85); }
+  body.mode-2p #touchP2 .tbtn, body.mode-2p #touchActionP2 .tbtn { border-color: rgba(231, 76, 60, 0.85); }
 
   .tbtn {
     width: 64px; height: 64px;
@@ -149,11 +162,18 @@
 <div class="touch-zone" id="touchP1" style="display:none;">
   <div class="tbtn" id="btnLeft">◀</div>
   <div class="tbtn" id="btnRight">▶</div>
-  <div class="tbtn" id="btnDown">⬇</div>
 </div>
 <div class="touch-zone" id="touchActionP1" style="display:none;">
   <div class="tbtn fire" id="btnFire">🔥</div>
   <div class="tbtn jump" id="btnJump">⬆</div>
+</div>
+<div class="touch-zone" id="touchP2" style="display:none;">
+  <div class="tbtn" id="btnLeft2">◀</div>
+  <div class="tbtn" id="btnRight2">▶</div>
+</div>
+<div class="touch-zone" id="touchActionP2" style="display:none;">
+  <div class="tbtn fire" id="btnFire2">🔥</div>
+  <div class="tbtn jump" id="btnJump2">⬆</div>
 </div>
 
 <script>
@@ -369,15 +389,19 @@ const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 
 function updateTouchVisibility() {
   const p1Zone = document.getElementById('touchP1');
   const actionZone = document.getElementById('touchActionP1');
-  if (!p1Zone || !actionZone) return;
+  const p2Zone = document.getElementById('touchP2');
+  const actionZone2 = document.getElementById('touchActionP2');
+  if (!p1Zone || !actionZone || !p2Zone || !actionZone2) return;
 
-  if (isTouchDevice && gameState === 'PLAYING') {
-    p1Zone.style.display = 'flex';
-    actionZone.style.display = 'flex';
-  } else {
-    p1Zone.style.display = 'none';
-    actionZone.style.display = 'none';
-  }
+  const showP1 = isTouchDevice && gameState === 'PLAYING';
+  const showP2 = showP1 && gameMode === '2P';
+
+  p1Zone.style.display = showP1 ? 'flex' : 'none';
+  actionZone.style.display = showP1 ? 'flex' : 'none';
+  p2Zone.style.display = showP2 ? 'flex' : 'none';
+  actionZone2.style.display = showP2 ? 'flex' : 'none';
+
+  document.body.classList.toggle('mode-2p', showP2);
 }
 
 // ============ INPUT SYSTEM ============
@@ -394,7 +418,7 @@ window.addEventListener('keyup', e => {
 });
 
 // Touch buttons binding
-const touchState = { p1Left: false, p1Right: false, p1Down: false, p1Jump: false, p1Fire: false };
+const touchState = { p1Left: false, p1Right: false, p1Down: false, p1Jump: false, p1Fire: false, p2Left: false, p2Right: false, p2Down: false, p2Jump: false, p2Fire: false };
 function bindTouch(id, prop) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -407,9 +431,12 @@ function bindTouch(id, prop) {
 }
 bindTouch('btnLeft', 'p1Left');
 bindTouch('btnRight', 'p1Right');
-bindTouch('btnDown', 'p1Down');
 bindTouch('btnJump', 'p1Jump');
 bindTouch('btnFire', 'p1Fire');
+bindTouch('btnLeft2', 'p2Left');
+bindTouch('btnRight2', 'p2Right');
+bindTouch('btnJump2', 'p2Jump');
+bindTouch('btnFire2', 'p2Fire');
 
 // ============ GAME STATE & GLOBALS ============
 const TILE_SIZE = 40;
@@ -492,15 +519,15 @@ class Player {
       moveLeft = keys['ArrowLeft'] || touchState.p1Left;
       moveRight = keys['ArrowRight'] || touchState.p1Right;
       jump = keys['ArrowUp'] || touchState.p1Jump;
-      duck = keys['ArrowDown'] || touchState.p1Down;
+      duck = keys['ArrowDown'];
       fire = keys['MetaRight'] || keys['MetaLeft'] || keys['Period'] || keys['NumpadDecimal'] || keys['ShiftRight'] || keys['Enter'] || keys['KeyM'] || keys['KeyL'] || touchState.p1Fire;
     } else {
       // P2 Controls: WASD + Tab / ShiftLeft / Space / F / E
-      moveLeft = keys['KeyA'];
-      moveRight = keys['KeyD'];
-      jump = keys['KeyW'];
+      moveLeft = keys['KeyA'] || touchState.p2Left;
+      moveRight = keys['KeyD'] || touchState.p2Right;
+      jump = keys['KeyW'] || touchState.p2Jump;
       duck = keys['KeyS'];
-      fire = keys['Tab'] || keys['ShiftLeft'] || keys['Space'] || keys['KeyF'] || keys['KeyE'] || keys['KeyQ'];
+      fire = keys['Tab'] || keys['ShiftLeft'] || keys['Space'] || keys['KeyF'] || keys['KeyE'] || keys['KeyQ'] || touchState.p2Fire;
     }
 
     // Horizontal Movement
