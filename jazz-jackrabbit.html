@@ -268,7 +268,8 @@ const TEXT = {
     p1Controls: 'P1 (ARROWS): FIRE WITH CMD, PERIOD (.), SHIFT, ENTER, M',
     p2Controls: 'P2 (WASD): FIRE WITH TAB, SHIFT, SPACE, F',
     touchHint: 'TOUCH SCREEN BUTTONS ENABLED',
-    paused: 'GAME PAUSED',
+    paused: 'GAME PAUSED ⏸',
+    pausedHint: 'Press P, ESC, tap ⏸ or click Resume to continue',
     resume: 'RESUME',
     restart: 'RESTART',
     menu: 'MAIN MENU',
@@ -313,7 +314,8 @@ const TEXT = {
     p1Controls: 'J1 (SĂGEȚI): TRAGE CU CMD, PUNCT (.), SHIFT, ENTER, M',
     p2Controls: 'J2 (WASD): TRAGE CU TAB, SHIFT, SPACE, F',
     touchHint: 'BUTOANE TACTILE ACTIVATE',
-    paused: 'JOC PAUZAT',
+    paused: 'JOC PAUZAT ⏸',
+    pausedHint: 'Apasă P, Esc, atinge ⏸ sau apăsă Continuă',
     resume: 'CONTINUĂ',
     restart: 'RESTART',
     menu: 'MENIU PRINCIPAL',
@@ -1639,7 +1641,7 @@ function render() {
   ctx.clearRect(0, 0, W, H);
   updateTouchVisibility();
 
-  if (gameState === 'PLAYING' || gameState === 'LEVEL_CLEAR' || gameState === 'VICTORY' || gameState === 'GAME_OVER') {
+  if (gameState === 'PLAYING' || gameState === 'PAUSED' || gameState === 'LEVEL_CLEAR' || gameState === 'VICTORY' || gameState === 'GAME_OVER') {
     const theme = MAP_THEMES[currentLevelIdx];
 
     // Background Gradient & Parallax
@@ -1886,14 +1888,19 @@ function drawModalOverlays() {
   if (gameState === 'PAUSED') {
     title = t('paused');
     sub = `${t('level')} ${currentLevelIdx + 1}: ${MAP_THEMES[currentLevelIdx].name}`;
-    drawMenuBtn(W / 2, cardY + 140, 240, 44, t('resume'), () => {
+    
+    ctx.fillStyle = '#a9c7eb';
+    ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillText(t('pausedHint'), W / 2, cardY + 105);
+
+    drawMenuBtn(W / 2, cardY + 148, 240, 44, t('resume'), () => {
       setGameState('PLAYING');
     });
-    drawMenuBtn(W / 2, cardY + 194, 240, 42, t('restart'), () => {
+    drawMenuBtn(W / 2, cardY + 200, 240, 42, t('restart'), () => {
       buildLevel(currentLevelIdx);
       setGameState('PLAYING');
     });
-    drawMenuBtn(W / 2, cardY + 244, 240, 42, t('menu'), () => {
+    drawMenuBtn(W / 2, cardY + 250, 240, 42, t('menu'), () => {
       setGameState('MODE_SELECT');
     });
   } else if (gameState === 'LEVEL_CLEAR') {
