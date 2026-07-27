@@ -148,6 +148,45 @@
   .panel-btn:active { transform: scale(0.96); }
   .btn-green { background: linear-gradient(180deg, #2ecc71, #27ae60); color: #fff; }
   .btn-blue { background: linear-gradient(180deg, #3498db, #2980b9); color: #fff; }
+
+  /* Leaderboard & Input Styles */
+  .leaderboard-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 240px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .lb-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .lb-rank { width: 28px; font-size: 15px; color: #f1c40f; text-align: left; }
+  .lb-name { flex: 1; text-align: left; margin: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
+  .lb-mode { font-size: 11px; background: rgba(52, 152, 219, 0.3); padding: 2px 6px; border-radius: 6px; margin-right: 8px; color: #a9c7eb; }
+  .lb-score { color: #2ecc71; font-weight: 900; font-size: 15px; }
+
+  .name-inputs { display: flex; flex-direction: column; gap: 12px; }
+  .input-group { display: flex; flex-direction: column; gap: 4px; text-align: left; }
+  .input-group label { font-size: 13px; font-weight: 800; color: #a9c7eb; }
+  .input-group input {
+    background: #091222;
+    border: 2px solid #3498db;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 17px;
+    font-weight: 700;
+    padding: 10px 14px;
+    outline: none;
+  }
+  .input-group input:focus { border-color: #2ecc71; box-shadow: 0 0 10px rgba(46, 204, 113, 0.5); }
 </style>
 </head>
 <body>
@@ -174,6 +213,34 @@
 <div class="touch-zone" id="touchActionP2" style="display:none;">
   <div class="tbtn fire" id="btnFire2">🔥</div>
   <div class="tbtn jump" id="btnJump2">⬆</div>
+</div>
+
+<!-- Leaderboard Modal Overlay -->
+<div class="overlay-panel" id="leaderboardModal">
+  <div class="panel-card">
+    <div class="panel-title" id="lbTitle">🏆 TOP SCORES</div>
+    <div class="leaderboard-list" id="lbList"></div>
+    <button type="button" class="panel-btn btn-green" id="lbCloseBtn">CLOSE</button>
+  </div>
+</div>
+
+<!-- Name Prompt Modal Overlay -->
+<div class="overlay-panel" id="namePromptModal">
+  <div class="panel-card">
+    <div class="panel-title" id="nameTitle">🎉 NEW HIGH SCORE!</div>
+    <div class="panel-sub" id="nameSub">ENTER YOUR NAME(S) FOR THE LEADERBOARD:</div>
+    <div class="name-inputs">
+      <div class="input-group" id="p1NameGroup">
+        <label for="p1NameInput" id="p1NameLabel">PLAYER 1 NAME:</label>
+        <input type="text" id="p1NameInput" maxlength="12" placeholder="Jazz" autocomplete="off">
+      </div>
+      <div class="input-group" id="p2NameGroup" style="display:none;">
+        <label for="p2NameInput" id="p2NameLabel">PLAYER 2 NAME:</label>
+        <input type="text" id="p2NameInput" maxlength="12" placeholder="Spaz" autocomplete="off">
+      </div>
+    </div>
+    <button type="button" class="panel-btn btn-green" id="saveScoreBtn">SAVE SCORE 🏆</button>
+  </div>
 </div>
 
 <script>
@@ -220,6 +287,14 @@ const TEXT = {
     teamVictory: 'TEAM VICTORY! 🎉',
     revived: 'TEAMMATE REVIVED! 💚',
     back: '← BACK',
+    topScores: '🏆 TOP SCORES',
+    newHighScore: '🎉 NEW HIGH SCORE!',
+    enterNames: 'ENTER YOUR NAME(S) FOR LEADERBOARD:',
+    p1NameLabel: 'PLAYER 1 NAME:',
+    p2NameLabel: 'PLAYER 2 NAME:',
+    saveScore: 'SAVE SCORE 🏆',
+    close: 'CLOSE',
+    noScoresYet: 'No high scores yet — be the first!',
   },
   ro: {
     title: 'JAZZ JACKRABBIT',
@@ -257,6 +332,14 @@ const TEXT = {
     teamVictory: 'VICTORIE ÎN ECHIPĂ! 🎉',
     revived: 'COECHIPIER REVENIT! 💚',
     back: '← ÎNAPOI',
+    topScores: '🏆 CELE MAI BUNE SCORURI',
+    newHighScore: '🎉 NOU RECORD DE SCOR!',
+    enterNames: 'INTRODUCEȚI NUMELE JUCĂTORILOR:',
+    p1NameLabel: 'NUME JUCĂTOR 1:',
+    p2NameLabel: 'NUME JUCĂTOR 2:',
+    saveScore: 'SALVEAZĂ SCORUL 🏆',
+    close: 'ÎNCHIDE',
+    noScoresYet: 'Niciun scor încă — fii primul!',
   }
 };
 const t = key => (TEXT[LANG] && TEXT[LANG][key]) ? TEXT[LANG][key] : TEXT['en'][key];
@@ -1327,10 +1410,22 @@ function showWarningMessage(msg) {
   warningTimer = 2.5;
 }
 
+let hasPromptedScoreForGame = false;
+
 function setGameState(newState) {
   pendingState = newState;
   stateCooldown = 0.35; // 350ms guard against cascading taps
   menuClick = null;
+
+  if (newState === 'PLAYING') {
+    hasPromptedScoreForGame = false;
+  } else if ((newState === 'GAME_OVER' || newState === 'VICTORY') && !hasPromptedScoreForGame) {
+    hasPromptedScoreForGame = true;
+    const totalScore = (player1 ? player1.score : 0) + (player2 ? player2.score : 0);
+    setTimeout(() => {
+      checkAndPromptHighScore(totalScore);
+    }, 600);
+  }
 }
 
 function checkGameOver() {
@@ -1841,10 +1936,15 @@ function drawMenus() {
       setGameState('LEVEL_SELECT');
     });
 
+    // Leaderboard Button
+    drawMenuBtn(W / 2, 345, Math.min(W * 0.85, 290), 44, t('topScores'), () => {
+      openLeaderboardModal();
+    });
+
     ctx.fillStyle = '#7f8c8d';
     ctx.font = '14px sans-serif';
-    ctx.fillText(t('p1Controls'), W / 2, Math.max(345, H - 75));
-    ctx.fillText(t('p2Controls'), W / 2, Math.max(375, H - 45));
+    ctx.fillText(t('p1Controls'), W / 2, Math.max(410, H - 55));
+    ctx.fillText(t('p2Controls'), W / 2, Math.max(435, H - 30));
   } else if (gameState === 'CHAR_SELECT') {
     ctx.fillStyle = '#2ecc71';
     ctx.font = 'bold 34px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
@@ -1979,6 +2079,137 @@ canvas.addEventListener('touchend', e => {
     handleCanvasPointer(e);
   }
 });
+
+// ============ LEADERBOARD & PLAYER NAME SYSTEM ============
+function loadLeaderboard() {
+  try {
+    const saved = localStorage.getItem('jazzLeaderboard');
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return [];
+}
+
+function saveLeaderboard(board) {
+  try {
+    localStorage.setItem('jazzLeaderboard', JSON.stringify(board));
+  } catch (e) {}
+}
+
+function isHighScore(score) {
+  if (score <= 0) return false;
+  const board = loadLeaderboard();
+  if (board.length < 10) return true;
+  return score > board[board.length - 1].score;
+}
+
+let pendingScoreData = null;
+
+function checkAndPromptHighScore(score) {
+  if (!isHighScore(score)) return false;
+  
+  pendingScoreData = {
+    score,
+    mode: gameMode,
+    level: currentLevelIdx + 1,
+    date: new Date().toLocaleDateString()
+  };
+
+  let lastP1 = 'Jazz';
+  let lastP2 = 'Spaz';
+  try {
+    lastP1 = localStorage.getItem('jazzP1Name') || 'Jazz';
+    lastP2 = localStorage.getItem('jazzP2Name') || 'Spaz';
+  } catch (e) {}
+
+  document.getElementById('p1NameInput').value = lastP1;
+  document.getElementById('p2NameInput').value = lastP2;
+  document.getElementById('p2NameGroup').style.display = gameMode === '2P' ? 'flex' : 'none';
+
+  document.getElementById('nameTitle').innerText = t('newHighScore');
+  document.getElementById('nameSub').innerText = t('enterNames');
+  document.getElementById('p1NameLabel').innerText = t('p1NameLabel');
+  document.getElementById('p2NameLabel').innerText = t('p2NameLabel');
+  document.getElementById('saveScoreBtn').innerText = t('saveScore');
+
+  document.getElementById('namePromptModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('p1NameInput').focus(), 100);
+  return true;
+}
+
+function renderLeaderboardUI() {
+  const board = loadLeaderboard();
+  const listEl = document.getElementById('lbList');
+  document.getElementById('lbTitle').innerText = t('topScores');
+  document.getElementById('lbCloseBtn').innerText = t('close');
+
+  if (!board.length) {
+    listEl.innerHTML = `<div style="text-align:center; padding:20px; color:#a9c7eb;">${t('noScoresYet')}</div>`;
+    return;
+  }
+
+  let html = '';
+  board.slice(0, 10).forEach((entry, idx) => {
+    const rankBadge = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : `#${idx + 1}`));
+    html += `
+      <div class="lb-row">
+        <span class="lb-rank">${rankBadge}</span>
+        <span class="lb-name">${escapeHtml(entry.name)}</span>
+        <span class="lb-mode">${entry.mode || '1P'} · L${entry.level || 1}</span>
+        <span class="lb-score">${entry.score}</span>
+      </div>
+    `;
+  });
+  listEl.innerHTML = html;
+}
+
+function openLeaderboardModal() {
+  renderLeaderboardUI();
+  document.getElementById('leaderboardModal').style.display = 'flex';
+}
+
+function closeLeaderboardModal() {
+  document.getElementById('leaderboardModal').style.display = 'none';
+}
+
+function submitHighScore() {
+  if (!pendingScoreData) return;
+  const p1Name = document.getElementById('p1NameInput').value.trim() || 'Jazz';
+  const p2Name = document.getElementById('p2NameInput').value.trim() || 'Spaz';
+
+  try {
+    localStorage.setItem('jazzP1Name', p1Name);
+    localStorage.setItem('jazzP2Name', p2Name);
+  } catch (e) {}
+
+  const finalName = pendingScoreData.mode === '2P' ? `${p1Name} & ${p2Name}` : p1Name;
+
+  const board = loadLeaderboard();
+  board.push({
+    name: finalName,
+    score: pendingScoreData.score,
+    mode: pendingScoreData.mode,
+    level: pendingScoreData.level,
+    date: pendingScoreData.date
+  });
+
+  board.sort((a, b) => b.score - a.score);
+  saveLeaderboard(board.slice(0, 10));
+
+  pendingScoreData = null;
+  document.getElementById('namePromptModal').style.display = 'none';
+  openLeaderboardModal();
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, m => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[m]);
+}
+
+document.getElementById('lbCloseBtn').addEventListener('click', closeLeaderboardModal);
+document.getElementById('saveScoreBtn').addEventListener('click', submitHighScore);
+document.getElementById('p1NameInput').addEventListener('keydown', e => { if (e.key === 'Enter') submitHighScore(); });
+document.getElementById('p2NameInput').addEventListener('keydown', e => { if (e.key === 'Enter') submitHighScore(); });
 
 // Kickstart loop
 requestAnimationFrame(gameLoop);
