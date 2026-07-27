@@ -219,6 +219,7 @@ const TEXT = {
     defeatLeroyFirst: 'DEFEAT LEROY FIRST! 🔒',
     teamVictory: 'TEAM VICTORY! 🎉',
     revived: 'TEAMMATE REVIVED! 💚',
+    back: '← BACK',
   },
   ro: {
     title: 'JAZZ JACKRABBIT',
@@ -255,6 +256,7 @@ const TEXT = {
     defeatLeroyFirst: 'ÎNVINGE-L PE LEROY MAI ÎNTÂI! 🔒',
     teamVictory: 'VICTORIE ÎN ECHIPĂ! 🎉',
     revived: 'COECHIPIER REVENIT! 💚',
+    back: '← ÎNAPOI',
   }
 };
 const t = key => (TEXT[LANG] && TEXT[LANG][key]) ? TEXT[LANG][key] : TEXT['en'][key];
@@ -1150,7 +1152,7 @@ const MAP_THEMES = [
 ];
 
 function buildLevel(levelIdx) {
-  mapCols = 85 + levelIdx * 10;
+  mapCols = 95 + levelIdx * 12;
   mapRows = 18;
   levelMap = [];
   entities = [];
@@ -1158,61 +1160,115 @@ function buildLevel(levelIdx) {
   particles = [];
   levelTime = 0;
 
-  // Generate tile grid
+  // 1. Initialize Base Grid (Bottom Ground & Walls)
   for (let r = 0; r < mapRows; r++) {
     const row = [];
     for (let c = 0; c < mapCols; c++) {
-      if (r === mapRows - 1) {
-        row.push(1); // Bottom ground
-      } else if (c === 0 || c === mapCols - 1) {
-        row.push(1); // Side walls
-      } else {
-        row.push(0);
-      }
+      if (r === mapRows - 1) row.push(1); // Bottom ground
+      else if (c === 0 || c === mapCols - 1) row.push(1); // Boundary walls
+      else row.push(0);
     }
     levelMap.push(row);
   }
 
-  // Add terrain platforms, crates, springs, and collectibles
-  for (let c = 6; c < mapCols - 8; c += 5) {
-    const platHeight = 4 + Math.floor(Math.sin(c * 0.4) * 3) + (c % 3);
-    const r = mapRows - 1 - platHeight;
-    const len = 3 + Math.floor(Math.random() * 3);
+  // 2. Structured Section-Based Level Layout
+  let c = 6;
+  let sectionIndex = 0;
+  while (c < mapCols - 14) {
+    const sectionType = (sectionIndex + levelIdx) % 4;
 
-    for (let i = 0; i < len; i++) {
-      if (c + i < mapCols - 6) {
-        levelMap[r][c + i] = (i === 0 || i === len - 1) ? 2 : 1;
+    if (sectionType === 0) { // Staircase Ascent & Collectibles
+      for (let s = 0; s < 3; s++) {
+        const r = mapRows - 2 - (s + 1) * 2;
+        for (let w = 0; w < 3; w++) {
+          if (c + s * 3 + w < mapCols - 10) {
+            levelMap[r][c + s * 3 + w] = (w === 0 || w === 2) ? 2 : 1;
+          }
+        }
+        entities.push(new Collectible((c + s * 3 + 1) * TILE_SIZE, (r - 1) * TILE_SIZE, Math.random() < 0.4 ? 'carrot' : 'gem'));
       }
+      if (Math.random() < 0.5) {
+        entities.push(new Enemy((c + 4) * TILE_SIZE, (mapRows - 2) * TILE_SIZE, 'turtle'));
+      }
+      c += 10;
+    } 
+    else if (sectionType === 1) { // High Spring Launcher & Elevated Rewards Vault
+      const springCol = c + 2;
+      const springRow = mapRows - 2;
+      levelMap[springRow][springCol] = 4; // Bouncy Spring Pad
+
+      // GUARANTEE: Clear all tiles above spring to top of screen so rabbits never bump heads!
+      for (let yr = 1; yr < springRow; yr++) {
+        levelMap[yr][springCol] = 0;
+        levelMap[yr][springCol - 1] = 0;
+        levelMap[yr][springCol + 1] = 0;
+      }
+
+      // Elevated Vault Platform above and to the right
+      const vaultRow = mapRows - 8;
+      for (let w = 0; w < 5; w++) {
+        if (springCol + 2 + w < mapCols - 8) {
+          levelMap[vaultRow][springCol + 2 + w] = 1;
+        }
+      }
+      // Wooden crate & triple weapon pickup on elevated vault
+      levelMap[vaultRow - 1][springCol + 3] = 3;
+      entities.push(new Collectible((springCol + 4) * TILE_SIZE, (vaultRow - 1) * TILE_SIZE, 'carrot'));
+      entities.push(new Collectible((springCol + 5) * TILE_SIZE, (vaultRow - 1) * TILE_SIZE, 'weapon_triple'));
+      c += 9;
+    }
+    else if (sectionType === 2) { // Double Bridge & Flying Enemies
+      const bRow1 = mapRows - 5;
+      const bRow2 = mapRows - 9;
+      for (let w = 0; w < 6; w++) {
+        if (c + w < mapCols - 10) {
+          levelMap[bRow1][c + w] = 2;
+          levelMap[bRow2][c + w] = 1;
+        }
+      }
+      entities.push(new Enemy((c + 2) * TILE_SIZE, (bRow1 - 1) * TILE_SIZE, 'turtle'));
+      entities.push(new Enemy((c + 3) * TILE_SIZE, (bRow2 - 2) * TILE_SIZE, 'bat'));
+      c += 8;
+    }
+    else { // Crate Barrier & Super Spring Launcher
+      const wallRow = mapRows - 2;
+      levelMap[wallRow][c + 1] = 3;
+      levelMap[wallRow - 1][c + 1] = 3;
+      
+      const spCol = c + 3;
+      levelMap[mapRows - 2][spCol] = 4;
+      for (let yr = 1; yr < mapRows - 2; yr++) {
+        levelMap[yr][spCol] = 0;
+        levelMap[yr][spCol + 1] = 0;
+      }
+
+      entities.push(new Collectible((c + 4) * TILE_SIZE, (mapRows - 6) * TILE_SIZE, 'gem'));
+      c += 7;
     }
 
-    // Place Crates & Collectibles
-    if (Math.random() < 0.6) {
-      levelMap[r - 1][c + 1] = 3; // Wooden Crate
-    } else {
-      entities.push(new Collectible((c + 1) * TILE_SIZE + 8, (r - 1) * TILE_SIZE + 8, Math.random() < 0.3 ? 'carrot' : 'gem'));
-    }
-
-    // Place Springs
-    if (Math.random() < 0.25) {
-      levelMap[mapRows - 2][c + 2] = 4;
-    }
-
-    // Place Enemies
-    if (c > 12 && Math.random() < 0.4) {
-      entities.push(new Enemy(c * TILE_SIZE, (r - 1) * TILE_SIZE, Math.random() < 0.5 ? 'turtle' : 'bat'));
-    }
+    sectionIndex++;
   }
 
-  // Level 5 Boss
+  // 3. Level 5 Boss Arena
   if (levelIdx === 4) {
-    const bossCol = mapCols - 10;
+    const bossCol = mapCols - 12;
+    // Clear arena sky
+    for (let r = 1; r < mapRows - 1; r++) {
+      for (let col = bossCol - 6; col < mapCols - 1; col++) {
+        levelMap[r][col] = 0;
+      }
+    }
+    // Solid arena ground
+    for (let col = bossCol - 6; col < mapCols - 1; col++) {
+      levelMap[mapRows - 1][col] = 1;
+    }
     entities.push(new Enemy(bossCol * TILE_SIZE, (mapRows - 4) * TILE_SIZE, 'boss'));
   }
 
-  // Exit Flag
+  // 4. Exit Flag
   levelMap[mapRows - 2][mapCols - 4] = 8;
 
-  // Spawn Players
+  // 5. Spawn Players
   player1 = new Player(1, p1Char, 100, (mapRows - 3) * TILE_SIZE);
   if (gameMode === '2P') {
     player2 = new Player(2, p2Char, 140, (mapRows - 3) * TILE_SIZE);
@@ -1510,9 +1566,38 @@ function render() {
           ctx.fillRect(tx + 2, ty + 2, TILE_SIZE - 4, TILE_SIZE - 4);
           ctx.strokeStyle = '#f39c12';
           ctx.strokeRect(tx + 4, ty + 4, TILE_SIZE - 8, TILE_SIZE - 8);
-        } else if (tile === 4) { // Spring
+        } else if (tile === 4) { // Redesigned Spring Launch Pad
+          // Steel base plate
+          ctx.fillStyle = '#34495e';
+          ctx.fillRect(tx + 4, ty + TILE_SIZE - 8, TILE_SIZE - 8, 8);
+          ctx.strokeStyle = '#7f8c8d';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(tx + 4, ty + TILE_SIZE - 8, TILE_SIZE - 8, 8);
+
+          // Coiled metallic spring
+          ctx.strokeStyle = '#bdc3c7';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(tx + 12, ty + TILE_SIZE - 8);
+          ctx.lineTo(tx + 28, ty + TILE_SIZE - 14);
+          ctx.lineTo(tx + 12, ty + TILE_SIZE - 20);
+          ctx.lineTo(tx + 28, ty + TILE_SIZE - 24);
+          ctx.stroke();
+
+          // Red & Yellow Bouncy Launch Cushion
+          ctx.fillStyle = '#e74c3c';
+          ctx.beginPath();
+          ctx.roundRect(tx + 2, ty + TILE_SIZE - 32, TILE_SIZE - 4, 10, 5);
+          ctx.fill();
           ctx.fillStyle = '#f1c40f';
-          ctx.fillRect(tx + 8, ty + TILE_SIZE - 12, TILE_SIZE - 16, 12);
+          ctx.fillRect(tx + 6, ty + TILE_SIZE - 30, TILE_SIZE - 12, 6);
+
+          // Glowing Launch Arrow Icon
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 11px -apple-system, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('▲', tx + TILE_SIZE / 2, ty + TILE_SIZE - 26);
         } else if (tile === 8) { // Exit Flag / Gate
           const isLevel5 = currentLevelIdx === 4;
           const bossAlive = entities.some(e => e instanceof Enemy && e.type === 'boss');
@@ -1731,20 +1816,20 @@ function drawMenus() {
 
   if (gameState === 'MODE_SELECT') {
     ctx.fillStyle = '#2ecc71';
-    ctx.font = 'bold 42px sans-serif';
-    ctx.fillText(t('title'), W / 2, Math.max(80, H * 0.22));
+    ctx.font = 'bold 40px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillText(t('title'), W / 2, 85);
 
     ctx.fillStyle = '#a9c7eb';
-    ctx.font = 'bold 16px sans-serif';
-    ctx.fillText(t('sub'), W / 2, Math.max(120, H * 0.30));
+    ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillText(t('sub'), W / 2, 125);
 
-    // Mode Buttons
-    drawMenuBtn(W / 2, Math.max(190, H * 0.44), Math.min(W * 0.85, 280), 52, t('p1Solo'), () => {
+    // Mode Buttons (Y = 195 & Y = 270)
+    drawMenuBtn(W / 2, 195, Math.min(W * 0.85, 290), 50, t('p1Solo'), () => {
       gameMode = '1P';
       setGameState('CHAR_SELECT');
     });
 
-    drawMenuBtn(W / 2, Math.max(260, H * 0.58), Math.min(W * 0.85, 280), 52, t('p2Coop'), () => {
+    drawMenuBtn(W / 2, 270, Math.min(W * 0.85, 290), 50, t('p2Coop'), () => {
       gameMode = '2P';
       p1Char = 'jazz';
       p2Char = 'spaz';
@@ -1753,47 +1838,52 @@ function drawMenus() {
 
     ctx.fillStyle = '#7f8c8d';
     ctx.font = '14px sans-serif';
-    ctx.fillText(t('p1Controls'), W / 2, Math.max(340, H * 0.78));
-    ctx.fillText(t('p2Controls'), W / 2, Math.max(370, H * 0.84));
+    ctx.fillText(t('p1Controls'), W / 2, Math.max(345, H - 75));
+    ctx.fillText(t('p2Controls'), W / 2, Math.max(375, H - 45));
   } else if (gameState === 'CHAR_SELECT') {
     ctx.fillStyle = '#2ecc71';
-    ctx.font = 'bold 32px sans-serif';
-    ctx.fillText(t('chooseChar'), W / 2, Math.max(90, H * 0.22));
+    ctx.font = 'bold 34px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillText(t('chooseChar'), W / 2, 85);
 
-    if (W < 460) {
-      drawMenuBtn(W / 2, 190, 260, 52, t('jazz'), () => {
+    if (W < 520) {
+      drawMenuBtn(W / 2, 155, 260, 48, t('jazz'), () => {
         p1Char = 'jazz';
         setGameState('LEVEL_SELECT');
       });
 
-      drawMenuBtn(W / 2, 260, 260, 52, t('spaz'), () => {
+      drawMenuBtn(W / 2, 225, 260, 48, t('spaz'), () => {
         p1Char = 'spaz';
         setGameState('LEVEL_SELECT');
       });
     } else {
-      drawMenuBtn(W / 2 - 120, 230, 210, 60, t('jazz'), () => {
+      drawMenuBtn(W / 2 - 125, 175, 210, 56, t('jazz'), () => {
         p1Char = 'jazz';
         setGameState('LEVEL_SELECT');
       });
 
-      drawMenuBtn(W / 2 + 120, 230, 210, 60, t('spaz'), () => {
+      drawMenuBtn(W / 2 + 125, 175, 210, 56, t('spaz'), () => {
         p1Char = 'spaz';
         setGameState('LEVEL_SELECT');
       });
     }
+
+    // Back Button to Return to Mode Select
+    drawMenuBtn(W / 2, 320, 180, 44, t('back'), () => {
+      setGameState('MODE_SELECT');
+    });
   } else if (gameState === 'LEVEL_SELECT') {
     ctx.fillStyle = '#2ecc71';
-    ctx.font = 'bold 36px sans-serif';
-    ctx.fillText(t('selectLevel'), W / 2, Math.max(80, H * 0.18));
+    ctx.font = 'bold 34px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillText(t('selectLevel'), W / 2, 65);
 
-    const startY = 150;
-    const spacing = 54;
+    const startY = 115;
+    const spacing = 48;
     for (let i = 0; i < 5; i++) {
       const isUnlocked = i < unlockedLevels;
       const btnY = startY + i * spacing;
       const label = `${t('level')} ${i + 1}: ${MAP_THEMES[i].name} ${isUnlocked ? '' : '🔒'}`;
 
-      drawMenuBtn(W / 2, btnY, Math.min(W * 0.85, 340), 46, label, () => {
+      drawMenuBtn(W / 2, btnY, Math.min(W * 0.85, 340), 42, label, () => {
         if (isUnlocked) {
           currentLevelIdx = i;
           buildLevel(currentLevelIdx);
@@ -1801,6 +1891,11 @@ function drawMenus() {
         }
       }, !isUnlocked);
     }
+
+    // Back Button
+    drawMenuBtn(W / 2, startY + 5 * spacing + 10, 180, 42, t('back'), () => {
+      setGameState(gameMode === '1P' ? 'CHAR_SELECT' : 'MODE_SELECT');
+    });
   }
 
   ctx.restore();
@@ -1841,16 +1936,26 @@ function drawMenuBtn(x, y, w, h, text, onClick, disabled = false) {
     if (menuClick.x >= x - w/2 && menuClick.x <= x + w/2 && menuClick.y >= y - h/2 && menuClick.y <= y + h/2) {
       playSfx('gem');
       menuClick = null;
+      stateCooldown = 0.45; // 450ms guard against touch bleeding
       onClick();
     }
   }
 }
 
 let menuClick = null;
+let lastPointerTime = 0;
 
 function handleCanvasPointer(e) {
   initAudio();
   if (stateCooldown > 0) return;
+  const now = performance.now();
+  if (now - lastPointerTime < 350) return;
+  lastPointerTime = now;
+
+  if (e.type === 'touchend') {
+    e.preventDefault();
+  }
+
   const rect = canvas.getBoundingClientRect();
   let clientX = e.clientX;
   let clientY = e.clientY;
