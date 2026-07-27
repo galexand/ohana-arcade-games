@@ -503,6 +503,14 @@ window.addEventListener('keydown', e => {
   if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','Tab','Period','ShiftLeft','ShiftRight','MetaRight','MetaLeft'].includes(e.code)) {
     e.preventDefault();
   }
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    e.preventDefault();
+    if (gameState === 'PLAYING') {
+      setGameState('PAUSED');
+    } else if (gameState === 'PAUSED') {
+      setGameState('PLAYING');
+    }
+  }
 });
 window.addEventListener('keyup', e => {
   keys[e.code] = false;
@@ -1809,6 +1817,7 @@ function drawHUD() {
   }
 
   // Level Title Badge (below centered Home button)
+  // Level Title Badge (below centered Home button)
   const titleText = `${t('level')} ${currentLevelIdx + 1}: ${MAP_THEMES[currentLevelIdx].name}`;
   ctx.font = 'bold 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
   const tw = ctx.measureText(titleText).width;
@@ -1824,6 +1833,13 @@ function drawHUD() {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(titleText, W / 2, 57);
+
+  // On-screen Pause Button (top header right beside title badge)
+  if (gameState === 'PLAYING') {
+    drawMenuBtn(Math.min(W - 40, W / 2 + tw / 2 + 36), 57, 38, 26, '⏸', () => {
+      setGameState('PAUSED');
+    });
+  }
 
   // On-Screen Warning Toast / Banner
   if (warningTimer > 0 && warningMsg) {
@@ -1853,7 +1869,7 @@ function drawModalOverlays() {
   ctx.textAlign = 'center';
 
   const cardW = Math.min(W * 0.9, 420);
-  const cardH = 280;
+  const cardH = 290;
   const cardX = (W - cardW) / 2;
   const cardY = (H - cardH) / 2;
 
@@ -1867,7 +1883,20 @@ function drawModalOverlays() {
   let title = '', sub = '';
   const totalScore = (player1 ? player1.score : 0) + (player2 ? player2.score : 0);
 
-  if (gameState === 'LEVEL_CLEAR') {
+  if (gameState === 'PAUSED') {
+    title = t('paused');
+    sub = `${t('level')} ${currentLevelIdx + 1}: ${MAP_THEMES[currentLevelIdx].name}`;
+    drawMenuBtn(W / 2, cardY + 140, 240, 44, t('resume'), () => {
+      setGameState('PLAYING');
+    });
+    drawMenuBtn(W / 2, cardY + 194, 240, 42, t('restart'), () => {
+      buildLevel(currentLevelIdx);
+      setGameState('PLAYING');
+    });
+    drawMenuBtn(W / 2, cardY + 244, 240, 42, t('menu'), () => {
+      setGameState('MODE_SELECT');
+    });
+  } else if (gameState === 'LEVEL_CLEAR') {
     title = t('levelClear');
     sub = `${t('totalScore')}: ${totalScore}`;
     drawMenuBtn(W / 2, cardY + 160, 240, 48, t('nextLevel'), () => {
