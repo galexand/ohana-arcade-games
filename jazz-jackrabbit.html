@@ -564,7 +564,7 @@ class Player {
 
     // Jump
     if (jump && this.isGrounded && !this.isDucking) {
-      this.vy = -560;
+      this.vy = -640; // Increased jump power for agile, effortless platform climbing
       this.isGrounded = false;
       playSfx('jump');
       // Jump dust particle
@@ -709,9 +709,10 @@ class Player {
         }
         // Spring Bouncer
         else if (tile === 4) {
-          this.vy = -760;
+          this.vy = -880; // High launch velocity for reaching upper platform vaults
           playSfx('spring');
-          createParticles(c * TILE_SIZE + 20, r * TILE_SIZE + 20, '#f39c12', 8);
+          createParticles(c * TILE_SIZE + 20, r * TILE_SIZE + 20, '#f39c12', 12);
+          createParticles(c * TILE_SIZE + 20, r * TILE_SIZE + 20, '#ffffff', 8);
         }
         // Speed Boost Pad
         else if (tile === 5 && this.isGrounded) {
@@ -1179,10 +1180,10 @@ function buildLevel(levelIdx) {
 
     if (sectionType === 0) { // Staircase Ascent & Collectibles
       for (let s = 0; s < 3; s++) {
-        const r = mapRows - 2 - (s + 1) * 2;
+        const r = mapRows - 3 - s * 2; // Step heights: mapRows-3, mapRows-5, mapRows-7
         for (let w = 0; w < 3; w++) {
-          if (c + s * 3 + w < mapCols - 10) {
-            levelMap[r][c + s * 3 + w] = (w === 0 || w === 2) ? 2 : 1;
+          if (c + s * 2.5 + w < mapCols - 10) {
+            levelMap[r][Math.floor(c + s * 2.5 + w)] = 2; // One-way drop-through platform
           }
         }
         entities.push(new Collectible((c + s * 3 + 1) * TILE_SIZE, (r - 1) * TILE_SIZE, Math.random() < 0.4 ? 'carrot' : 'gem'));
@@ -1190,7 +1191,7 @@ function buildLevel(levelIdx) {
       if (Math.random() < 0.5) {
         entities.push(new Enemy((c + 4) * TILE_SIZE, (mapRows - 2) * TILE_SIZE, 'turtle'));
       }
-      c += 10;
+      c += 9;
     } 
     else if (sectionType === 1) { // High Spring Launcher & Elevated Rewards Vault
       const springCol = c + 2;
@@ -1204,13 +1205,17 @@ function buildLevel(levelIdx) {
         levelMap[yr][springCol + 1] = 0;
       }
 
-      // Elevated Vault Platform above and to the right
-      const vaultRow = mapRows - 8;
-      for (let w = 0; w < 5; w++) {
+      // Accessible Vault Platform (height 5 tiles above ground)
+      const vaultRow = mapRows - 6;
+      for (let w = 0; w < 6; w++) {
         if (springCol + 2 + w < mapCols - 8) {
           levelMap[vaultRow][springCol + 2 + w] = 1;
         }
       }
+      // Stepping ledge connecting staircase to vault
+      levelMap[vaultRow + 2][springCol - 1] = 2;
+      levelMap[vaultRow + 2][springCol] = 2;
+
       // Wooden crate & triple weapon pickup on elevated vault
       levelMap[vaultRow - 1][springCol + 3] = 3;
       entities.push(new Collectible((springCol + 4) * TILE_SIZE, (vaultRow - 1) * TILE_SIZE, 'carrot'));
