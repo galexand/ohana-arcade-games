@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Heroes of Ohana & Magic</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #080d1a; color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  /* Top Control Bar */
+  #homeLink {
+    position: fixed; top: max(12px, env(safe-area-inset-top)); left: 12px; z-index: 20;
+    color: #fff; text-decoration: none; font-weight: 800; font-size: 14px;
+    background: rgba(0, 0, 0, 0.65); padding: 8px 14px; border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(8px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); transition: transform 0.1s ease;
+  }
+  #homeLink:active { transform: scale(0.95); }
+
+  .langToggle {
+    position: fixed; top: max(12px, env(safe-area-inset-top)); right: 12px; z-index: 20;
+    display: flex; background: rgba(0, 0, 0, 0.65); border-radius: 999px; padding: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(8px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+  .langToggle button {
+    border: none; background: transparent; color: #a9c7eb; font-weight: 800; font-size: 13px;
+    padding: 6px 12px; border-radius: 999px; cursor: pointer; transition: background 0.15s ease;
+  }
+  .langToggle button.active { background: #2ecc71; color: #fff; }
+
+  /* Touch Controls Overlay */
+  .touch-zone { position: fixed; bottom: 16px; z-index: 15; display: flex; gap: 10px; }
+  #touchDPad { left: 16px; flex-direction: column; align-items: center; }
+  .dpad-row { display: flex; gap: 10px; }
+  #touchAction { right: 16px; flex-direction: column; align-items: flex-end; }
+  .tbtn {
+    width: 58px; height: 58px; border-radius: 50%;
+    background: rgba(17, 26, 46, 0.85); border: 2px solid rgba(255, 255, 255, 0.25);
+    color: #fff; font-size: 22px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.5); backdrop-filter: blur(6px);
+  }
+  .tbtn:active, .tbtn.active { transform: scale(0.92); background: rgba(46, 204, 113, 0.85); border-color: #58d68d; }
+  .tbtn.end-turn { width: auto; height: 50px; border-radius: 25px; padding: 0 20px; font-size: 16px; background: linear-gradient(180deg, #f39c12, #d35400); border-color: #f1c40f; }
+
+  /* Modals & Overlay Cards */
+  .overlay-panel {
+    position: fixed; inset: 0; z-index: 30;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px);
+  }
+  .panel-card {
+    background: linear-gradient(135deg, #111a2e, #1a2847);
+    border: 2px solid #3498db; border-radius: 20px; padding: 24px;
+    width: min(94vw, 480px); color: #fff;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
+    display: flex; flex-direction: column; gap: 14px; text-align: center;
+  }
+  .panel-title { font-size: 26px; font-weight: 900; color: #2ecc71; text-shadow: 0 2px 4px rgba(0,0,0,0.6); }
+  .panel-sub { font-size: 14px; color: #a9c7eb; }
+  .panel-btn {
+    font-size: 17px; font-weight: 800; padding: 12px 20px; border-radius: 12px; border: none;
+    cursor: pointer; transition: transform 0.1s ease; outline: none;
+  }
+  .panel-btn:active { transform: scale(0.96); }
+  .btn-green { background: linear-gradient(180deg, #2ecc71, #27ae60); color: #fff; }
+  .btn-blue { background: linear-gradient(180deg, #3498db, #2980b9); color: #fff; }
+  .btn-gold { background: linear-gradient(180deg, #f39c12, #d35400); color: #fff; }
+
+  /* Leaderboard & Name Inputs */
+  .leaderboard-list { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; padding-right: 4px; }
+  .lb-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(255, 255, 255, 0.08); padding: 8px 12px; border-radius: 10px; font-size: 14px; font-weight: 700;
+  }
+  .lb-rank { width: 28px; font-size: 15px; color: #f1c40f; text-align: left; }
+  .lb-name { flex: 1; text-align: left; margin: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
+  .lb-mode { font-size: 11px; background: rgba(52, 152, 219, 0.3); padding: 2px 6px; border-radius: 6px; margin-right: 8px; color: #a9c7eb; }
+  .lb-score { color: #2ecc71; font-weight: 900; font-size: 15px; }
+
+  .name-inputs { display: flex; flex-direction: column; gap: 12px; }
+  .input-group { display: flex; flex-direction: column; gap: 4px; text-align: left; }
+  .input-group label { font-size: 13px; font-weight: 800; color: #a9c7eb; }
+  .input-group input {
+    background: #091222; border: 2px solid #3498db; border-radius: 10px;
+    color: #fff; font-size: 17px; font-weight: 700; padding: 10px 14px; outline: none;
+  }
+  .input-group input:focus { border-color: #2ecc71; box-shadow: 0 0 10px rgba(46, 204, 113, 0.5); }
+
+  /* Castle Building Items */
+  .castle-buildings { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .building-item {
+    background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(52, 152, 219, 0.4);
+    border-radius: 12px; padding: 10px; text-align: left; display: flex; flex-direction: column; gap: 4px;
+  }
+  .building-name { font-size: 14px; font-weight: 800; color: #ffd700; }
+  .building-cost { font-size: 12px; color: #2ecc71; }
+  .building-btn { font-size: 12px; font-weight: 800; padding: 6px 10px; border-radius: 8px; border: none; cursor: pointer; background: #3498db; color: #fff; margin-top: 4px; }
+  .building-btn:disabled { background: #555; cursor: not-allowed; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<a id="homeLink" href="index.html">← Games</a>
+<div class="langToggle" id="langToggle">
+  <button type="button" data-lang="en">🇬🇧 EN</button>
+  <button type="button" data-lang="ro">🇷🇴 RO</button>
+</div>
+
+<!-- Mobile Touch Controls -->
+<div class="touch-zone" id="touchDPad" style="display:none;">
+  <div class="tbtn" id="btnUp">▲</div>
+  <div class="dpad-row">
+    <div class="tbtn" id="btnLeft">◀</div>
+    <div class="tbtn" id="btnRight">▶</div>
+  </div>
+  <div class="tbtn" id="btnDown">▼</div>
+</div>
+<div class="touch-zone" id="touchAction" style="display:none;">
+  <div class="tbtn end-turn" id="btnEndTurn">⏳ End Turn</div>
+  <div class="tbtn" id="btnInteract">⚔️</div>
+</div>
+
+<!-- Leaderboard Modal Overlay -->
+<div class="overlay-panel" id="leaderboardModal">
+  <div class="panel-card">
+    <div class="panel-title" id="lbTitle">🏆 TOP SCORES</div>
+    <div class="leaderboard-list" id="lbList"></div>
+    <button type="button" class="panel-btn btn-green" id="lbCloseBtn">CLOSE</button>
+  </div>
+</div>
+
+<!-- Name Prompt Modal Overlay -->
+<div class="overlay-panel" id="namePromptModal">
+  <div class="panel-card">
+    <div class="panel-title" id="nameTitle">🎉 NEW HIGH SCORE!</div>
+    <div class="panel-sub" id="nameSub">ENTER YOUR NAME(S) FOR THE LEADERBOARD:</div>
+    <div class="name-inputs">
+      <div class="input-group" id="p1NameGroup">
+        <label for="p1NameInput" id="p1NameLabel">HERO 1 NAME:</label>
+        <input type="text" id="p1NameInput" maxlength="12" placeholder="Lilo" autocomplete="off">
+      </div>
+      <div class="input-group" id="p2NameGroup" style="display:none;">
+        <label for="p2NameInput" id="p2NameLabel">HERO 2 NAME:</label>
+        <input type="text" id="p2NameInput" maxlength="12" placeholder="Stitch" autocomplete="off">
+      </div>
+    </div>
+    <button type="button" class="panel-btn btn-green" id="saveScoreBtn">SAVE SCORE 🏆</button>
+  </div>
+</div>
+
+<!-- Castle Management Modal Overlay -->
+<div class="overlay-panel" id="castleModal">
+  <div class="panel-card" style="width: min(96vw, 560px);">
+    <div class="panel-title" id="castleTitle">🏰 OHANA KEEP CASTLE</div>
+    <div class="panel-sub" id="castleSub">Construct buildings and recruit your fantasy armies!</div>
+    <div class="castle-buildings" id="castleBuildings"></div>
+    <button type="button" class="panel-btn btn-green" id="castleCloseBtn">EXIT CASTLE</button>
+  </div>
+</div>
+
+<!-- Hero Spellbook Modal Overlay -->
+<div class="overlay-panel" id="spellbookModal">
+  <div class="panel-card">
+    <div class="panel-title" id="spellTitle">📖 HERO SPELLBOOK</div>
+    <div class="panel-sub" id="spellSub">Cast powerful magic in tactical combat!</div>
+    <div class="castle-buildings" id="spellList"></div>
+    <button type="button" class="panel-btn btn-blue" id="spellCloseBtn">CLOSE SPELLBOOK</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ============ I18N SETUP ============
+let LANG = 'en';
+try { LANG = localStorage.getItem('ohanaLang') === 'ro' ? 'ro' : 'en'; } catch (e) {}
+
+const TEXT = {
+  en: {
+    title: 'HEROES OF OHANA & MAGIC',
+    sub: 'FANTASY TURN-BASED STRATEGY RPG inspired by HOMM2',
+    p1Solo: '1 PLAYER (SOLO QUEST)',
+    p2Coop: '2 PLAYERS (HOTSEAT CO-OP)',
+    chooseHero: 'CHOOSE YOUR HERO',
+    lilo: 'KNIGHT LILO (HIGH DEFENSE)',
+    stitch: 'SORCERER STITCH (HIGH MANA)',
+    angel: 'PALADIN ANGEL (HIGH SPEED)',
+    selectQuest: 'SELECT QUEST REALM',
+    realm1: 'Carrotus Kingdom',
+    realm2: 'Crystal Archipelago',
+    realm3: 'Devastator Citadel',
+    endTurn: '⏳ END TURN',
+    day: 'DAY',
+    gold: 'GOLD',
+    wood: 'WOOD',
+    ore: 'ORE',
+    crystals: 'CRYSTALS',
+    mana: 'MANA',
+    moves: 'MOVES',
+    castle: '🏰 CASTLE',
+    spellbook: '📖 SPELLS',
+    topScores: '🏆 TOP SCORES',
+    paused: 'GAME PAUSED ⏸',
+    pausedHint: 'Press P, ESC, tap ⏸ or click Resume to continue',
+    resume: 'RESUME',
+    restart: 'RESTART',
+    menu: 'MAIN MENU',
+    gameOver: 'DEFEAT! YOUR HERO FELL 💀',
+    victory: 'VICTORY! REALM CONQUERED! 🏆',
+    newHighScore: '🎉 NEW HIGH SCORE!',
+    enterNames: 'ENTER YOUR NAME(S) FOR THE LEADERBOARD:',
+    p1NameLabel: 'PLAYER 1 NAME:',
+    p2NameLabel: 'PLAYER 2 NAME:',
+    saveScore: 'SAVE SCORE 🏆',
+    close: 'CLOSE',
+    noScoresYet: 'No high scores yet — be the first!',
+    back: '← BACK',
+    recruit: 'RECRUIT',
+    built: 'BUILT',
+  },
+  ro: {
+    title: 'HEROES OF OHANA & MAGIC',
+    sub: 'STRATEGIE TURN-BASED FANTASY inspirat de HOMM2',
+    p1Solo: '1 JUCĂTOR (MISIUNE SOLO)',
+    p2Coop: '2 JUCĂTORI (HOTSEAT CO-OP)',
+    chooseHero: 'ALEGE-ȚI EROUL',
+    lilo: 'CAVALERUL LILO (APĂRARE)',
+    stitch: 'VRĂJITORUL STITCH (MANĂ)',
+    angel: 'PALADINUL ANGEL (VITEZĂ)',
+    selectQuest: 'ALEGE REGATUL',
+    realm1: 'Regatul Carrotus',
+    realm2: 'Arhipelagul de Cristal',
+    realm3: 'Citadela Devastator',
+    endTurn: '⏳ SFÂRȘIT TURA',
+    day: 'ZIUA',
+    gold: 'AUR',
+    wood: 'LEMN',
+    ore: 'MINEREU',
+    crystals: 'CRISTALE',
+    mana: 'MANĂ',
+    moves: 'MUTĂRI',
+    castle: '🏰 CASTEL',
+    spellbook: '📖 VRĂJI',
+    topScores: '🏆 CELE MAI BUNE SCORURI',
+    paused: 'JOC PAUZAT ⏸',
+    pausedHint: 'Apasă P, Esc, atinge ⏸ sau apăsă Continuă',
+    resume: 'CONTINUĂ',
+    restart: 'RESTART',
+    menu: 'MENIU PRINCIPAL',
+    gameOver: 'INFRÂNGERE! EROUL A CĂZUT 💀',
+    victory: 'VICTORIE! REGAT CUCERIT! 🏆',
+    newHighScore: '🎉 NOU RECORD DE SCOR!',
+    enterNames: 'INTRODUCEȚI NUMELE JUCĂTORILOR:',
+    p1NameLabel: 'NUME JUCĂTOR 1:',
+    p2NameLabel: 'NUME JUCĂTOR 2:',
+    saveScore: 'SALVEAZĂ SCORUL 🏆',
+    close: 'ÎNCHIDE',
+    noScoresYet: 'Niciun scor încă — fii primul!',
+    back: '← ÎNAPOI',
+    recruit: 'RECRUTEAZĂ',
+    built: 'CONSTRUIT',
+  }
+};
+const t = key => (TEXT[LANG] && TEXT[LANG][key]) ? TEXT[LANG][key] : TEXT['en'][key];
+
+function updateLangToggleUI() {
+  document.querySelectorAll('#langToggle button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === LANG);
+  });
+}
+document.getElementById('langToggle').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-lang]');
+  if (!btn) return;
+  LANG = btn.dataset.lang;
+  try { localStorage.setItem('ohanaLang', LANG); } catch (err) {}
+  updateLangToggleUI();
+});
+updateLangToggleUI();
+
+// ============ SOUND SYNTHESIZER (WebAudio) ============
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playSfx(type) {
+  if (!audioCtx) return;
+  try {
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    if (type === 'step') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(140, now);
+      osc.frequency.exponentialRampToValueAtTime(40, now + 0.08);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      osc.start(now); osc.stop(now + 0.08);
+    } else if (type === 'coin') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(987.77, now); // B5
+      osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.start(now); osc.stop(now + 0.2);
+    } else if (type === 'sword') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(400, now);
+      osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.start(now); osc.stop(now + 0.15);
+    } else if (type === 'spell') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.3);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      osc.start(now); osc.stop(now + 0.3);
+    } else if (type === 'fanfare') {
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((freq, idx) => {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'triangle';
+        o.frequency.value = freq;
+        o.connect(g); g.connect(audioCtx.destination);
+        const startTime = now + idx * 0.1;
+        g.gain.setValueAtTime(0.14, startTime);
+        g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.28);
+        o.start(startTime); o.stop(startTime + 0.28);
+      });
+    }
+  } catch (e) {}
+}
+
+// ============ CANVAS SETUP ============
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0;
+
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 100));
+resize();
+
+const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 1024);
+function updateTouchVisibility() {
+  const showTouch = isTouchDevice && (gameState === 'OVERWORLD' || gameState === 'COMBAT');
+  document.getElementById('touchDPad').style.display = showTouch ? 'flex' : 'none';
+  document.getElementById('touchAction').style.display = showTouch ? 'flex' : 'none';
+}
+
+// ============ UNIT DEFINITIONS ============
+const UNIT_TYPES = [
+  { id: 'puka', name: 'Puka Capy', tier: 1, hp: 12, atk: 3, def: 2, minDmg: 2, maxDmg: 4, speed: 4, ranged: false, color: '#e67e22', icon: '🐹' },
+  { id: 'archer', name: 'Archer Duck', tier: 2, hp: 15, atk: 5, def: 3, minDmg: 3, maxDmg: 5, speed: 5, ranged: true, color: '#f1c40f', icon: '🦆' },
+  { id: 'griffin', name: 'Griffin Experiment', tier: 3, hp: 28, atk: 8, def: 6, minDmg: 6, maxDmg: 9, speed: 7, ranged: false, color: '#9b59b6', icon: '🦅' },
+  { id: 'knight', name: 'Swordsman Knight', tier: 4, hp: 40, atk: 11, def: 9, minDmg: 9, maxDmg: 14, speed: 5, ranged: false, color: '#3498db', icon: '🗡️' },
+  { id: 'sorcerer', name: 'Mage Sorcerer', tier: 5, hp: 50, atk: 14, def: 10, minDmg: 12, maxDmg: 18, speed: 6, ranged: true, color: '#1abc9c', icon: '🔮' },
+  { id: 'dragon', name: 'Dragon Stitch', tier: 6, hp: 120, atk: 22, def: 18, minDmg: 25, maxDmg: 38, speed: 8, ranged: false, color: '#e74c3c', icon: '🐲' }
+];
+
+// ============ GAME DATA & STATE ============
+let gameState = 'MODE_SELECT'; // MODE_SELECT, CHAR_SELECT, OVERWORLD, CASTLE_VIEW, COMBAT, PAUSED, GAME_OVER, VICTORY
+let gameMode = '1P'; // '1P' or '2P'
+let activePlayerIdx = 0; // 0 = Player 1, 1 = Player 2
+let dayCount = 1;
+let stateCooldown = 0;
+let pendingState = null;
+
+const GRID_COLS = 16;
+const GRID_ROWS = 12;
+
+class PlayerState {
+  constructor(id, name, color, heroType) {
+    this.id = id;
+    this.name = name;
+    this.color = color;
+    this.heroType = heroType;
+    this.x = id === 1 ? 2 : 13;
+    this.y = id === 1 ? 2 : 9;
+    this.maxMoves = 12;
+    this.movesLeft = 12;
+    this.gold = 1500;
+    this.wood = 10;
+    this.ore = 10;
+    this.crystals = 5;
+    this.mana = 30;
+    this.maxMana = 30;
+    this.atkBonus = 0;
+    this.defBonus = 0;
+    this.army = [
+      { unitId: 'puka', count: 18 },
+      { unitId: 'archer', count: 10 }
+    ];
+  }
+}
+
+let players = [];
+let overworldMap = [];
+let activeCombat = null;
+let menuClick = null;
+let lastPointerTime = 0;
+
+// ============ OVERWORLD GENERATION ============
+function initOverworldMap() {
+  overworldMap = [];
+  for (let r = 0; r < GRID_ROWS; r++) {
+    const row = [];
+    for (let c = 0; c < GRID_COLS; c++) {
+      let type = 'grass';
+      let structure = null;
+
+      if (r === 0 || r === GRID_ROWS - 1 || c === 0 || c === GRID_COLS - 1) {
+        type = 'mountain';
+      } else if ((r === 2 && c === 2)) {
+        structure = { kind: 'castle', owner: 1, name: 'Red Fortress' };
+      } else if ((r === 9 && c === 13)) {
+        structure = { kind: 'castle', owner: 2, name: 'Blue Keep' };
+      } else if ((r === 4 && c === 3) || (r === 7 && c === 12)) {
+        structure = { kind: 'mine', res: 'gold', name: 'Gold Mine' };
+      } else if ((r === 3 && c === 8) || (r === 8 && c === 5)) {
+        structure = { kind: 'mine', res: 'wood', name: 'Wood Mill' };
+      } else if ((r === 5 && c === 10) || (r === 6 && c === 4)) {
+        structure = { kind: 'mine', res: 'crystals', name: 'Crystal Mine' };
+      } else if ((c % 4 === 0 && r % 3 === 0) && !(r === 2 && c === 2) && !(r === 9 && c === 13)) {
+        structure = { kind: 'chest', gold: 600 };
+      } else if ((r === 5 && c === 7) || (r === 7 && c === 9)) {
+        structure = { kind: 'monster', unitId: 'griffin', count: 8 };
+      } else if (Math.random() < 0.15) {
+        type = 'forest';
+      }
+
+      row.push({ type, structure });
+    }
+    overworldMap.push(row);
+  }
+}
+
+function startNewGame() {
+  dayCount = 1;
+  activePlayerIdx = 0;
+  initOverworldMap();
+
+  players = [
+    new PlayerState(1, 'Lilo', '#e74c3c', 'lilo'),
+    new PlayerState(2, gameMode === '2P' ? 'Stitch' : 'Lord Leroy', '#3498db', 'stitch')
+  ];
+
+  setGameState('OVERWORLD');
+}
+
+function endCurrentTurn() {
+  playSfx('fanfare');
+  activePlayerIdx = (activePlayerIdx + 1) % (gameMode === '2P' ? 2 : 2);
+  if (activePlayerIdx === 0) {
+    dayCount++;
+  }
+
+  // Daily income & movement points refill
+  players.forEach(p => {
+    p.movesLeft = p.maxMoves;
+    p.gold += 300;
+    p.mana = Math.min(p.maxMana, p.mana + 5);
+  });
+
+  // AI Turn in 1P mode
+  if (gameMode === '1P' && activePlayerIdx === 1) {
+    simulateAiTurn();
+    activePlayerIdx = 0;
+    dayCount++;
+    players[0].movesLeft = players[0].maxMoves;
+  }
+
+  showWarningMessage(`DAY ${dayCount} — ${players[activePlayerIdx].name}'S TURN!`);
+}
+
+function simulateAiTurn() {
+  const ai = players[1];
+  ai.gold += 500;
+  ai.movesLeft = ai.maxMoves;
+}
+
+// ============ TACTICAL BATTLEGROUND ENGINE ============
+class CombatBattle {
+  constructor(attacker, defenderStack) {
+    this.attacker = attacker;
+    this.defenderStack = defenderStack;
+    this.gridCols = 8;
+    this.gridRows = 6;
+    this.turnIndex = 0;
+    this.floaters = [];
+
+    // Initialize units on battleground grid
+    this.units = [];
+
+    // Attacker Stacks (Left)
+    attacker.army.forEach((stack, idx) => {
+      const type = UNIT_TYPES.find(u => u.id === stack.unitId);
+      this.units.push({
+        side: 'attacker',
+        type,
+        count: stack.count,
+        maxHp: type.hp,
+        currentTopHp: type.hp,
+        x: 1,
+        y: 1 + idx * 2,
+        active: true
+      });
+    });
+
+    // Defender Stacks (Right)
+    if (Array.isArray(defenderStack)) {
+      defenderStack.forEach((stack, idx) => {
+        const type = UNIT_TYPES.find(u => u.id === stack.unitId);
+        this.units.push({
+          side: 'defender',
+          type,
+          count: stack.count,
+          maxHp: type.hp,
+          currentTopHp: type.hp,
+          x: 6,
+          y: 1 + idx * 2,
+          active: true
+        });
+      });
+    } else {
+      const type = UNIT_TYPES.find(u => u.id === defenderStack.unitId);
+      this.units.push({
+        side: 'defender',
+        type,
+        count: defenderStack.count,
+        maxHp: type.hp,
+        currentTopHp: type.hp,
+        x: 6,
+        y: 2,
+        active: true
+      });
+    }
+
+    this.activeUnitIdx = 0;
+    this.sortTurnQueue();
+  }
+
+  sortTurnQueue() {
+    this.units.sort((a, b) => b.type.speed - a.type.speed);
+  }
+
+  getActiveUnit() {
+    return this.units[this.activeUnitIdx];
+  }
+
+  attackTarget(attackerUnit, defenderUnit) {
+    const totalMaxDamage = attackerUnit.count * attackerUnit.type.maxDmg;
+    const damage = Math.floor(totalMaxDamage * (1 + (this.attacker.atkBonus * 0.05)));
+    
+    let kills = Math.floor(damage / defenderUnit.type.hp);
+    kills = Math.min(defenderUnit.count, kills);
+
+    defenderUnit.count -= kills;
+    playSfx(attackerUnit.type.ranged ? 'spell' : 'sword');
+
+    this.floaters.push({
+      x: defenderUnit.x, y: defenderUnit.y,
+      text: `-${damage} 💥 (${kills} Slain)`,
+      color: '#e74c3c', life: 1.2
+    });
+
+    if (defenderUnit.count <= 0) {
+      defenderUnit.active = false;
+    }
+
+    this.nextTurn();
+  }
+
+  nextTurn() {
+    do {
+      this.activeUnitIdx = (this.activeUnitIdx + 1) % this.units.length;
+    } while (!this.units[this.activeUnitIdx].active && this.units.some(u => u.active));
+
+    // Check Victory / Defeat
+    const attackersAlive = this.units.some(u => u.side === 'attacker' && u.active);
+    const defendersAlive = this.units.some(u => u.side === 'defender' && u.active);
+
+    if (!defendersAlive) {
+      playSfx('fanfare');
+      setGameState('OVERWORLD');
+      showWarningMessage('VICTORY! MONSTER STACK DEFEATED! 🏆');
+    } else if (!attackersAlive) {
+      setGameState('GAME_OVER');
+    }
+  }
+}
+
+// ============ UI & CANVAS RENDER ENGINE ============
+let warningTimer = 0;
+let warningMsg = '';
+
+function showWarningMessage(msg) {
+  warningMsg = msg;
+  warningTimer = 2.5;
+}
+
+function setGameState(newState) {
+  pendingState = newState;
+  stateCooldown = 0.35;
+  menuClick = null;
+}
+
+function render() {
+  ctx.clearRect(0, 0, W, H);
+  updateTouchVisibility();
+
+  if (gameState === 'MODE_SELECT') {
+    renderModeSelect();
+  } else if (gameState === 'CHAR_SELECT') {
+    renderCharSelect();
+  } else if (gameState === 'OVERWORLD') {
+    renderOverworld();
+  } else if (gameState === 'COMBAT') {
+    renderCombat();
+  } else if (gameState === 'PAUSED') {
+    renderOverworld();
+    drawModalCard(t('paused'), t('pausedHint'), [
+      { label: t('resume'), action: () => setGameState('OVERWORLD') },
+      { label: t('restart'), action: () => startNewGame() },
+      { label: t('menu'), action: () => setGameState('MODE_SELECT') }
+    ]);
+  } else if (gameState === 'GAME_OVER') {
+    renderOverworld();
+    drawModalCard(t('gameOver'), 'Your army was defeated in battle!', [
+      { label: t('restart'), action: () => startNewGame() },
+      { label: t('menu'), action: () => setGameState('MODE_SELECT') }
+    ]);
+  }
+
+  if (warningTimer > 0 && warningMsg) {
+    ctx.save();
+    ctx.font = 'bold 15px -apple-system, sans-serif';
+    const mw = ctx.measureText(warningMsg).width;
+    ctx.fillStyle = 'rgba(192, 57, 43, 0.9)';
+    ctx.strokeStyle = '#f1c40f';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(W / 2 - mw / 2 - 16, 78, mw + 32, 32, 16);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(warningMsg, W / 2, 94);
+    ctx.restore();
+  }
+}
+
+function renderModeSelect() {
+  ctx.fillStyle = '#080d1a';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#2ecc71';
+  ctx.font = 'bold 36px -apple-system, sans-serif';
+  ctx.fillText(t('title'), W / 2, 90);
+
+  ctx.fillStyle = '#a9c7eb';
+  ctx.font = 'bold 15px -apple-system, sans-serif';
+  ctx.fillText(t('sub'), W / 2, 130);
+
+  drawMenuBtn(W / 2, 210, Math.min(W * 0.85, 320), 52, t('p1Solo'), () => {
+    gameMode = '1P';
+    setGameState('CHAR_SELECT');
+  });
+
+  drawMenuBtn(W / 2, 280, Math.min(W * 0.85, 320), 52, t('p2Coop'), () => {
+    gameMode = '2P';
+    setGameState('CHAR_SELECT');
+  });
+
+  drawMenuBtn(W / 2, 350, Math.min(W * 0.85, 320), 46, t('topScores'), () => {
+    openLeaderboardModal();
+  });
+
+  ctx.restore();
+}
+
+function renderCharSelect() {
+  ctx.fillStyle = '#080d1a';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#2ecc71';
+  ctx.font = 'bold 32px -apple-system, sans-serif';
+  ctx.fillText(t('chooseHero'), W / 2, 85);
+
+  drawMenuBtn(W / 2, 160, Math.min(W * 0.85, 320), 48, t('lilo'), () => {
+    startNewGame();
+  });
+
+  drawMenuBtn(W / 2, 225, Math.min(W * 0.85, 320), 48, t('stitch'), () => {
+    startNewGame();
+  });
+
+  drawMenuBtn(W / 2, 290, Math.min(W * 0.85, 320), 48, t('angel'), () => {
+    startNewGame();
+  });
+
+  drawMenuBtn(W / 2, 370, 180, 44, t('back'), () => {
+    setGameState('MODE_SELECT');
+  });
+
+  ctx.restore();
+}
+
+function renderOverworld() {
+  const p = players[activePlayerIdx];
+  const tileSize = Math.min((W - 32) / GRID_COLS, (H - 120) / GRID_ROWS);
+  const offsetX = (W - GRID_COLS * tileSize) / 2;
+  const offsetY = 70;
+
+  // Render Overworld Map Tiles
+  for (let r = 0; r < GRID_ROWS; r++) {
+    for (let c = 0; c < GRID_COLS; c++) {
+      const tile = overworldMap[r][c];
+      const tx = offsetX + c * tileSize;
+      const ty = offsetY + r * tileSize;
+
+      // Base Terrain Colors
+      if (tile.type === 'grass') ctx.fillStyle = '#27ae60';
+      else if (tile.type === 'forest') ctx.fillStyle = '#1e8449';
+      else if (tile.type === 'mountain') ctx.fillStyle = '#7f8c8d';
+      else ctx.fillStyle = '#2980b9';
+
+      ctx.fillRect(tx, ty, tileSize, tileSize);
+      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+      ctx.strokeRect(tx, ty, tileSize, tileSize);
+
+      // Render Structures & Objects
+      if (tile.structure) {
+        const s = tile.structure;
+        ctx.font = `${tileSize * 0.6}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+        if (s.kind === 'castle') {
+          ctx.fillStyle = s.owner === 1 ? '#e74c3c' : '#3498db';
+          ctx.fillRect(tx + 4, ty + 4, tileSize - 8, tileSize - 8);
+          ctx.fillText('🏰', tx + tileSize / 2, ty + tileSize / 2);
+        } else if (s.kind === 'mine') {
+          ctx.fillText(s.res === 'gold' ? '🪙' : (s.res === 'wood' ? '🪵' : '💎'), tx + tileSize / 2, ty + tileSize / 2);
+        } else if (s.kind === 'chest') {
+          ctx.fillText('🎁', tx + tileSize / 2, ty + tileSize / 2);
+        } else if (s.kind === 'monster') {
+          ctx.fillText('🦅', tx + tileSize / 2, ty + tileSize / 2);
+        }
+      }
+    }
+  }
+
+  // Render Heroes
+  players.forEach(hero => {
+    const hx = offsetX + hero.x * tileSize + tileSize / 2;
+    const hy = offsetY + hero.y * tileSize + tileSize / 2;
+
+    ctx.fillStyle = hero.color;
+    ctx.beginPath();
+    ctx.arc(hx, hy, tileSize * 0.38, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(hero.name[0], hx, hy);
+  });
+
+  // Top Resource HUD Bar
+  ctx.fillStyle = 'rgba(17, 26, 46, 0.9)';
+  ctx.fillRect(0, 0, W, 56);
+  ctx.fillStyle = '#2ecc71';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(`🏰 ${p.name} | 🪙 ${p.gold} | 🪵 ${p.wood} | 💎 ${p.crystals} | ⚡ MOVES: ${p.movesLeft}/${p.maxMoves}`, 14, 32);
+
+  // Action Buttons Bar
+  drawMenuBtn(W - 200, 28, 110, 36, '🏰 CASTLE', () => openCastleModal());
+  drawMenuBtn(W - 70, 28, 90, 36, '⏳ END', () => endCurrentTurn());
+}
+
+function renderCombat() {
+  if (!activeCombat) return;
+  const b = activeCombat;
+
+  ctx.fillStyle = '#1b2a47';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = '#2ecc71';
+  ctx.font = 'bold 24px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('⚔️ TACTICAL BATTLEGROUND', W / 2, 40);
+
+  const tileSize = Math.min((W - 40) / b.gridCols, (H - 120) / b.gridRows);
+  const offsetX = (W - b.gridCols * tileSize) / 2;
+  const offsetY = 70;
+
+  // Grid
+  for (let r = 0; r < b.gridRows; r++) {
+    for (let c = 0; c < b.gridCols; c++) {
+      const tx = offsetX + c * tileSize;
+      const ty = offsetY + r * tileSize;
+      ctx.fillStyle = (c + r) % 2 === 0 ? '#2c3e50' : '#34495e';
+      ctx.fillRect(tx, ty, tileSize, tileSize);
+      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+      ctx.strokeRect(tx, ty, tileSize, tileSize);
+    }
+  }
+
+  // Render Combat Stacks
+  b.units.forEach(u => {
+    if (!u.active) return;
+    const ux = offsetX + u.x * tileSize + tileSize / 2;
+    const uy = offsetY + u.y * tileSize + tileSize / 2;
+
+    ctx.font = `${tileSize * 0.5}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(u.type.icon, ux, uy - 6);
+
+    ctx.fillStyle = u.side === 'attacker' ? '#2ecc71' : '#e74c3c';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillText(`x${u.count}`, ux, uy + 16);
+  });
+
+  // Action Bar
+  const activeUnit = b.getActiveUnit();
+  if (activeUnit && activeUnit.side === 'attacker') {
+    ctx.fillStyle = '#ffd700';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`YOUR TURN: ${activeUnit.type.name} (x${activeUnit.count})`, W / 2, H - 40);
+
+    // Target button
+    const target = b.units.find(u => u.side === 'defender' && u.active);
+    if (target) {
+      drawMenuBtn(W / 2, H - 80, 220, 44, `ATTACK ${target.type.name} ⚔️`, () => {
+        b.attackTarget(activeUnit, target);
+      });
+    }
+  }
+}
+
+function drawMenuBtn(x, y, w, h, text, onClick, disabled = false) {
+  ctx.save();
+  ctx.fillStyle = disabled ? '#1e2b45' : '#27ae60';
+  ctx.strokeStyle = disabled ? '#34495e' : '#58d68d';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(x - w / 2, y - h / 2, w, h, 14);
+  ctx.fill(); ctx.stroke();
+
+  ctx.font = 'bold 16px -apple-system, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = disabled ? '#8fa3c4' : '#ffffff';
+  ctx.fillText(text, x, y);
+  ctx.restore();
+
+  if (!disabled && menuClick && stateCooldown <= 0) {
+    if (menuClick.x >= x - w/2 && menuClick.x <= x + w/2 && menuClick.y >= y - h/2 && menuClick.y <= y + h/2) {
+      playSfx('coin');
+      menuClick = null;
+      stateCooldown = 0.35;
+      onClick();
+    }
+  }
+}
+
+function drawModalCard(title, sub, buttons) {
+  ctx.save();
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.fillRect(0, 0, W, H);
+
+  const cardW = Math.min(W * 0.9, 420);
+  const cardH = 280;
+  const cardX = (W - cardW) / 2;
+  const cardY = (H - cardH) / 2;
+
+  ctx.fillStyle = '#111a2e';
+  ctx.strokeStyle = '#3498db';
+  ctx.lineWidth = 3;
+  ctx.roundRect(cardX, cardY, cardW, cardH, 20);
+  ctx.fill(); ctx.stroke();
+
+  ctx.fillStyle = '#2ecc71';
+  ctx.font = 'bold 28px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(title, W / 2, cardY + 50);
+
+  ctx.fillStyle = '#a9c7eb';
+  ctx.font = '14px sans-serif';
+  ctx.fillText(sub, W / 2, cardY + 90);
+
+  buttons.forEach((btn, idx) => {
+    drawMenuBtn(W / 2, cardY + 145 + idx * 52, 240, 44, btn.label, btn.action);
+  });
+
+  ctx.restore();
+}
+
+// ============ CASTLE MODAL ENGINE ============
+function openCastleModal() {
+  const p = players[activePlayerIdx];
+  document.getElementById('castleTitle').innerText = `🏰 ${p.name}'S CASTLE`;
+  
+  const container = document.getElementById('castleBuildings');
+  let html = '';
+
+  UNIT_TYPES.forEach(u => {
+    const cost = u.tier * 200;
+    const canAfford = p.gold >= cost;
+    html += `
+      <div class="building-item">
+        <div class="building-name">${u.icon} ${u.name}</div>
+        <div class="building-cost">Cost: ${cost} Gold | Atk:${u.atk} Def:${u.def}</div>
+        <button class="building-btn" ${canAfford ? '' : 'disabled'} onclick="recruitUnit('${u.id}', ${cost})">
+          ${t('recruit')} (+5)
+        </button>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+  document.getElementById('castleModal').style.display = 'flex';
+}
+
+window.recruitUnit = function(unitId, cost) {
+  const p = players[activePlayerIdx];
+  if (p.gold >= cost) {
+    p.gold -= cost;
+    const stack = p.army.find(a => a.unitId === unitId);
+    if (stack) stack.count += 5;
+    else p.army.push({ unitId, count: 5 });
+    playSfx('coin');
+    openCastleModal();
+  }
+};
+
+document.getElementById('castleCloseBtn').addEventListener('click', () => {
+  document.getElementById('castleModal').style.display = 'none';
+});
+
+// ============ LEADERBOARD & PLAYER NAME SYSTEM ============
+function loadLeaderboard() {
+  try {
+    const saved = localStorage.getItem('heroesLeaderboard');
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return [];
+}
+
+function saveLeaderboard(board) {
+  try {
+    localStorage.setItem('heroesLeaderboard', JSON.stringify(board));
+  } catch (e) {}
+}
+
+function renderLeaderboardUI() {
+  const board = loadLeaderboard();
+  const listEl = document.getElementById('lbList');
+  document.getElementById('lbTitle').innerText = t('topScores');
+  document.getElementById('lbCloseBtn').innerText = t('close');
+
+  if (!board.length) {
+    listEl.innerHTML = `<div style="text-align:center; padding:20px; color:#a9c7eb;">${t('noScoresYet')}</div>`;
+    return;
+  }
+
+  let html = '';
+  board.slice(0, 10).forEach((entry, idx) => {
+    const rankBadge = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : `#${idx + 1}`));
+    html += `
+      <div class="lb-row">
+        <span class="lb-rank">${rankBadge}</span>
+        <span class="lb-name">${entry.name}</span>
+        <span class="lb-mode">${entry.mode || '1P'}</span>
+        <span class="lb-score">${entry.score}</span>
+      </div>
+    `;
+  });
+  listEl.innerHTML = html;
+}
+
+function openLeaderboardModal() {
+  renderLeaderboardUI();
+  document.getElementById('leaderboardModal').style.display = 'flex';
+}
+
+document.getElementById('lbCloseBtn').addEventListener('click', () => {
+  document.getElementById('leaderboardModal').style.display = 'none';
+});
+
+// ============ INPUT & EVENT LISTENERS ============
+function handleCanvasPointer(e) {
+  initAudio();
+  if (stateCooldown > 0) return;
+  const now = performance.now();
+  if (now - lastPointerTime < 300) return;
+  lastPointerTime = now;
+
+  if (e.type === 'touchend') e.preventDefault();
+
+  const rect = canvas.getBoundingClientRect();
+  let clientX = e.clientX;
+  let clientY = e.clientY;
+  if (e.changedTouches && e.changedTouches[0]) {
+    clientX = e.changedTouches[0].clientX;
+    clientY = e.changedTouches[0].clientY;
+  }
+
+  if (clientX !== undefined && clientY !== undefined) {
+    const px = clientX - rect.left;
+    const py = clientY - rect.top;
+    menuClick = { x: px, y: py };
+
+    if (gameState === 'OVERWORLD') {
+      handleOverworldTap(px, py);
+    }
+  }
+}
+
+function handleOverworldTap(px, py) {
+  const p = players[activePlayerIdx];
+  const tileSize = Math.min((W - 32) / GRID_COLS, (H - 120) / GRID_ROWS);
+  const offsetX = (W - GRID_COLS * tileSize) / 2;
+  const offsetY = 70;
+
+  const col = Math.floor((px - offsetX) / tileSize);
+  const row = Math.floor((py - offsetY) / tileSize);
+
+  if (col >= 0 && col < GRID_COLS && row >= 0 && row < GRID_ROWS) {
+    const dist = Math.abs(col - p.x) + Math.abs(row - p.y);
+    if (dist === 1 && p.movesLeft > 0) {
+      const tile = overworldMap[row][col];
+      if (tile.type !== 'mountain') {
+        p.x = col;
+        p.y = row;
+        p.movesLeft--;
+        playSfx('step');
+
+        if (tile.structure) {
+          if (tile.structure.kind === 'chest') {
+            p.gold += 600;
+            playSfx('coin');
+            tile.structure = null;
+            showWarningMessage('+600 GOLD FOUND IN CHEST! 🪙');
+          } else if (tile.structure.kind === 'monster') {
+            activeCombat = new CombatBattle(p, tile.structure);
+            setGameState('COMBAT');
+          }
+        }
+      }
+    }
+  }
+}
+
+canvas.addEventListener('click', handleCanvasPointer);
+canvas.addEventListener('touchend', handleCanvasPointer);
+
+window.addEventListener('keydown', e => {
+  initAudio();
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
+
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    if (gameState === 'OVERWORLD') setGameState('PAUSED');
+    else if (gameState === 'PAUSED') setGameState('OVERWORLD');
+  }
+});
+
+// Touch controls binding
+function bindTouchBtn(id, action) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const start = e => { e.preventDefault(); initAudio(); action(); };
+  el.addEventListener('touchstart', start);
+  el.addEventListener('mousedown', start);
+}
+bindTouchBtn('btnEndTurn', endCurrentTurn);
+
+// Game Loop
+let lastTime = performance.now();
+function gameLoop(now) {
+  const dt = Math.min(0.05, (now - lastTime) / 1000);
+  lastTime = now;
+
+  if (pendingState !== null) {
+    gameState = pendingState;
+    pendingState = null;
+  }
+
+  if (stateCooldown > 0) stateCooldown -= dt;
+  if (warningTimer > 0) warningTimer -= dt;
+
+  render();
+  requestAnimationFrame(gameLoop);
+}
+requestAnimationFrame(gameLoop);
+
+</script>
+</body>
+</html>

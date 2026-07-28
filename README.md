@@ -12,6 +12,7 @@ drop a new `.html` file in the folder and add one entry to the `GAMES` array in 
 
 | Game | File | What it is |
 |---|---|---|
+| **Heroes of Ohana & Magic** | `heroes-of-might-and-magic.html` | Turn-based fantasy strategy RPG inspired by HOMM2: overworld map exploration, resource mines, castle building, army recruitment, tactical turn-based hex battles |
 | **Jazz Jackrabbit** | `jazz-jackrabbit.html` | Fast 2-player arcade platform shooter: P1 (Arrows), P2 (WASD), dash, jump, shoot blasters, 5 themed levels, boss battle |
 | **Ohana Karts** | `ohana-karts.html` | Beach kart race across five selectable tracks: play Lilo or Stitch, dodge the villains, beat your rival to the finish |
 | **Ohana Sumo** | `ohana-sumo.html` | Beach sumo duel: Stitch vs Experiment 625, push your opponent out of the shrinking ring, best of 3 rounds |
@@ -19,6 +20,7 @@ drop a new `.html` file in the folder and add one entry to the `GAMES` array in 
 | **Super Batter** | `super-batter.html` | Timing-based batting game: play Experiment 608, swing at the right moment to smash back balls from a pitching machine, across 12 levels |
 | **Super Cooking** | `super-cooking.html` | Cook with Capy: mix, boil and fry 6 recipes for the Ohana, one step at a time |
 | **Super Jumper** | `super-jumper.html` | 12-world platform adventure with friends, experiments and a golden medal |
+| **Super Rings** | `super-rings.html` | 20-level behind-the-ball ring flyer: steer a ball with your finger through a pseudo-3D corridor, fly through floating rings, unlock ball skins |
 | **Super Roll** | `super-roll.html` | 20-level rolling-ball platformer: steer Stitch-the-ball with your finger, jump through the rings, reach the goal |
 | **Whack Hämsterviel** | `whack-hamsterviel.html` | Whack-a-mole: bonk Hämsterviel with your finger, spare the friends, beat the clock |
 
@@ -187,6 +189,50 @@ Controls: tap/click everywhere (ingredients, gauge, flip); drag in a circle for 
 
 Progress is saved in `localStorage`: `superCookingUnlocked` (how many recipes are open) and
 `superCookingStars0` through `superCookingStars5` (best stars per recipe).
+
+---
+
+# 🎯 Super Rings
+
+A **behind-the-ball** pseudo-3D ring flyer across **20 levels** — instead of watching your ball
+from the side, the camera sits right behind it looking down a scrolling corridor, so rings and
+checkpoints grow larger and rush toward you as the world auto-advances.
+
+### Controls
+
+- **Touch (primary)**: drag your finger anywhere on the screen — **left/right** moves the ball
+  sideways, **up/down** moves it higher (to reach tall rings) or lower. The ball eases smoothly
+  toward your finger, clamped inside the corridor. Forward motion is always automatic.
+- **Keyboard**: ← → / `A` `D` to move sideways, ↑ ↓ / `W` `S` to move up/down.
+
+### The core loop
+
+- **Rings** float ahead in the corridor and approach the camera — position the ball so it flies
+  **through** the ring as it reaches the ball's depth. A clean pass pops with a sparkle burst and a
+  chime, and the ring lights up green.
+- **Missing a ring** (it reaches the ball's plane with the ball outside it) or **hitting a hazard
+  ring** (⚠, from level 12 on) costs one of **3 hearts** — losing all hearts respawns the ball at
+  the **last checkpoint square** touched, hearts refilled, no harsh game over.
+- **Checkpoint squares** are glowing gates placed at the level start and a few points along the
+  way; reaching one lights it up and becomes the new respawn point.
+- Reach the big glowing **goal portal** at the end of the corridor to clear the level.
+- From level 8, some rings **drift** up and down; from level 12, sparse hazard rings appear to
+  dodge. Speed and ring count rise gradually, and the corridor rotates through four backdrops —
+  space, sky, neon and sunset — while staying beatable throughout.
+
+### Level select, progression & ball skins
+
+20 levels unlock **one at a time** as you clear them, shown on a level-select grid (🔒 for locked
+levels, up to 3 stars per cleared level based on how many rings you kept clean). A **skin picker**
+(reachable from the level-select screen) offers **8 ball skins** — Classic, Beach Ball, Soccer,
+Watermelon, Planet, Galaxy, Gold and a Stitch-face ball — all drawn in code and unlocked as you
+progress through the levels; locked skins show 🔒 with the level needed to unlock them. Your
+chosen skin is used for the ball in every level. Finish level 20 for a confetti **Champion**
+screen.
+
+Progress is saved in `localStorage`: `superRingsUnlocked` (how many levels are open),
+`superRingsStars{n}` (best stars per level), `superRingsSkin` (the equipped skin) and
+`superRingsSkinsUnlocked` (the set of unlocked skins).
 
 ---
 
@@ -403,6 +449,7 @@ any game, without having to choose again.
 | `spaceship-racers.html` | The pseudo-3D spaceship racing game. |
 | `super-batter.html` | The batting game — 12 levels tuned in `levelConfig()`, ball physics and swing/hit detection in `update()`. |
 | `super-cooking.html` | The cooking game — recipes in the `RECIPES` array, ingredients drawn in `drawIngredientIcon`. |
+| `super-rings.html` | The behind-the-ball ring flyer — 20 levels generated by `levelConfig()`, pseudo-3D `project()` corridor, 8 procedural ball skins in the `SKINS` array. |
 | `super-roll.html` | The rolling-ball platformer — 20 levels generated by `buildLevel()` from difficulty parameters (see the `LEVEL GENERATOR` comment block). |
 | `whack-hamsterviel.html` | The whack-a-mole game. |
 | `serve.py` | Dev server with no-cache headers on port 8642. |

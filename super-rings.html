@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Super Rings</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #000;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    position: fixed;
+  }
+  #game { display: block; width: 100%; height: 100%; }
+  #homeLink {
+    position: fixed;
+    top: max(10px, env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    font: 600 14px -apple-system, sans-serif;
+    color: #fff;
+    text-decoration: none;
+    background: rgba(0,0,0,0.35);
+    padding: 5px 12px;
+    border-radius: 14px;
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<a id="homeLink" href="index.html">← Games</a>
+
+<script>
+'use strict';
+
+// ============ SETUP ============
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, K = 1;
+
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  K = Math.max(0.8, Math.min(1.5, H / 460));
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 100));
+resize();
+
+// ============ I18N ============
+let LANG = 'en';
+try { LANG = localStorage.getItem('ohanaLang') === 'ro' ? 'ro' : 'en'; } catch (e) {}
+const T = {
+  en: {
+    pageTitle: 'Super Rings',
+    homeLink: '← Games',
+    title: '🎯 SUPER RINGS 🎯',
+    tapStart: 'Tap to start',
+    play: 'PLAY',
+    levels: 'LEVELS',
+    skins: 'SKINS',
+    hint: 'Fly your ball through the floating rings!',
+    controlsHint: 'Drag to move · Arrows / WASD on keyboard',
+    back: '‹ Back',
+    level: 'Level ',
+    ring: 'Ring ',
+    respawning: 'Back to checkpoint!',
+    checkpointHit: 'Checkpoint!',
+    levelComplete: 'LEVEL COMPLETE!',
+    stars: 'Stars: ',
+    tapContinue: 'Tap to continue',
+    champion: '🏆 CHAMPION! 🏆',
+    conquered: 'You flew through all 20 levels!',
+    tapMenu: 'Tap for level select',
+    locked: 'Locked',
+    unlockAt: (n) => 'Beat level ' + n,
+    skinPicker: 'CHOOSE YOUR BALL',
+    equipped: 'EQUIPPED',
+    tapEquip: 'Tap to equip',
+    skinNames: ['Classic', 'Beach Ball', 'Soccer', 'Watermelon', 'Planet', 'Galaxy', 'Gold', 'Stitch'],
+  },
+  ro: {
+    pageTitle: 'Super Rings',
+    homeLink: '← Jocuri',
+    title: '🎯 SUPER RINGS 🎯',
+    tapStart: 'Atinge pentru start',
+    play: 'JOACĂ',
+    levels: 'NIVELE',
+    skins: 'SKINURI',
+    hint: 'Zboară cu mingea prin cercurile plutitoare!',
+    controlsHint: 'Trage cu degetul · Săgeți / WASD pe tastatură',
+    back: '‹ Înapoi',
+    level: 'Nivel ',
+    ring: 'Cerc ',
+    respawning: 'Înapoi la punctul de control!',
+    checkpointHit: 'Punct de control!',
+    levelComplete: 'NIVEL TERMINAT!',
+    stars: 'Stele: ',
+    tapContinue: 'Atinge pentru a continua',
+    champion: '🏆 CAMPION! 🏆',
+    conquered: 'Ai zburat prin toate cele 20 de nivele!',
+    tapMenu: 'Atinge pentru alegerea nivelelor',
+    locked: 'Blocat',
+    unlockAt: (n) => 'Treci de nivelul ' + n,
+    skinPicker: 'ALEGE-ȚI MINGEA',
+    equipped: 'ECHIPAT',
+    tapEquip: 'Atinge pentru a echipa',
+    skinNames: ['Clasică', 'Minge de Plajă', 'Fotbal', 'Pepene', 'Planetă', 'Galaxie', 'Aur', 'Stitch'],
+  },
+};
+function tr(key) { return T[LANG][key]; }
+document.title = tr('pageTitle');
+document.addEventListener('DOMContentLoaded', () => {
+  const home = document.getElementById('homeLink');
+  if (home) home.textContent = tr('homeLink');
+});
+
+// ============ SOUND ============
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+function beep(freq, dur, type, vol, slide) {
+  if (!audioCtx) return;
+  type = type || 'square'; vol = vol || 0.07; slide = slide || 0;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), audioCtx.currentTime + dur);
+  g.gain.setValueAtTime(vol, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start(); o.stop(audioCtx.currentTime + dur);
+}
+const sfx = {
+  ringPass()  { beep(660, 0.1, 'sine', 0.08, 300); setTimeout(() => beep(880, 0.12, 'sine', 0.07, 200), 60); },
+  checkpoint(){ beep(700, 0.08, 'sine', 0.06, 260); setTimeout(() => beep(980, 0.12, 'sine', 0.06, 160), 70); },
+  miss()      { beep(220, 0.22, 'sawtooth', 0.09, -140); },
+  respawn()   { [440, 350, 280].forEach((f, i) => setTimeout(() => beep(f, 0.16, 'triangle', 0.06), i * 90)); },
+  levelDone() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 0.2, 'square', 0.08), i * 120)); },
+  unlock()    { [660, 880, 1108].forEach((f, i) => setTimeout(() => beep(f, 0.16, 'square', 0.07), i * 90)); },
+  champion()  { [523, 659, 784, 1047, 1319].forEach((f, i) => setTimeout(() => beep(f, 0.26, 'square', 0.09), i * 130)); },
+  tick()      { beep(500, 0.05, 'square', 0.04); },
+};
+
+// ============ PROJECTION (behind-the-ball corridor) ============
+const FOCAL = 340;                // focal length used in scale = FOCAL / z
+const CORRIDOR_HALF_X = 260;      // world half-width of the corridor
+const CORRIDOR_TOP = 220;         // world height above ball-plane
+const CORRIDOR_BOTTOM = 40;
+const HORIZON_FRAC = 0.40;        // horizon line as a fraction of H
+
+function project(ox, oy, z) {
+  const scale = FOCAL / Math.max(1, z);
+  return {
+    x: W / 2 + ox * scale,
+    y: H * HORIZON_FRAC + oy * scale,
+    scale,
+  };
+}
+
+// ============ LEVEL GENERATION ============
+// Each level is a sequence of "gates" (rings, checkpoints, hazards) placed at
+// increasing world-depth `z0` (distance ahead when spawned). The ball's own
+// depth stays fixed at BALL_Z; the world scrolls toward the camera by
+// decreasing every gate's remaining z each frame (speed = forward velocity).
+const BALL_Z = 130; // depth-plane where the ball lives / where pass-through is judged
+
+function themeFor(n) {
+  const t = ['space', 'sky', 'neon', 'sunset'];
+  return t[Math.floor((n - 1) / 5) % t.length];
+}
+
+function levelConfig(n) {
+  const diff = (n - 1) / 19; // 0..1
+  const ringCount = 10 + Math.floor(diff * 14);          // 10..24
+  const speed = 5.4 + diff * 5.6;                          // world units/frame closing speed
+  const spacing = 900 - diff * 260;                        // depth gap between rings
+  const spreadX = 90 + diff * 150;                          // lateral placement range
+  const spreadY = 40 + diff * 90;                           // vertical placement range
+  const moving = n >= 8;
+  const hazards = n >= 12;
+  const name = tr('level') + n;
+
+  const rings = [];
+  let z = 1600;
+  // simple deterministic pseudo-random so a level is stable across replays
+  let seed = n * 7919 + 13;
+  function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return (seed % 1000) / 1000; }
+
+  for (let i = 0; i < ringCount; i++) {
+    const ox = (rnd() * 2 - 1) * spreadX;
+    const oy = (rnd() * 2 - 1) * spreadY - 20;
+    const drift = moving && rnd() < 0.45 ? { amp: 30 + rnd() * 40, spd: 0.02 + rnd() * 0.02, phase: rnd() * 6.28 } : null;
+    rings.push({ z0: z, ox, oy, drift, r: 46, passed: false, missed: false });
+    z += spacing + rnd() * 220;
+    if (hazards && i > 2 && rnd() < 0.3) {
+      const hox = (rnd() * 2 - 1) * spreadX;
+      const hoy = (rnd() * 2 - 1) * spreadY - 20;
+      rings.push({ z0: z - 120, ox: hox, oy: hoy, hazard: true, r: 30, passed: false, missed: false });
+    }
+  }
+  // checkpoints: start + a couple mid-level, spaced by index
+  const checkpoints = [{ z0: 20, ox: 0, oy: -20 }];
+  const cpEvery = Math.max(3, Math.floor(ringCount / 3));
+  for (let i = cpEvery; i < ringCount; i += cpEvery) {
+    checkpoints.push({ z0: rings[i].z0 - 40, ox: 0, oy: -20 });
+  }
+  const goalZ = z + 300;
+
+  return { n, name, theme: themeFor(n), rings, checkpoints, goalZ, speed, ringCount };
+}
+
+// ============ SKINS ============
+// Each skin is drawn procedurally; unlockLevel = level that must be beaten to unlock it (1 = free from start)
+const SKINS = [
+  { id: 'classic', unlockLevel: 1, draw: drawSkinClassic },
+  { id: 'beach', unlockLevel: 2, draw: drawSkinBeach },
+  { id: 'soccer', unlockLevel: 4, draw: drawSkinSoccer },
+  { id: 'watermelon', unlockLevel: 6, draw: drawSkinWatermelon },
+  { id: 'planet', unlockLevel: 9, draw: drawSkinPlanet },
+  { id: 'galaxy', unlockLevel: 12, draw: drawSkinGalaxy },
+  { id: 'gold', unlockLevel: 16, draw: drawSkinGold },
+  { id: 'stitch', unlockLevel: 20, draw: drawSkinStitch },
+];
+
+function drawBallBase(r, baseColor, spin) {
+  const grad = ctx.createRadialGradient(-r * 0.35, -r * 0.4, r * 0.15, 0, 0, r);
+  grad.addColorStop(0, lighten(baseColor, 0.5));
+  grad.addColorStop(0.6, baseColor);
+  grad.addColorStop(1, darken(baseColor, 0.35));
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+}
+function lighten(hex, amt) { return mix(hex, '#ffffff', amt); }
+function darken(hex, amt) { return mix(hex, '#000000', amt); }
+function mix(a, b, t) {
+  const pa = hexToRgb(a), pb = hexToRgb(b);
+  const r = Math.round(pa.r + (pb.r - pa.r) * t);
+  const g = Math.round(pa.g + (pb.g - pa.g) * t);
+  const bl = Math.round(pa.b + (pb.b - pa.b) * t);
+  return 'rgb(' + r + ',' + g + ',' + bl + ')';
+}
+function hexToRgb(h) {
+  h = h.replace('#', '');
+  return { r: parseInt(h.substr(0, 2), 16), g: parseInt(h.substr(2, 2), 16), b: parseInt(h.substr(4, 2), 16) };
+}
+function ballHighlight(r) {
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.beginPath(); ctx.ellipse(-r * 0.32, -r * 0.38, r * 0.22, r * 0.14, -0.6, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawSkinClassic(r, spin) {
+  drawBallBase(r, '#3a8bef', spin);
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = Math.max(1.5, r * 0.06);
+  for (let i = -1; i <= 1; i++) {
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 0.9, r, 0, 0, Math.PI * 2);
+    ctx.save(); ctx.rotate(spin + i * 1.05); ctx.beginPath();
+    ctx.ellipse(0, 0, r * Math.abs(Math.cos(i)) * 0.85 + r * 0.15, r, 0, 0, Math.PI * 2);
+    ctx.stroke(); ctx.restore();
+  }
+  ballHighlight(r);
+}
+function drawSkinBeach(r, spin) {
+  drawBallBase(r, '#f4f4f4', spin);
+  const colors = ['#ff4d4d', '#ffd23f', '#3aa1ff'];
+  ctx.save();
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.clip();
+  for (let i = 0; i < 6; i++) {
+    ctx.fillStyle = colors[i % 3];
+    ctx.save(); ctx.rotate(spin + i * Math.PI / 3);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, -0.26, 0.26); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+  ballHighlight(r);
+}
+function drawSkinSoccer(r, spin) {
+  drawBallBase(r, '#f0f0f0', spin);
+  ctx.save();
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.clip();
+  ctx.fillStyle = '#222';
+  for (let i = 0; i < 5; i++) {
+    const ang = spin + i * (Math.PI * 2 / 5);
+    const px = Math.cos(ang) * r * 0.42, py = Math.sin(ang) * r * 0.42;
+    drawPentagon(px, py, r * 0.24, ang);
+  }
+  drawPentagon(0, 0, r * 0.22, spin);
+  ctx.restore();
+  ballHighlight(r);
+}
+function drawPentagon(cx, cy, rr, rot) {
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const a = rot + i * (Math.PI * 2 / 5) - Math.PI / 2;
+    const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath(); ctx.fill();
+}
+function drawSkinWatermelon(r, spin) {
+  drawBallBase(r, '#39c15a', spin);
+  ctx.strokeStyle = 'rgba(20,80,30,0.55)'; ctx.lineWidth = Math.max(1.5, r * 0.09);
+  for (let i = 0; i < 7; i++) {
+    ctx.save(); ctx.rotate(spin + i * 0.45);
+    ctx.beginPath(); ctx.ellipse(0, 0, r * 0.2, r, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+  ballHighlight(r);
+}
+function drawSkinPlanet(r, spin) {
+  drawBallBase(r, '#d99a4e', spin);
+  ctx.save();
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.clip();
+  ctx.strokeStyle = 'rgba(120,60,20,0.35)'; ctx.lineWidth = r * 0.14;
+  for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(-r, i * r * 0.4); ctx.lineTo(r, i * r * 0.4 + 4); ctx.stroke(); }
+  ctx.restore();
+  ctx.save(); ctx.rotate(0.5);
+  ctx.strokeStyle = '#e8c98a'; ctx.lineWidth = Math.max(2, r * 0.14);
+  ctx.beginPath(); ctx.ellipse(0, 0, r * 1.6, r * 0.45, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+  ballHighlight(r);
+}
+function drawSkinGalaxy(r, spin) {
+  drawBallBase(r, '#241448', spin);
+  ctx.save();
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.clip();
+  let seed = 99;
+  function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+  for (let i = 0; i < 22; i++) {
+    const a = rnd() * Math.PI * 2 + spin * 0.3;
+    const rr = rnd() * r;
+    ctx.fillStyle = 'rgba(255,255,255,' + (0.3 + rnd() * 0.7) + ')';
+    ctx.fillRect(Math.cos(a) * rr, Math.sin(a) * rr, 1.6, 1.6);
+  }
+  ctx.restore();
+  ballHighlight(r);
+}
+function drawSkinGold(r, spin) {
+  drawBallBase(r, '#f4c93e', spin);
+  ctx.strokeStyle = 'rgba(255,255,220,0.6)'; ctx.lineWidth = Math.max(1.5, r * 0.05);
+  for (let i = 0; i < 3; i++) {
+    ctx.save(); ctx.rotate(spin + i * 1.05);
+    ctx.beginPath(); ctx.ellipse(0, 0, r * 0.9, r, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+  ballHighlight(r);
+}
+function drawSkinStitch(r, spin) {
+  drawBallBase(r, '#3a72d0', spin);
+  ctx.save(); ctx.rotate(spin * 0.15);
+  // simple face
+  ctx.fillStyle = '#e9f4ff';
+  ctx.beginPath(); ctx.ellipse(-r * 0.28, -r * 0.05, r * 0.22, r * 0.26, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(r * 0.28, -r * 0.05, r * 0.22, r * 0.26, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#111';
+  ctx.beginPath(); ctx.arc(-r * 0.28, r * 0.02, r * 0.1, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(r * 0.28, r * 0.02, r * 0.1, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#1a3a8f';
+  ctx.beginPath(); ctx.ellipse(0, r * 0.28, r * 0.16, r * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  ballHighlight(r);
+}
+
+// ============ THEMES ============
+const THEMES = {
+  space:  { sky: ['#07051c', '#1a1240', '#2c1a56'], wall: '#1c1240', floor: '#120b2c', line: '#7dfcff', stars: true, accent: '#8f6bff' },
+  sky:    { sky: ['#2b6fb0', '#7ec7e8', '#dff3ff'], wall: '#3b7fc0', floor: '#295a91', line: '#ffffff', stars: false, accent: '#ffe066' },
+  neon:   { sky: ['#0a0a12', '#1a0a2a', '#2a0a3a'], wall: '#220a33', floor: '#150720', line: '#ff2fd0', stars: true, accent: '#2fffe0' },
+  sunset: { sky: ['#3a1050', '#a3396b', '#f0975a'], wall: '#5a2050', floor: '#3a1436', line: '#ffd27a', stars: false, accent: '#ff7a5c' },
+};
+
+// ============ PROGRESS (localStorage) ============
+const UNLOCK_KEY = 'superRingsUnlocked';
+const SKIN_KEY = 'superRingsSkin';
+const SKIN_UNLOCK_KEY = 'superRingsSkinsUnlocked';
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function getUnlocked() {
+  try { return clamp(parseInt(localStorage.getItem(UNLOCK_KEY) || '1', 10) || 1, 1, 20); } catch (e) { return 1; }
+}
+function setUnlocked(n) {
+  try { if (n > getUnlocked()) localStorage.setItem(UNLOCK_KEY, String(n)); } catch (e) {}
+}
+function getStars(n) {
+  try { return parseInt(localStorage.getItem('superRingsStars' + n) || '0', 10) || 0; } catch (e) { return 0; }
+}
+function setStars(n, stars) {
+  try { if (stars > getStars(n)) localStorage.setItem('superRingsStars' + n, String(stars)); } catch (e) {}
+}
+function getEquippedSkin() {
+  try { return localStorage.getItem(SKIN_KEY) || 'classic'; } catch (e) { return 'classic'; }
+}
+function setEquippedSkin(id) {
+  try { localStorage.setItem(SKIN_KEY, id); } catch (e) {}
+}
+function getUnlockedSkins() {
+  try {
+    const raw = localStorage.getItem(SKIN_UNLOCK_KEY);
+    return raw ? JSON.parse(raw) : ['classic'];
+  } catch (e) { return ['classic']; }
+}
+function syncSkinUnlocks() {
+  const unlockedLevel = getUnlocked();
+  const have = getUnlockedSkins();
+  let changed = false;
+  for (const s of SKINS) {
+    if (s.unlockLevel <= unlockedLevel && have.indexOf(s.id) < 0) { have.push(s.id); changed = true; }
+  }
+  if (changed) { try { localStorage.setItem(SKIN_UNLOCK_KEY, JSON.stringify(have)); } catch (e) {} }
+  return have;
+}
+
+// ============ GAME STATE ============
+const state = { mode: 'title', levelIdx: 0, msg: '', msgT: 0, stars: 0, newSkinUnlocked: null };
+const player = {
+  x: 0, y: 0, tx: 0, ty: 0,          // world offsets, target offsets (input)
+  hearts: 3, invuln: 0,
+  squash: 0, spin: 0,
+  checkpoint: null,
+};
+let level = null, theme = THEMES.space;
+let ringsPassedCount = 0, ringsTotal = 0;
+let parts = [], flashT = 0, shakeT = 0, respawnT = 0;
+let distTraveled = 0;
+let unlockedSkins = syncSkinUnlocks();
+let skinPickerFrom = 'title'; // where to return after picking
+
+const X_LIMIT = CORRIDOR_HALF_X - 30;
+const Y_TOP = -CORRIDOR_TOP + 30;
+const Y_BOTTOM = CORRIDOR_BOTTOM - 10;
+
+function newLevelRuntimeState() {
+  ringsPassedCount = 0;
+  ringsTotal = level.ringCount;
+  parts = []; flashT = 0; shakeT = 0; respawnT = 0;
+  distTraveled = 0;
+}
+
+function startLevel(idx) {
+  level = levelConfig(idx + 1);
+  theme = THEMES[level.theme];
+  // deep clone gates so re-tries reset state
+  level.rings = level.rings.map(r => Object.assign({}, r, { passed: false, missed: false, z: r.z0 }));
+  level.checkpoints = level.checkpoints.map(c => Object.assign({}, c, { z: c.z0, hit: false }));
+  player.x = 0; player.y = 0; player.tx = 0; player.ty = 0;
+  player.hearts = 3; player.invuln = 60; player.squash = 0; player.spin = 0;
+  player.checkpoint = { z: 0, ox: 0, oy: 0 };
+  level.checkpoints[0].hit = true;
+  state.levelIdx = idx;
+  state.mode = 'play';
+  state.msg = ''; state.msgT = 0;
+  scroll = 0;
+  newLevelRuntimeState();
+}
+
+// The world is modeled as a single scroll offset `scroll` (total depth consumed
+// by forward motion). Every gate's current depth = z0 - scroll, and a checkpoint
+// simply remembers the scroll value (plus the player's x/y) at the moment it was hit.
+let scroll = 0;
+
+// ============ INPUT ============
+let dragging = false, dragId = null, dragStartX = 0, dragStartY = 0, dragBaseX = 0, dragBaseY = 0;
+const keys = {};
+
+function onPointerDown(x, y, id) {
+  initAudio();
+  if (state.mode === 'title') {
+    state.mode = 'levelselect';
+    return;
+  }
+  if (state.mode === 'levelselect') { handleLevelSelectTap(x, y); return; }
+  if (state.mode === 'skins') { handleSkinTap(x, y); return; }
+  if (state.mode === 'levelcomplete') { state.mode = 'levelselect'; return; }
+  if (state.mode === 'champion') { state.mode = 'levelselect'; return; }
+  if (state.mode === 'play') {
+    dragging = true; dragId = id;
+    dragStartX = x; dragStartY = y;
+    dragBaseX = player.tx; dragBaseY = player.ty;
+  }
+}
+function onPointerMove(x, y, id) {
+  if (state.mode !== 'play' || !dragging || id !== dragId) return;
+  const dx = x - dragStartX, dy = y - dragStartY;
+  const sens = 1.0;
+  player.tx = clamp(dragBaseX + dx * sens, -X_LIMIT, X_LIMIT);
+  player.ty = clamp(dragBaseY + dy * sens, Y_TOP, Y_BOTTOM);
+}
+function onPointerUp(id) {
+  if (id === dragId) { dragging = false; dragId = null; }
+}
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) onPointerDown(t.clientX, t.clientY, t.identifier);
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) onPointerMove(t.clientX, t.clientY, t.identifier);
+}, { passive: false });
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) onPointerUp(t.identifier);
+}, { passive: false });
+canvas.addEventListener('touchcancel', e => {
+  for (const t of e.changedTouches) onPointerUp(t.identifier);
+});
+canvas.addEventListener('mousedown', e => onPointerDown(e.clientX, e.clientY, 'mouse'));
+canvas.addEventListener('mousemove', e => onPointerMove(e.clientX, e.clientY, 'mouse'));
+window.addEventListener('mouseup', e => onPointerUp('mouse'));
+
+window.addEventListener('keydown', e => {
+  initAudio();
+  keys[e.code] = true;
+  if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
+  if (state.mode === 'title' && (e.code === 'Enter' || e.code === 'Space')) state.mode = 'levelselect';
+  else if (state.mode === 'levelcomplete' && (e.code === 'Enter' || e.code === 'Space')) state.mode = 'levelselect';
+  else if (state.mode === 'champion' && (e.code === 'Enter' || e.code === 'Space')) state.mode = 'levelselect';
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+function handleLevelSelectTap(x, y) {
+  if (y < H * 0.13) { state.mode = 'title'; return; }
+  // skins button, top-right
+  if (y < H * 0.13 + 46 * K && x > W - 140 * K) { skinPickerFrom = 'levelselect'; state.mode = 'skins'; return; }
+  const unlocked = getUnlocked();
+  const cols = W > 700 ? 5 : (W > 460 ? 4 : 3);
+  const cw = Math.min(120, (W - 60) / cols);
+  const ch = cw;
+  const gx = (W - cw * cols - 14 * (cols - 1)) / 2;
+  const gy = H * 0.24;
+  for (let i = 0; i < 20; i++) {
+    const col = i % cols, row = Math.floor(i / cols);
+    const cx = gx + col * (cw + 14);
+    const cy = gy + row * (ch + 14);
+    if (x >= cx && x <= cx + cw && y >= cy && y <= cy + ch) {
+      if (i + 1 <= unlocked) startLevel(i);
+      return;
+    }
+  }
+}
+
+function handleSkinTap(x, y) {
+  if (y < H * 0.13) { state.mode = skinPickerFrom; return; }
+  const cols = W > 700 ? 4 : 2;
+  const cw = Math.min(150, (W - 60) / cols);
+  const ch = cw * 1.05;
+  const gx = (W - cw * cols - 16 * (cols - 1)) / 2;
+  const gy = H * 0.24;
+  const have = unlockedSkins;
+  for (let i = 0; i < SKINS.length; i++) {
+    const col = i % cols, row = Math.floor(i / cols);
+    const cx = gx + col * (cw + 16);
+    const cy = gy + row * (ch + 16);
+    if (x >= cx && x <= cx + cw && y >= cy && y <= cy + ch) {
+      if (have.indexOf(SKINS[i].id) >= 0) { setEquippedSkin(SKINS[i].id); sfx.tick(); }
+      return;
+    }
+  }
+}
+
+// ============ UPDATE ============
+const STEP = 1000 / 60;
+let lastT = performance.now(), acc = 0;
+
+function updateParticles() {
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.life--;
+    if (p.life <= 0) parts.splice(i, 1);
+  }
+}
+function burst(sx, sy, color, n) {
+  for (let i = 0; i < n; i++) {
+    parts.push({
+      x: sx, y: sy,
+      vx: (Math.random() - 0.5) * 6,
+      vy: -Math.random() * 5 - 1,
+      life: 26 + Math.random() * 20,
+      color,
+    });
+  }
+}
+
+function keyboardInput() {
+  const left = keys.ArrowLeft || keys.KeyA;
+  const right = keys.ArrowRight || keys.KeyD;
+  const up = keys.ArrowUp || keys.KeyW;
+  const down = keys.ArrowDown || keys.KeyS;
+  const spd = 4.2;
+  if (left) player.tx = clamp(player.tx - spd, -X_LIMIT, X_LIMIT);
+  if (right) player.tx = clamp(player.tx + spd, -X_LIMIT, X_LIMIT);
+  if (up) player.ty = clamp(player.ty - spd, Y_TOP, Y_BOTTOM);
+  if (down) player.ty = clamp(player.ty + spd, Y_TOP, Y_BOTTOM);
+}
+
+function update() {
+  updateParticles();
+  if (flashT > 0) flashT--;
+  if (shakeT > 0) shakeT--;
+  if (state.msgT > 0) state.msgT--;
+
+  if (state.mode !== 'play') return;
+
+  keyboardInput();
+  player.x += (player.tx - player.x) * 0.22;
+  player.y += (player.ty - player.y) * 0.22;
+  player.spin += 0.12 + Math.abs(player.x) * 0.0005;
+  if (player.squash > 0) player.squash -= 0.05;
+
+  if (respawnT > 0) { respawnT--; return; }
+  if (player.invuln > 0) player.invuln--;
+
+  scroll += level.speed;
+  distTraveled = scroll;
+
+  // checkpoints
+  for (const c of level.checkpoints) {
+    if (c.hit) continue;
+    const z = c.z0 - scroll;
+    if (z <= BALL_Z + 30 && z > BALL_Z - 60) {
+      c.hit = true;
+      player.checkpoint = { z: scroll, ox: player.x, oy: player.y };
+      sfx.checkpoint();
+      state.msg = tr('checkpointHit'); state.msgT = 60;
+      burst(W / 2, H * HORIZON_FRAC, theme.accent, 14);
+    }
+  }
+
+  // rings
+  for (const r of level.rings) {
+    if (r.passed || r.missed) continue;
+    const z = r.z0 - scroll;
+    let ox = r.ox, oy = r.oy;
+    if (r.drift) { ox += Math.sin(scroll * r.drift.spd + r.drift.phase) * r.drift.amp; }
+    r.curOx = ox; r.curOy = oy;
+    if (z <= BALL_Z && z > BALL_Z - 90) {
+      const dx = player.x - ox, dy = player.y - oy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const inside = dist < r.r * 0.72;
+      if (r.hazard) {
+        if (inside && player.invuln <= 0) {
+          r.missed = true;
+          loseHeart();
+          burst(project(ox, oy, BALL_Z).x, project(ox, oy, BALL_Z).y, '#ff5c5c', 14);
+        } else if (z <= BALL_Z - 60) {
+          r.missed = true; // passed the hazard depth without hitting -> fine
+        }
+      } else {
+        if (inside) {
+          r.passed = true;
+          ringsPassedCount++;
+          sfx.ringPass();
+          const p = project(ox, oy, BALL_Z);
+          burst(p.x, p.y, theme.accent, 16);
+        } else if (z <= BALL_Z - 60) {
+          r.missed = true;
+          sfx.miss();
+          loseHeart();
+        }
+      }
+    }
+  }
+
+  // goal
+  const goalZ = level.goalZ - scroll;
+  if (goalZ <= BALL_Z + 10) {
+    completeLevel();
+  }
+}
+
+function loseHeart() {
+  if (player.invuln > 0) return;
+  player.hearts--;
+  player.invuln = 60;
+  player.squash = 1;
+  flashT = 10; shakeT = 14;
+  sfx.miss();
+  if (player.hearts <= 0) respawnAtCheckpoint2();
+}
+
+function respawnAtCheckpoint2() {
+  respawnT = 45;
+  player.hearts = 3;
+  player.invuln = 90;
+  scroll = player.checkpoint.z;
+  player.tx = player.checkpoint.ox; player.x = player.checkpoint.ox;
+  player.ty = player.checkpoint.oy; player.y = player.checkpoint.oy;
+  for (const r of level.rings) {
+    if (r.z0 - scroll > BALL_Z - 90 || (!r.passed && !r.missed)) {
+      // only reset rings that hadn't been resolved yet, or that are now ahead again
+    }
+    if (r.z0 - scroll > BALL_Z - 90) { r.passed = false; r.missed = false; }
+  }
+  for (const c of level.checkpoints) { if (c.z0 - scroll > 0) c.hit = false; }
+  sfx.respawn();
+  state.msg = tr('respawning'); state.msgT = 90;
+}
+
+function completeLevel() {
+  const missedCount = level.rings.filter(r => !r.hazard && r.missed).length;
+  const heartsLeft = player.hearts;
+  let stars = 1;
+  if (missedCount === 0 && heartsLeft === 3) stars = 3;
+  else if (missedCount <= 2) stars = 2;
+  state.stars = stars;
+  setStars(state.levelIdx + 1, stars);
+  const lvlNum = state.levelIdx + 1;
+  const wasUnlocked = getUnlocked();
+  if (lvlNum === wasUnlocked && lvlNum < 20) setUnlocked(lvlNum + 1);
+  const before = unlockedSkins.slice();
+  unlockedSkins = syncSkinUnlocks();
+  state.newSkinUnlocked = null;
+  for (const s of SKINS) {
+    if (before.indexOf(s.id) < 0 && unlockedSkins.indexOf(s.id) >= 0) { state.newSkinUnlocked = s.id; break; }
+  }
+  if (lvlNum >= 20) {
+    state.mode = 'champion';
+    sfx.champion();
+    for (let i = 0; i < 100; i++) parts.push({
+      x: Math.random() * W, y: -20 - Math.random() * 200,
+      vx: (Math.random() - 0.5) * 2, vy: 1 + Math.random() * 2.5,
+      life: 140 + Math.random() * 100,
+      color: ['#ff6b8a', '#ffe066', '#7dff8a', '#7adcff', '#c77dff'][i % 5],
+    });
+  } else {
+    state.mode = 'levelcomplete';
+    sfx.levelDone();
+    if (state.newSkinUnlocked) sfx.unlock();
+  }
+}
+
+function loop(now) {
+  requestAnimationFrame(loop);
+  let dt = now - lastT; lastT = now;
+  if (dt > 250) dt = 250;
+  acc += dt;
+  while (acc >= STEP) { update(); acc -= STEP; }
+  render();
+}
+
+// ============ RENDER: BACKGROUND ============
+function drawBackground(t) {
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, theme.sky[0]);
+  grad.addColorStop(0.5, theme.sky[1]);
+  grad.addColorStop(1, theme.sky[2]);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  if (theme.stars) {
+    let seed = 5;
+    function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+    for (let i = 0; i < 90; i++) {
+      const sx = rnd() * W;
+      const sy = rnd() * H * HORIZON_FRAC;
+      const tw = 0.3 + 0.7 * Math.abs(Math.sin(t / 500 + i));
+      ctx.fillStyle = 'rgba(255,255,255,' + tw + ')';
+      ctx.fillRect(sx, sy, 2, 2);
+    }
+  }
+}
+
+// draws the corridor: a floor plane and two side walls converging to a
+// vanishing point at the horizon, using the same project() perspective as
+// gates so everything reads as one consistent tunnel
+function drawCorridor(t) {
+  const horizonY = H * HORIZON_FRAC;
+  const nearZ = 60, farZ = 2600;
+  const steps = 22;
+
+  // floor: draw as a fan of receding quads for a subtle grid look
+  ctx.save();
+  const floorGrad = ctx.createLinearGradient(0, horizonY, 0, H);
+  floorGrad.addColorStop(0, theme.wall);
+  floorGrad.addColorStop(1, theme.floor);
+  ctx.fillStyle = floorGrad;
+  const pNearL = project(-CORRIDOR_HALF_X, Y_BOTTOM + 20, nearZ);
+  const pNearR = project(CORRIDOR_HALF_X, Y_BOTTOM + 20, nearZ);
+  const pFarL = project(-CORRIDOR_HALF_X, Y_BOTTOM + 20, farZ);
+  const pFarR = project(CORRIDOR_HALF_X, Y_BOTTOM + 20, farZ);
+  ctx.beginPath();
+  ctx.moveTo(pNearL.x, pNearL.y); ctx.lineTo(pNearR.x, pNearR.y);
+  ctx.lineTo(pFarR.x, pFarR.y); ctx.lineTo(pFarL.x, pFarL.y);
+  ctx.closePath(); ctx.fill();
+
+  // side walls
+  const pNearLT = project(-CORRIDOR_HALF_X, -CORRIDOR_TOP, nearZ);
+  const pFarLT = project(-CORRIDOR_HALF_X, -CORRIDOR_TOP, farZ);
+  const wallGradL = ctx.createLinearGradient(pNearLT.x, 0, pFarLT.x, 0);
+  wallGradL.addColorStop(0, theme.wall);
+  wallGradL.addColorStop(1, theme.floor);
+  ctx.fillStyle = wallGradL;
+  ctx.beginPath();
+  ctx.moveTo(pNearL.x, pNearL.y); ctx.lineTo(pNearLT.x, pNearLT.y);
+  ctx.lineTo(pFarLT.x, pFarLT.y); ctx.lineTo(pFarL.x, pFarL.y);
+  ctx.closePath(); ctx.fill();
+
+  const pNearRT = project(CORRIDOR_HALF_X, -CORRIDOR_TOP, nearZ);
+  const pFarRT = project(CORRIDOR_HALF_X, -CORRIDOR_TOP, farZ);
+  ctx.fillStyle = wallGradL;
+  ctx.beginPath();
+  ctx.moveTo(pNearR.x, pNearR.y); ctx.lineTo(pNearRT.x, pNearRT.y);
+  ctx.lineTo(pFarRT.x, pFarRT.y); ctx.lineTo(pFarR.x, pFarR.y);
+  ctx.closePath(); ctx.fill();
+
+  // scrolling floor rungs for a sense of forward motion
+  ctx.strokeStyle = theme.line; ctx.globalAlpha = 0.35; ctx.lineWidth = 2;
+  const rungSpace = 260;
+  const offset = (scroll || 0) % rungSpace;
+  for (let z = nearZ + (rungSpace - offset); z < farZ; z += rungSpace) {
+    const l = project(-CORRIDOR_HALF_X, Y_BOTTOM + 20, z);
+    const r = project(CORRIDOR_HALF_X, Y_BOTTOM + 20, z);
+    ctx.beginPath(); ctx.moveTo(l.x, l.y); ctx.lineTo(r.x, r.y); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // speed lines converging to vanishing point for extra motion cue
+  ctx.save();
+  ctx.globalAlpha = 0.12;
+  ctx.strokeStyle = '#ffffff';
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2;
+    const vx = W / 2, vy = horizonY;
+    ctx.beginPath();
+    ctx.moveTo(vx, vy);
+    ctx.lineTo(vx + Math.cos(a) * W, vy + Math.sin(a) * H * 0.6);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ============ RENDER: GATES ============
+function drawRing(r) {
+  const z = r.z0 - scroll;
+  if (z < BALL_Z - 100 || z > 2700) return;
+  const ox = r.curOx !== undefined ? r.curOx : r.ox;
+  const oy = r.curOy !== undefined ? r.curOy : r.oy;
+  const p = project(ox, oy, z);
+  const rr = r.r * p.scale;
+  if (rr < 1.2) return;
+  const passedBall = z <= BALL_Z && !r.hazard;
+
+  const color = r.hazard ? '#ff5c5c' : (r.passed ? '#5cff8a' : theme.accent);
+
+  // back arc
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = Math.max(1.5, rr * 0.22);
+  ctx.globalAlpha = 0.55;
+  ctx.beginPath(); ctx.ellipse(p.x, p.y, rr, rr * 0.92, 0, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // glow
+  ctx.save();
+  ctx.shadowColor = color; ctx.shadowBlur = Math.max(4, rr * 0.5);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = Math.max(2, rr * 0.16);
+  ctx.beginPath(); ctx.ellipse(p.x, p.y, rr, rr * 0.92, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+
+  if (r.hazard) {
+    ctx.save();
+    ctx.fillStyle = '#ffdc5c';
+    ctx.font = 'bold ' + Math.max(8, rr * 0.9) + 'px -apple-system, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('⚠', p.x, p.y);
+    ctx.restore();
+  }
+}
+
+function drawCheckpoint(c) {
+  const z = c.z0 - scroll;
+  if (z < BALL_Z - 100 || z > 2700) return;
+  const p = project(c.ox, c.oy, z);
+  const size = 90 * p.scale;
+  if (size < 2) return;
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  const color = c.hit ? '#5cff8a' : '#ffe066';
+  ctx.shadowColor = color; ctx.shadowBlur = Math.max(4, size * 0.3);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = Math.max(2, size * 0.08);
+  ctx.strokeRect(-size / 2, -size / 2, size, size);
+  ctx.restore();
+}
+
+function drawGoal() {
+  const z = level.goalZ - scroll;
+  if (z < BALL_Z - 100 || z > 3200) return;
+  const p = project(0, -60, z);
+  const rr = 140 * p.scale;
+  if (rr < 1.5) return;
+  ctx.save();
+  ctx.shadowColor = '#ffe066'; ctx.shadowBlur = Math.max(6, rr * 0.4);
+  const grad = ctx.createRadialGradient(p.x, p.y, rr * 0.3, p.x, p.y, rr);
+  grad.addColorStop(0, 'rgba(255,230,102,0.5)');
+  grad.addColorStop(1, 'rgba(255,230,102,0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(p.x, p.y, rr, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#ffe066'; ctx.lineWidth = Math.max(2, rr * 0.1);
+  ctx.beginPath(); ctx.arc(p.x, p.y, rr, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+}
+
+// ============ RENDER: PLAYER BALL ============
+function drawPlayer() {
+  const p = project(player.x, player.y, BALL_Z);
+  const r = 34 * p.scale * (1 - player.squash * 0.35);
+  const rY = r * (1 + player.squash * 0.35);
+
+  // shadow
+  ctx.save();
+  ctx.globalAlpha = 0.35;
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.ellipse(p.x, p.y + r * 1.15, r * 1.1, r * 0.3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // motion trail
+  ctx.save();
+  ctx.globalAlpha = 0.18;
+  for (let i = 1; i <= 3; i++) {
+    const tp = project(player.x, player.y, BALL_Z + i * 22);
+    const tr2 = r * (1 - i * 0.12);
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(tp.x, tp.y, Math.max(1, tr2), 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.scale(1, rY / r);
+  const skin = SKINS.find(s => s.id === getEquippedSkin()) || SKINS[0];
+  const flashing = player.invuln > 0 && Math.floor(player.invuln / 6) % 2 === 0;
+  if (flashing) ctx.globalAlpha = 0.55;
+  skin.draw(r, player.spin);
+  ctx.restore();
+}
+
+// ============ RENDER: PARTICLES / OVERLAY ============
+function drawParticles() {
+  for (const pt of parts) {
+    ctx.globalAlpha = Math.max(0, pt.life / 40);
+    ctx.fillStyle = pt.color;
+    ctx.beginPath(); ctx.arc(pt.x, pt.y, 3.5, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawHUD() {
+  // hearts
+  ctx.save();
+  ctx.font = (26 * K) + 'px -apple-system, sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  for (let i = 0; i < 3; i++) {
+    ctx.fillText(i < player.hearts ? '❤️' : '🖤', 14 + i * 32 * K, 14 + Math.max(0, 0) * 0 + (window.__safeTop || 0));
+  }
+  ctx.restore();
+
+  // level name top-center
+  ctx.save();
+  ctx.font = 'bold ' + (18 * K) + 'px -apple-system, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  const label = level.name;
+  const tw = ctx.measureText(label).width;
+  ctx.fillRect(W / 2 - tw / 2 - 12, 10, tw + 24, 28 * K);
+  ctx.fillStyle = '#fff';
+  ctx.fillText(label, W / 2, 12);
+  ctx.restore();
+
+  // ring progress top-right
+  ctx.save();
+  ctx.font = (16 * K) + 'px -apple-system, sans-serif';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+  ctx.fillStyle = '#fff';
+  ctx.fillText(ringsPassedCount + '/' + ringsTotal, W - 14, 16);
+  ctx.restore();
+
+  if (state.msgT > 0) {
+    ctx.save();
+    const a = Math.min(1, state.msgT / 20);
+    ctx.globalAlpha = a;
+    ctx.font = 'bold ' + (24 * K) + 'px -apple-system, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.strokeText(state.msg, W / 2, H * 0.22);
+    ctx.fillStyle = '#ffe066';
+    ctx.fillText(state.msg, W / 2, H * 0.22);
+    ctx.restore();
+  }
+}
+
+// ============ RENDER: MENUS ============
+function drawTitle() {
+  drawBackground(performance.now());
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold ' + (38 * K) + 'px -apple-system, sans-serif';
+  ctx.fillText(tr('title'), W / 2, H * 0.28);
+  ctx.font = (18 * K) + 'px -apple-system, sans-serif';
+  ctx.fillText(tr('hint'), W / 2, H * 0.38);
+  ctx.fillText(tr('controlsHint'), W / 2, H * 0.44);
+
+  // demo ball
+  const bob = Math.sin(performance.now() / 400) * 10;
+  ctx.save();
+  ctx.translate(W / 2, H * 0.6 + bob);
+  const skin = SKINS.find(s => s.id === getEquippedSkin()) || SKINS[0];
+  skin.draw(60 * K, performance.now() / 300);
+  ctx.restore();
+
+  ctx.font = 'bold ' + (22 * K) + 'px -apple-system, sans-serif';
+  ctx.globalAlpha = 0.6 + 0.4 * Math.abs(Math.sin(performance.now() / 500));
+  ctx.fillStyle = '#ffe066';
+  ctx.fillText(tr('tapStart'), W / 2, H * 0.8);
+  ctx.restore();
+}
+
+function drawLevelSelect() {
+  drawBackground(performance.now());
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.fillStyle = '#fff';
+  ctx.font = 'bold ' + (22 * K) + 'px -apple-system, sans-serif';
+  ctx.fillText(tr('levels'), W / 2, H * 0.06);
+  ctx.font = (16 * K) + 'px -apple-system, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(tr('back'), 14, H * 0.05);
+
+  // skins button
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#ffe066';
+  ctx.font = 'bold ' + (16 * K) + 'px -apple-system, sans-serif';
+  ctx.fillText('🎨 ' + tr('skins'), W - 14, H * 0.05);
+  ctx.restore();
+
+  const unlocked = getUnlocked();
+  const cols = W > 700 ? 5 : (W > 460 ? 4 : 3);
+  const cw = Math.min(120, (W - 60) / cols);
+  const ch = cw;
+  const gx = (W - cw * cols - 14 * (cols - 1)) / 2;
+  const gy = H * 0.24;
+  for (let i = 0; i < 20; i++) {
+    const col = i % cols, row = Math.floor(i / cols);
+    const cx = gx + col * (cw + 14);
+    const cy = gy + row * (ch + 14);
+    const isUnlocked = i + 1 <= unlocked;
+    ctx.save();
+    ctx.fillStyle = isUnlocked ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.3)';
+    ctx.strokeStyle = isUnlocked ? '#ffe066' : 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(cx, cy, cw, ch, 10); else ctx.rect(cx, cy, cw, ch);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    if (isUnlocked) {
+      ctx.font = 'bold ' + (22 * K) + 'px -apple-system, sans-serif';
+      ctx.fillText(String(i + 1), cx + cw / 2, cy + ch * 0.4);
+      const stars = getStars(i + 1);
+      ctx.font = (13 * K) + 'px -apple-system, sans-serif';
+      ctx.fillText('⭐'.repeat(stars) + '☆'.repeat(3 - stars), cx + cw / 2, cy + ch * 0.72);
+    } else {
+      ctx.font = (22 * K) + 'px -apple-system, sans-serif';
+      ctx.fillText('🔒', cx + cw / 2, cy + ch * 0.5);
+    }
+    ctx.restore();
+  }
+}
+
+function drawSkinsScreen() {
+  drawBackground(performance.now());
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.fillStyle = '#fff';
+  ctx.font = 'bold ' + (22 * K) + 'px -apple-system, sans-serif';
+  ctx.fillText(tr('skinPicker'), W / 2, H * 0.06);
+  ctx.textAlign = 'left'; ctx.font = (16 * K) + 'px -apple-system, sans-serif';
+  ctx.fillText(tr('back'), 14, H * 0.05);
+  ctx.restore();
+
+  const cols = W > 700 ? 4 : 2;
+  const cw = Math.min(150, (W - 60) / cols);
+  const ch = cw * 1.05;
+  const gx = (W - cw * cols - 16 * (cols - 1)) / 2;
+  const gy = H * 0.24;
+  const have = unlockedSkins;
+  const equipped = getEquippedSkin();
+  for (let i = 0; i < SKINS.length; i++) {
+    const s = SKINS[i];
+    const col = i % cols, row = Math.floor(i / cols);
+    const cx = gx + col * (cw + 16);
+    const cy = gy + row * (ch + 16);
+    const unlocked = have.indexOf(s.id) >= 0;
+    ctx.save();
+    ctx.fillStyle = unlocked ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.35)';
+    ctx.strokeStyle = s.id === equipped ? '#5cff8a' : (unlocked ? '#ffe066' : 'rgba(255,255,255,0.2)');
+    ctx.lineWidth = s.id === equipped ? 3 : 2;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(cx, cy, cw, ch, 10); else ctx.rect(cx, cy, cw, ch);
+    ctx.fill(); ctx.stroke();
+    ctx.save();
+    ctx.translate(cx + cw / 2, cy + ch * 0.4);
+    if (!unlocked) ctx.globalAlpha = 0.35;
+    s.draw(cw * 0.26, performance.now() / 300 + i);
+    ctx.restore();
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = (13 * K) + 'px -apple-system, sans-serif';
+    ctx.fillText(tr('skinNames')[i], cx + cw / 2, cy + ch * 0.78);
+    if (!unlocked) {
+      ctx.fillStyle = '#ffe066';
+      ctx.font = (11 * K) + 'px -apple-system, sans-serif';
+      ctx.fillText('🔒 ' + tr('unlockAt')(s.unlockLevel), cx + cw / 2, cy + ch * 0.92);
+    } else if (s.id === equipped) {
+      ctx.fillStyle = '#5cff8a';
+      ctx.font = 'bold ' + (11 * K) + 'px -apple-system, sans-serif';
+      ctx.fillText(tr('equipped'), cx + cw / 2, cy + ch * 0.92);
+    }
+    ctx.restore();
+  }
+}
+
+function drawLevelComplete() {
+  drawBackground(performance.now());
+  drawParticles();
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.fillStyle = '#5cff8a';
+  ctx.font = 'bold ' + (30 * K) + 'px -apple-system, sans-serif';
+  ctx.fillText(tr('levelComplete'), W / 2, H * 0.32);
+  ctx.fillStyle = '#ffe066';
+  ctx.font = (24 * K) + 'px -apple-system, sans-serif';
+  ctx.fillText('⭐'.repeat(state.stars) + '☆'.repeat(3 - state.stars), W / 2, H * 0.42);
+  if (state.newSkinUnlocked) {
+    ctx.fillStyle = '#fff';
+    ctx.font = (18 * K) + 'px -apple-system, sans-serif';
+    ctx.fillText('🎉 ' + tr('skins') + ': ' + tr('skinNames')[SKINS.findIndex(s => s.id === state.newSkinUnlocked)], W / 2, H * 0.5);
+  }
+  ctx.fillStyle = '#fff';
+  ctx.font = (16 * K) + 'px -apple-system, sans-serif';
+  ctx.globalAlpha = 0.6 + 0.4 * Math.abs(Math.sin(performance.now() / 500));
+  ctx.fillText(tr('tapContinue'), W / 2, H * 0.62);
+  ctx.restore();
+}
+
+function drawChampion() {
+  drawBackground(performance.now());
+  drawParticles();
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.fillStyle = '#ffe066';
+  ctx.font = 'bold ' + (30 * K) + 'px -apple-system, sans-serif';
+  ctx.fillText(tr('champion'), W / 2, H * 0.32);
+  ctx.fillStyle = '#fff';
+  ctx.font = (18 * K) + 'px -apple-system, sans-serif';
+  ctx.fillText(tr('conquered'), W / 2, H * 0.42);
+  ctx.globalAlpha = 0.6 + 0.4 * Math.abs(Math.sin(performance.now() / 500));
+  ctx.fillText(tr('tapMenu'), W / 2, H * 0.62);
+  ctx.restore();
+}
+
+// ============ RENDER: MAIN ============
+function render() {
+  ctx.save();
+  if (shakeT > 0) {
+    ctx.translate((Math.random() - 0.5) * shakeT * 0.6, (Math.random() - 0.5) * shakeT * 0.6);
+  }
+
+  if (state.mode === 'title') drawTitle();
+  else if (state.mode === 'levelselect') drawLevelSelect();
+  else if (state.mode === 'skins') drawSkinsScreen();
+  else if (state.mode === 'levelcomplete') drawLevelComplete();
+  else if (state.mode === 'champion') drawChampion();
+  else if (state.mode === 'play') {
+    drawBackground(performance.now());
+    drawCorridor(performance.now());
+    // painter's order: far to near among gates + goal
+    const drawables = [];
+    drawables.push({ z: level.goalZ - scroll, fn: drawGoal });
+    for (const c of level.checkpoints) drawables.push({ z: c.z0 - scroll, fn: () => drawCheckpoint(c) });
+    for (const r of level.rings) drawables.push({ z: r.z0 - scroll, fn: () => drawRing(r) });
+    drawables.sort((a, b) => b.z - a.z);
+    for (const d of drawables) d.fn();
+    drawPlayer();
+    drawParticles();
+    drawHUD();
+  }
+
+  ctx.restore();
+
+  if (flashT > 0) {
+    ctx.save();
+    ctx.globalAlpha = (flashT / 10) * 0.35;
+    ctx.fillStyle = '#ff5c5c';
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+}
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
