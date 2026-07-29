@@ -985,9 +985,10 @@ function drawHUD() {
   ctx.fillStyle = 'rgba(0,0,0,0.35)';
   const label = level.name;
   const tw = ctx.measureText(label).width;
-  ctx.fillRect(W / 2 - tw / 2 - 12, 10, tw + 24, 28 * K);
+  const nameY = 44 + (window.__safeTop || 0); // sit below the centered "← Games" home link
+  ctx.fillRect(W / 2 - tw / 2 - 12, nameY - 2, tw + 24, 28 * K);
   ctx.fillStyle = '#fff';
-  ctx.fillText(label, W / 2, 12);
+  ctx.fillText(label, W / 2, nameY);
   ctx.restore();
 
   // ring progress top-right
