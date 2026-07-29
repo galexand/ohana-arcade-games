@@ -17,20 +17,22 @@
   canvas { display: block; width: 100%; height: 100%; }
 
   /* Top Control Bar */
+  .top-control-bar {
+    position: fixed; top: 0; left: 0; right: 0; height: 50px; z-index: 25;
+    background: rgba(11, 19, 41, 0.95); border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 14px;
+    backdrop-filter: blur(8px);
+  }
   #homeLink {
-    position: fixed; top: max(12px, env(safe-area-inset-top)); left: 12px; z-index: 20;
     color: #fff; text-decoration: none; font-weight: 800; font-size: 14px;
-    background: rgba(0, 0, 0, 0.65); padding: 8px 14px; border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(8px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); transition: transform 0.1s ease;
+    background: rgba(255, 255, 255, 0.1); padding: 7px 14px; border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2); transition: transform 0.1s ease;
   }
   #homeLink:active { transform: scale(0.95); }
 
   .langToggle {
-    position: fixed; top: max(12px, env(safe-area-inset-top)); right: 12px; z-index: 20;
-    display: flex; background: rgba(0, 0, 0, 0.65); border-radius: 999px; padding: 3px;
-    border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(8px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    display: flex; background: rgba(0, 0, 0, 0.5); border-radius: 999px; padding: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
   }
   .langToggle button {
     border: none; background: transparent; color: #a9c7eb; font-weight: 800; font-size: 13px;
@@ -738,9 +740,9 @@ function renderCharSelect() {
 
 function renderOverworld() {
   const p = players[activePlayerIdx];
-  const tileSize = Math.min((W - 32) / GRID_COLS, (H - 120) / GRID_ROWS);
+  const tileSize = Math.min((W - 32) / GRID_COLS, (H - 160) / GRID_ROWS);
   const offsetX = (W - GRID_COLS * tileSize) / 2;
-  const offsetY = 70;
+  const offsetY = 96;
 
   // Render Overworld Map Tiles
   for (let r = 0; r < GRID_ROWS; r++) {
@@ -799,17 +801,21 @@ function renderOverworld() {
     ctx.fillText(hero.name[0], hx, hy);
   });
 
-  // Top Resource HUD Bar
-  ctx.fillStyle = 'rgba(17, 26, 46, 0.9)';
-  ctx.fillRect(0, 0, W, 56);
-  ctx.fillStyle = '#2ecc71';
-  ctx.font = 'bold 14px sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText(`🏰 ${p.name} | 🪙 ${p.gold} | 🪵 ${p.wood} | 💎 ${p.crystals} | ⚡ MOVES: ${p.movesLeft}/${p.maxMoves}`, 14, 32);
+  // Resource HUD Bar (Y = 50..92, below top header bar)
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 50, W, 42);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+  ctx.strokeRect(0, 50, W, 42);
 
-  // Action Buttons Bar
-  drawMenuBtn(W - 200, 28, 110, 36, '🏰 CASTLE', () => openCastleModal());
-  drawMenuBtn(W - 70, 28, 90, 36, '⏳ END', () => endCurrentTurn());
+  ctx.fillStyle = '#2ecc71';
+  ctx.font = 'bold 14px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`🏰 ${p.name}  ·  🪙 ${p.gold}  ·  🪵 ${p.wood}  ·  💎 ${p.crystals}  ·  ⚡ MOVES: ${p.movesLeft}/${p.maxMoves}`, W / 2, 71);
+
+  // Bottom Action Buttons Bar (Y = H - 30)
+  drawMenuBtn(W / 2 - 75, H - 30, 130, 38, '🏰 CASTLE', () => openCastleModal());
+  drawMenuBtn(W / 2 + 75, H - 30, 130, 38, '⏳ END TURN', () => endCurrentTurn());
 }
 
 function renderCombat() {
@@ -1053,9 +1059,9 @@ function handleCanvasPointer(e) {
 
 function handleOverworldTap(px, py) {
   const p = players[activePlayerIdx];
-  const tileSize = Math.min((W - 32) / GRID_COLS, (H - 120) / GRID_ROWS);
+  const tileSize = Math.min((W - 32) / GRID_COLS, (H - 160) / GRID_ROWS);
   const offsetX = (W - GRID_COLS * tileSize) / 2;
-  const offsetY = 70;
+  const offsetY = 96;
 
   const col = Math.floor((px - offsetX) / tileSize);
   const row = Math.floor((py - offsetY) / tileSize);
