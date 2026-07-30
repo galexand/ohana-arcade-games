@@ -344,6 +344,69 @@ const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 let W = 0, H = 0;
 
+const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 1024);
+function updateTouchVisibility() {
+  const showTouch = isTouchDevice && gameState === 'PLAY';
+  document.getElementById('touchDPad').style.display = showTouch ? 'flex' : 'none';
+  document.getElementById('touchAction').style.display = showTouch ? 'flex' : 'none';
+}
+
+// ============ ISOMETRIC PROJECTION ENGINE ============
+// World space stays a flat x/y (+z for height) coordinate system exactly like a
+// top-down game (see shelves/checkoutZone/player below). Rendering projects that
+// world space onto the screen with a classic 2:1 diamond isometric transform.
+// Everything else (movement, collisions, proximity checks, AABB checkout) keeps
+// operating purely in world coordinates — projection is render-only.
+const WORLD_W = 800;      // world x extent (lateral)
+const WORLD_D = 800;      // world y extent (depth, larger y = closer to camera/front)
+const WORLD_MAX_Z = 190;  // tallest thing in the scene (shelf box + floating aisle sign)
+const SHELF_H = 130;      // shelf box height in world units
+const CHECKOUT_H = 55;    // checkout POS box height in world units
+
+const iso = { halfW: 20, halfH: 10, zScale: 10, originX: 0, originY: 0 };
+
+function computeIso() {
+  const topPad = 108;                          // clears the top bar + in-canvas HUD
+  const bottomPad = isTouchDevice ? 150 : 46;   // clears touch D-pad / shelf button
+  const sidePad = 18;
+  const availW = Math.max(160, W - sidePad * 2);
+  const availH = Math.max(140, H - topPad - bottomPad);
+
+  const scaleW = availW / (WORLD_W + WORLD_D);
+  const scaleH = availH / ((WORLD_W + WORLD_D) * 0.5 + WORLD_MAX_Z * 0.5);
+  // 0.05 is only a degenerate-viewport safety floor (never zero/negative) — the
+  // real fit constraint is whichever of scaleW/scaleH is smaller.
+  const tile = Math.max(0.05, Math.min(scaleW, scaleH));
+
+  iso.halfW = tile;
+  iso.halfH = tile * 0.5;
+  iso.zScale = tile * 0.5;
+
+  // Project the world's bounding volume corners (unshifted) to find how big the
+  // whole scene is on screen, then derive an origin that centers it.
+  const corners = [
+    [0, 0, 0], [WORLD_W, 0, 0], [0, WORLD_D, 0], [WORLD_W, WORLD_D, 0],
+    [0, 0, WORLD_MAX_Z], [WORLD_W, 0, WORLD_MAX_Z], [0, WORLD_D, WORLD_MAX_Z], [WORLD_W, WORLD_D, WORLD_MAX_Z]
+  ];
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  corners.forEach(([wx, wy, wz]) => {
+    const sx = (wx - wy) * iso.halfW;
+    const sy = (wx + wy) * iso.halfH - wz * iso.zScale;
+    if (sx < minX) minX = sx; if (sx > maxX) maxX = sx;
+    if (sy < minY) minY = sy; if (sy > maxY) maxY = sy;
+  });
+
+  iso.originX = W / 2 - (minX + maxX) / 2;
+  iso.originY = topPad + (availH - (maxY - minY)) / 2 - minY;
+}
+
+function project(wx, wy, wz) {
+  return {
+    x: (wx - wy) * iso.halfW + iso.originX,
+    y: (wx + wy) * iso.halfH - (wz || 0) * iso.zScale + iso.originY
+  };
+}
+
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   W = window.innerWidth;
@@ -353,17 +416,11 @@ function resize() {
   canvas.style.width = W + 'px';
   canvas.style.height = H + 'px';
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  computeIso();
 }
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 100));
 resize();
-
-const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 1024);
-function updateTouchVisibility() {
-  const showTouch = isTouchDevice && gameState === 'PLAY';
-  document.getElementById('touchDPad').style.display = showTouch ? 'flex' : 'none';
-  document.getElementById('touchAction').style.display = showTouch ? 'flex' : 'none';
-}
 
 // ============ PRODUCT DATABASE ============
 const PRODUCTS = [
@@ -421,27 +478,31 @@ let feedbackTimer = 0;
 
 // Player Position & Cart Inventory
 const player = {
-  x: 200, y: 300, vx: 0, vy: 0, speed: 240, r: 18,
+  x: 400, y: 690, vx: 0, vy: 0, speed: 240, r: 18, facing: 1,
   cart: [] // Array of product ids inside cart
 };
 
-// Supermarket Aisles & Shelves Definition
+// Supermarket Aisles & Shelves Definition — world coordinates (x lateral, y depth,
+// larger y = closer to camera/front of store). Two long shelf rows run along the
+// depth axis with a walkable aisle between them; checkout sits up front, dead
+// ahead of the player's spawn point.
 let shelves = [];
-let checkoutZone = { x: 650, y: 470, w: 110, h: 75 };
+let checkoutZone = { x: 330, y: 700, w: 140, h: 70 };
 
 function initSupermarketLevel(lvlIdx) {
   const lvl = LEVELS[lvlIdx];
   levelTimer = lvl.timer;
-  player.x = 260;
-  player.y = 485;
+  player.x = 400;
+  player.y = 690;
+  player.facing = 1;
   player.cart = [];
 
   shelves = [
-    // Continuous Aisle 1 - Bakery, Produce & Dairy
-    { x: 240, y: 145, w: 520, h: 95, cat: 'bakery', name: '🥖 BAKERY  ·  🍎 PRODUCE  ·  🥛 DAIRY', items: ['bread', 'croissant', 'donut', 'apple', 'banana', 'carrot', 'watermelon', 'milk', 'cheese', 'butter', 'yogurt'] },
+    // Left Aisle Row - Bakery, Produce & Dairy (long shelf running back-to-front)
+    { x: 100, y: 60, w: 160, h: 600, cat: 'bakery', name: '🥖 BAKERY  ·  🍎 PRODUCE  ·  🥛 DAIRY', items: ['bread', 'croissant', 'donut', 'apple', 'banana', 'carrot', 'watermelon', 'milk', 'cheese', 'butter', 'yogurt'] },
 
-    // Continuous Aisle 2 - Butchery, Snacks & Household
-    { x: 240, y: 325, w: 520, h: 95, cat: 'meat', name: '🥩 BUTCHERY  ·  🍿 SNACKS  ·  🧼 HOUSEHOLD', items: ['chicken', 'steak', 'sausage', 'chocolate', 'chips', 'soda', 'soap', 'detergent', 'paper'] },
+    // Right Aisle Row - Butchery, Snacks & Household (long shelf running back-to-front)
+    { x: 540, y: 60, w: 160, h: 600, cat: 'meat', name: '🥩 BUTCHERY  ·  🍿 SNACKS  ·  🧼 HOUSEHOLD', items: ['chicken', 'steak', 'sausage', 'chocolate', 'chips', 'soda', 'soap', 'detergent', 'paper'] },
   ];
 
   updatePaperShoppingListUI();
@@ -530,14 +591,29 @@ function interactWithNearestShelf() {
   }
 }
 
+// Nearest point on a shelf's AABB footprint to a world point — used both for the
+// proximity prompt and for circle/box collision. Distance-to-nearest-edge (rather
+// than distance-to-center) works correctly for the long shelf rows so the whole
+// length of a shelf is reachable, not just a spot near its middle.
+function nearestPointOnRect(px, py, s) {
+  const nx = Math.max(s.x, Math.min(px, s.x + s.w));
+  const ny = Math.max(s.y, Math.min(py, s.y + s.h));
+  return { x: nx, y: ny };
+}
+
 function getNearbyShelf() {
   for (const s of shelves) {
-    const cx = s.x + s.w / 2;
-    const cy = s.y + s.h / 2;
-    const dist = Math.hypot(player.x - cx, player.y - cy);
-    if (dist < 90) return s;
+    const np = nearestPointOnRect(player.x, player.y, s);
+    const dist = Math.hypot(player.x - np.x, player.y - np.y);
+    if (dist < 60) return s;
   }
   return null;
+}
+
+function circleHitsShelf(cx, cy, r, s) {
+  const np = nearestPointOnRect(cx, cy, s);
+  const dx = cx - np.x, dy = cy - np.y;
+  return (dx * dx + dy * dy) < r * r;
 }
 
 function update(dt) {
@@ -552,7 +628,9 @@ function update(dt) {
     }
   }
 
-  // Player Movement & Physics
+  // Player Movement & Physics (world coords: x = lateral, y = depth, larger y =
+  // toward the camera/front of the store — Up moves away/back, Down moves toward
+  // camera, matching the isometric view).
   let dx = 0, dy = 0;
   if (keys['ArrowLeft'] || keys['KeyA']) dx -= 1;
   if (keys['ArrowRight'] || keys['KeyD']) dx += 1;
@@ -560,14 +638,24 @@ function update(dt) {
   if (keys['ArrowDown'] || keys['KeyS']) dy += 1;
 
   if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
+  if (dx !== 0) player.facing = dx > 0 ? 1 : -1;
 
-  const nextX = player.x + dx * player.speed * dt;
-  const nextY = player.y + dy * player.speed * dt;
+  // World bounds (fixed, independent of screen size/projection)
+  const minX = 20, maxX = 780, minY = 20, maxY = 780;
 
-  // Bounds & Shelf Collision Detection
-  const minX = 230, maxX = W - 40, minY = 100, maxY = H - 60;
-  if (nextX >= minX && nextX <= maxX) player.x = nextX;
-  if (nextY >= minY && nextY <= maxY) player.y = nextY;
+  // Sliding shelf collision: resolve each axis independently so the player never
+  // gets stuck against a shelf — it just slides along it.
+  let nextX = player.x + dx * player.speed * dt;
+  nextX = Math.max(minX, Math.min(maxX, nextX));
+  let blockedX = false;
+  for (const s of shelves) { if (circleHitsShelf(nextX, player.y, player.r, s)) { blockedX = true; break; } }
+  if (!blockedX) player.x = nextX;
+
+  let nextY = player.y + dy * player.speed * dt;
+  nextY = Math.max(minY, Math.min(maxY, nextY));
+  let blockedY = false;
+  for (const s of shelves) { if (circleHitsShelf(player.x, nextY, player.r, s)) { blockedY = true; break; } }
+  if (!blockedY) player.y = nextY;
 
   // Checkout Register Area Check
   if (player.x >= checkoutZone.x && player.x <= checkoutZone.x + checkoutZone.w &&
@@ -689,121 +777,232 @@ function renderTitle() {
   ctx.restore();
 }
 
-function renderSupermarket() {
-  const lvl = LEVELS[currentLevelIdx];
+// ============ ISOMETRIC SCENE DRAWING ============
 
-// Polished Marble Hypermarket Floor Tiles
-  ctx.fillStyle = '#f1f5f9';
-  ctx.fillRect(0, 50, W, H - 50);
-
-  // Tile Grid Lines
-  ctx.strokeStyle = 'rgba(203, 213, 225, 0.6)';
+// Hypermarket floor as a grid of iso diamond tiles covering the whole world.
+function drawIsoFloor() {
+  const tileWorld = 100;
+  ctx.save();
   ctx.lineWidth = 1;
-  for (let x = 0; x < W; x += 50) {
-    ctx.beginPath(); ctx.moveTo(x, 50); ctx.lineTo(x, H); ctx.stroke();
+  for (let gy = 0; gy < WORLD_D; gy += tileWorld) {
+    for (let gx = 0; gx < WORLD_W; gx += tileWorld) {
+      const p0 = project(gx, gy, 0);
+      const p1 = project(gx + tileWorld, gy, 0);
+      const p2 = project(gx + tileWorld, gy + tileWorld, 0);
+      const p3 = project(gx, gy + tileWorld, 0);
+      const checker = ((gx / tileWorld) + (gy / tileWorld)) % 2 === 0;
+      ctx.fillStyle = checker ? '#f1f5f9' : '#e2e8f0';
+      ctx.beginPath();
+      ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.55)';
+      ctx.stroke();
+    }
   }
-  for (let y = 50; y < H; y += 50) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-  }
+  ctx.restore();
+}
 
-  // Draw Full-Length Continuous Aisle Category Banners & Pseudo-3D Multi-Tier Shelves
-  shelves.forEach(s => {
-    // 1. Realistic Ground Shadow Projected onto Store Floor
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.4)';
-    ctx.fillRect(s.x + 6, s.y + s.h - 2, s.w, 14);
+// A shelf drawn as a 3D box (right face + front face + top face), with an aisle
+// sign floating above, a price-tag rail on the front, and products standing as
+// upright emoji billboards on the top surface.
+function drawIsoShelf(s, isNear) {
+  const spriteScale = iso.halfW / 20;
 
-    // 2. Main Metallic / Wooden Shelf Structure Body (Pseudo-3D Isometric Facade)
-    const shelfGrad = ctx.createLinearGradient(s.x, s.y, s.x, s.y + s.h);
-    shelfGrad.addColorStop(0, '#1e293b');
-    shelfGrad.addColorStop(0.2, '#334155');
-    shelfGrad.addColorStop(0.8, '#1e293b');
-    shelfGrad.addColorStop(1, '#0f172a');
-    ctx.fillStyle = shelfGrad;
-    ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth = 2;
+  // Ground shadow (slightly offset toward the camera)
+  const shOff = 14;
+  const sh0 = project(s.x + shOff, s.y + shOff, 0);
+  const sh1 = project(s.x + s.w + shOff, s.y + shOff, 0);
+  const sh2 = project(s.x + s.w + shOff, s.y + s.h + shOff, 0);
+  const sh3 = project(s.x + shOff, s.y + s.h + shOff, 0);
+  ctx.fillStyle = 'rgba(8, 15, 30, 0.3)';
+  ctx.beginPath();
+  ctx.moveTo(sh0.x, sh0.y); ctx.lineTo(sh1.x, sh1.y); ctx.lineTo(sh2.x, sh2.y); ctx.lineTo(sh3.x, sh3.y);
+  ctx.closePath(); ctx.fill();
+
+  // Right face (facing +x)
+  const r0 = project(s.x + s.w, s.y, 0);
+  const r1 = project(s.x + s.w, s.y + s.h, 0);
+  const r2 = project(s.x + s.w, s.y + s.h, SHELF_H);
+  const r3 = project(s.x + s.w, s.y, SHELF_H);
+  ctx.fillStyle = '#152238';
+  ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(r0.x, r0.y); ctx.lineTo(r1.x, r1.y); ctx.lineTo(r2.x, r2.y); ctx.lineTo(r3.x, r3.y);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  // Front face (facing +y, toward the camera)
+  const f0 = project(s.x, s.y + s.h, 0);
+  const f1 = project(s.x + s.w, s.y + s.h, 0);
+  const f2 = project(s.x + s.w, s.y + s.h, SHELF_H);
+  const f3 = project(s.x, s.y + s.h, SHELF_H);
+  const frontGrad = ctx.createLinearGradient(f0.x, f0.y, f3.x, f3.y);
+  frontGrad.addColorStop(0, '#1e293b');
+  frontGrad.addColorStop(1, '#334155');
+  ctx.fillStyle = frontGrad;
+  ctx.beginPath();
+  ctx.moveTo(f0.x, f0.y); ctx.lineTo(f1.x, f1.y); ctx.lineTo(f2.x, f2.y); ctx.lineTo(f3.x, f3.y);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  // Yellow price-tag rail strip along the bottom of the front face
+  const pr0 = project(s.x, s.y + s.h, 0);
+  const pr1 = project(s.x + s.w, s.y + s.h, 0);
+  const pr2 = project(s.x + s.w, s.y + s.h, 18);
+  const pr3 = project(s.x, s.y + s.h, 18);
+  ctx.fillStyle = '#f59e0b';
+  ctx.beginPath();
+  ctx.moveTo(pr0.x, pr0.y); ctx.lineTo(pr1.x, pr1.y); ctx.lineTo(pr2.x, pr2.y); ctx.lineTo(pr3.x, pr3.y);
+  ctx.closePath(); ctx.fill();
+
+  // Top face
+  const t0 = project(s.x, s.y, SHELF_H);
+  const t1 = project(s.x + s.w, s.y, SHELF_H);
+  const t2 = project(s.x + s.w, s.y + s.h, SHELF_H);
+  const t3 = project(s.x, s.y + s.h, SHELF_H);
+  const topGrad = ctx.createLinearGradient(t0.x, t0.y, t2.x, t2.y);
+  topGrad.addColorStop(0, '#94a3b8');
+  topGrad.addColorStop(1, '#cbd5e1');
+  ctx.fillStyle = topGrad;
+  ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(t0.x, t0.y); ctx.lineTo(t1.x, t1.y); ctx.lineTo(t2.x, t2.y); ctx.lineTo(t3.x, t3.y);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  // Price rail text (readable, screen-space billboard)
+  ctx.fillStyle = '#1e293b';
+  ctx.font = `${Math.max(7, Math.round(9 * spriteScale))}px monospace`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const railMid = project(s.x + s.w / 2, s.y + s.h, 9);
+  ctx.fillText('🏷️ LIDL & KAUFLAND SPECIAL', railMid.x, railMid.y);
+
+  // Products standing on the top surface, spread along the shelf's length
+  s.items.forEach((itemId, idx) => {
+    const prod = PRODUCTS.find(p => p.id === itemId);
+    if (!prod) return;
+    const frac = (idx + 0.5) / s.items.length;
+    const iy = s.y + 30 + frac * (s.h - 60);
+    const ix = s.x + (idx % 2 === 0 ? s.w * 0.34 : s.w * 0.66);
+
+    const shadowP = project(ix, iy, SHELF_H);
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
     ctx.beginPath();
-    ctx.roundRect(s.x, s.y, s.w, s.h, 8);
-    ctx.fill(); ctx.stroke();
+    ctx.ellipse(shadowP.x, shadowP.y + 3, 9 * spriteScale, 4 * spriteScale, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-    // 3. Top Continuous Aisle LED Category Header Sign Banner
-    ctx.fillStyle = '#0284c7';
-    ctx.fillRect(s.x, s.y, s.w, 22);
-    ctx.fillStyle = '#38bdf8';
-    ctx.fillRect(s.x, s.y + 20, s.w, 2); // Glowing LED strip
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 12px -apple-system, sans-serif';
+    const iconP = project(ix, iy, SHELF_H + 18);
+    ctx.font = `${Math.max(10, Math.round(18 * spriteScale))}px sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(s.name, s.x + s.w / 2, s.y + 11);
-
-    // 4. Multi-Tier Steel Shelf Layers (Back Tier & Front Tier)
-    ctx.fillStyle = '#475569';
-    ctx.fillRect(s.x + 6, s.y + 28, s.w - 12, 4); // Back tier rail
-    ctx.fillRect(s.x + 6, s.y + 56, s.w - 12, 4); // Front tier rail
-
-    // Yellow Price Tag Rail along front edge
-    ctx.fillStyle = '#f59e0b';
-    ctx.fillRect(s.x, s.y + s.h - 10, s.w, 10);
-    ctx.fillStyle = '#1e293b';
-    ctx.font = '9px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('🏷️ BEST QUALITY & DISCOUNT OFFER — LIDL & KAUFLAND SPECIAL', s.x + s.w / 2, s.y + s.h - 4);
-
-    // 5. Products Stacked in Multiple Rows (Back Row & Front Row)
-    s.items.forEach((itemId, idx) => {
-      const prod = PRODUCTS.find(p => p.id === itemId);
-      if (prod) {
-        // Calculate multi-row stacking coordinates
-        const itemX = s.x + 26 + (idx % 11) * 44;
-
-        // Back Row (Stacked behind on upper tier)
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.beginPath(); ctx.ellipse(itemX, s.y + 36, 10, 4, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.font = '16px sans-serif';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(prod.icon, itemX, s.y + 34);
-
-        // Front Row (Stacked in front on lower tier with shadows)
-        ctx.fillStyle = 'rgba(0,0,0,0.35)';
-        ctx.beginPath(); ctx.ellipse(itemX, s.y + 68, 12, 5, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.font = '20px sans-serif';
-        ctx.fillText(prod.icon, itemX, s.y + 66);
-      }
-    });
+    ctx.fillText(prod.icon, iconP.x, iconP.y);
   });
 
-  // Highlight Nearby Proximity Shelf
-  const nearShelf = getNearbyShelf();
-  if (nearShelf) {
-    ctx.strokeStyle = '#22c55e';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(nearShelf.x - 4, nearShelf.y - 4, nearShelf.w + 8, nearShelf.h + 8);
-
-    ctx.fillStyle = '#16a34a';
-    ctx.font = 'bold 13px -apple-system, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(t('grabHint'), player.x, player.y - 34);
-  }
-
-  // Draw Checkout POS Conveyor Belt & Rubber Texture
-  ctx.fillStyle = '#1e293b';
-  ctx.fillRect(checkoutZone.x, checkoutZone.y, checkoutZone.w, checkoutZone.h);
-  ctx.strokeStyle = '#22c55e';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(checkoutZone.x, checkoutZone.y, checkoutZone.w, checkoutZone.h);
-
-  // Scanner Laser Light
-  ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
-  ctx.fillRect(checkoutZone.x + 10, checkoutZone.y + 10, checkoutZone.w - 20, 8);
-
+  // Overhead aisle category sign, floating above the shelf's center
+  const signAnchor = project(s.x + s.w / 2, s.y + s.h / 2, SHELF_H + 55);
+  ctx.font = `bold ${Math.max(9, Math.round(13 * spriteScale))}px -apple-system, sans-serif`;
+  const tw = ctx.measureText(s.name).width;
+  ctx.fillStyle = '#0284c7';
+  ctx.beginPath();
+  ctx.roundRect(signAnchor.x - tw / 2 - 10, signAnchor.y - 14 * spriteScale, tw + 20, 28 * spriteScale, 8);
+  ctx.fill();
+  ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.5; ctx.stroke();
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 13px -apple-system, sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('💳 POS CHECKOUT', checkoutZone.x + checkoutZone.w / 2, checkoutZone.y + checkoutZone.h / 2 + 6);
+  ctx.fillText(s.name, signAnchor.x, signAnchor.y);
 
-  // Draw Realistic Human Shopper & Metallic 3D Shopping Cart (Top-Down View)
+  // Proximity highlight outline around the top face
+  if (isNear) {
+    ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(t0.x, t0.y); ctx.lineTo(t1.x, t1.y); ctx.lineTo(t2.x, t2.y); ctx.lineTo(t3.x, t3.y);
+    ctx.closePath(); ctx.stroke();
+  }
+}
+
+// Checkout POS drawn as a compact 3D box with a scanner light and label.
+function drawIsoCheckout(cz) {
+  const spriteScale = iso.halfW / 20;
+
+  const shOff = 10;
+  const sh0 = project(cz.x + shOff, cz.y + shOff, 0);
+  const sh1 = project(cz.x + cz.w + shOff, cz.y + shOff, 0);
+  const sh2 = project(cz.x + cz.w + shOff, cz.y + cz.h + shOff, 0);
+  const sh3 = project(cz.x + shOff, cz.y + cz.h + shOff, 0);
+  ctx.fillStyle = 'rgba(8, 15, 30, 0.3)';
+  ctx.beginPath();
+  ctx.moveTo(sh0.x, sh0.y); ctx.lineTo(sh1.x, sh1.y); ctx.lineTo(sh2.x, sh2.y); ctx.lineTo(sh3.x, sh3.y);
+  ctx.closePath(); ctx.fill();
+
+  const r0 = project(cz.x + cz.w, cz.y, 0);
+  const r1 = project(cz.x + cz.w, cz.y + cz.h, 0);
+  const r2 = project(cz.x + cz.w, cz.y + cz.h, CHECKOUT_H);
+  const r3 = project(cz.x + cz.w, cz.y, CHECKOUT_H);
+  ctx.fillStyle = '#0f2418';
+  ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(r0.x, r0.y); ctx.lineTo(r1.x, r1.y); ctx.lineTo(r2.x, r2.y); ctx.lineTo(r3.x, r3.y);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  const f0 = project(cz.x, cz.y + cz.h, 0);
+  const f1 = project(cz.x + cz.w, cz.y + cz.h, 0);
+  const f2 = project(cz.x + cz.w, cz.y + cz.h, CHECKOUT_H);
+  const f3 = project(cz.x, cz.y + cz.h, CHECKOUT_H);
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath();
+  ctx.moveTo(f0.x, f0.y); ctx.lineTo(f1.x, f1.y); ctx.lineTo(f2.x, f2.y); ctx.lineTo(f3.x, f3.y);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  const t0 = project(cz.x, cz.y, CHECKOUT_H);
+  const t1 = project(cz.x + cz.w, cz.y, CHECKOUT_H);
+  const t2 = project(cz.x + cz.w, cz.y + cz.h, CHECKOUT_H);
+  const t3 = project(cz.x, cz.y + cz.h, CHECKOUT_H);
+  ctx.fillStyle = '#134e2f';
+  ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(t0.x, t0.y); ctx.lineTo(t1.x, t1.y); ctx.lineTo(t2.x, t2.y); ctx.lineTo(t3.x, t3.y);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  // Scanner laser light glowing on the conveyor top
+  const laserA = project(cz.x + cz.w * 0.15, cz.y + cz.h * 0.5, CHECKOUT_H + 1);
+  const laserB = project(cz.x + cz.w * 0.85, cz.y + cz.h * 0.5, CHECKOUT_H + 1);
+  ctx.strokeStyle = 'rgba(239, 68, 68, 0.85)';
+  ctx.lineWidth = Math.max(2, 4 * spriteScale);
+  ctx.beginPath(); ctx.moveTo(laserA.x, laserA.y); ctx.lineTo(laserB.x, laserB.y); ctx.stroke();
+
+  // Label sign
+  const labelAnchor = project(cz.x + cz.w / 2, cz.y + cz.h / 2, CHECKOUT_H + 40);
+  ctx.font = `bold ${Math.max(9, Math.round(13 * spriteScale))}px -apple-system, sans-serif`;
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const label = '💳 POS CHECKOUT';
+  const tw = ctx.measureText(label).width;
+  ctx.fillStyle = '#22c55e';
+  ctx.beginPath();
+  ctx.roundRect(labelAnchor.x - tw / 2 - 8, labelAnchor.y - 13 * spriteScale, tw + 16, 26 * spriteScale, 7);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(label, labelAnchor.x, labelAnchor.y);
+}
+
+// Player (shopper + cart) drawn as a small isometric billboard sprite standing
+// on its projected ground point, with a soft shadow ellipse and a left/right
+// flip based on the last horizontal movement direction.
+function drawIsoPlayer() {
+  // iso.halfW is a world-unit->pixel scale (e.g. ~0.2-0.4, NOT a tile pixel size),
+  // so the sprite (drawn with ~36-40 unit art) needs a multiplier, not a divisor,
+  // to read as roughly 1.5 floor tiles on screen.
+  const spriteScale = iso.halfW * 2.2;
+  const base = project(player.x, player.y, 0);
+
+  // Ground shadow
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
+  ctx.beginPath();
+  ctx.ellipse(base.x, base.y + 4, 20 * spriteScale, 9 * spriteScale, 0, 0, Math.PI * 2);
+  ctx.fill();
+
   ctx.save();
-  ctx.translate(player.x, player.y);
+  // Raise the sprite's origin so its feet (the sprite's lowest drawn point,
+  // roughly +25 in the original local coordinate space) sit on the ground point.
+  ctx.translate(base.x, base.y - 25 * spriteScale);
+  ctx.scale(spriteScale * (player.facing || 1), spriteScale);
 
   // 1. Swivel Caster Wheels under Shopping Cart
   ctx.fillStyle = '#1e293b';
@@ -858,9 +1057,9 @@ function renderSupermarket() {
     }
   });
 
-  // 3. Human Shopper Character (Realistic Anatomy in 3/4 Top-Down View)
+  // 3. Human Shopper Character
   // Human Arms extending to hold the Handlebar
-  ctx.strokeStyle = '#f87171'; // Blue/Red Shirt sleeve color
+  ctx.strokeStyle = '#f87171';
   ctx.lineWidth = 6;
   ctx.lineCap = 'round';
 
@@ -882,7 +1081,7 @@ function renderSupermarket() {
   ctx.beginPath(); ctx.arc(12, -4, 3.5, 0, Math.PI * 2); ctx.fill();
 
   // Shoulders & Apron/Shirt
-  ctx.fillStyle = '#0284c7'; // LIDL/Kaufland Blue Uniform Shirt
+  ctx.fillStyle = '#0284c7';
   ctx.beginPath();
   ctx.ellipse(0, 14, 18, 11, 0, 0, Math.PI * 2);
   ctx.fill();
@@ -891,23 +1090,54 @@ function renderSupermarket() {
   ctx.stroke();
 
   // Human Head with Hair & Cap
-  // Head Shadow
   ctx.fillStyle = 'rgba(0,0,0,0.2)';
   ctx.beginPath(); ctx.ellipse(0, 15, 11, 11, 0, 0, Math.PI * 2); ctx.fill();
 
-  // Skin Tone Face/Ears
   ctx.fillStyle = '#fdba74';
   ctx.beginPath(); ctx.arc(0, 12, 10.5, 0, Math.PI * 2); ctx.fill();
 
-  // Hair / Cap Visor
-  ctx.fillStyle = '#f59e0b'; // Brown/Blonde Hair or Cap
+  ctx.fillStyle = '#f59e0b';
   ctx.beginPath(); ctx.arc(0, 10, 10.5, Math.PI * 0.8, Math.PI * 2.2); ctx.fill();
 
-  // Cap Visor Front Edge
   ctx.fillStyle = '#ef4444';
   ctx.beginPath(); ctx.roundRect(-8, 3, 16, 4, 2); ctx.fill();
 
   ctx.restore();
+}
+
+function renderSupermarket() {
+  const lvl = LEVELS[currentLevelIdx];
+  computeIso();
+
+  // Dark backdrop behind the whole iso scene (canvas outside the floor diamond)
+  ctx.fillStyle = '#0b1426';
+  ctx.fillRect(0, 50, W, H - 50);
+
+  drawIsoFloor();
+
+  // Depth-sort shelves + checkout + player (painter's algorithm) so nearer
+  // entities correctly overlap farther ones in the projected view.
+  const nearShelf = getNearbyShelf();
+  const entities = [];
+  shelves.forEach(s => entities.push({ type: 'shelf', data: s, depth: (s.x + s.w) + (s.y + s.h) }));
+  entities.push({ type: 'checkout', data: checkoutZone, depth: (checkoutZone.x + checkoutZone.w) + (checkoutZone.y + checkoutZone.h) });
+  entities.push({ type: 'player', data: player, depth: player.x + player.y });
+  entities.sort((a, b) => a.depth - b.depth);
+
+  entities.forEach(e => {
+    if (e.type === 'shelf') drawIsoShelf(e.data, e.data === nearShelf);
+    else if (e.type === 'checkout') drawIsoCheckout(e.data);
+    else drawIsoPlayer();
+  });
+
+  // Proximity hint text floats above the player's head
+  if (nearShelf) {
+    const headPt = project(player.x, player.y, 60);
+    ctx.fillStyle = '#16a34a';
+    ctx.font = 'bold 13px -apple-system, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(t('grabHint'), headPt.x, headPt.y - 12);
+  }
 
   // Resource HUD Bar (Y = 50..92)
   ctx.fillStyle = '#0f172a';
