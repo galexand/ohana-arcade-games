@@ -11,7 +11,7 @@
   * { margin: 0; padding: 0; box-sizing: border-box; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
   html, body {
     width: 100%; height: 100%; overflow: hidden;
-    background: #091222; color: #fff;
+    background: #0b1426; color: #fff;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
   canvas { display: block; width: 100%; height: 100%; }
@@ -40,6 +40,28 @@
   }
   .langToggle button.active { background: #2ecc71; color: #fff; }
 
+  /* Persistent Real Paper Shopping List Notepad (Top Left Overlay) */
+  #paperShoppingList {
+    position: fixed; top: 102px; left: 14px; z-index: 20;
+    width: 210px; max-height: calc(100vh - 180px); overflow-y: auto;
+    background: #fff9e6; color: #1e293b;
+    border: 2px solid #d4a359; border-radius: 12px; padding: 12px 14px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5), inset 0 0 40px rgba(245, 222, 179, 0.5);
+    font-family: -apple-system, sans-serif; display: none; flex-direction: column; gap: 6px;
+  }
+  .paper-header {
+    font-size: 14px; font-weight: 900; color: #9a3412; text-transform: uppercase;
+    border-bottom: 2px dashed #cbd5e1; padding-bottom: 6px; margin-bottom: 4px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .paper-item {
+    font-size: 13px; font-weight: 700; color: #334155;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 3px 0; border-bottom: 1px solid #f1f5f9;
+  }
+  .paper-item.checked { color: #16a34a; text-decoration: line-through; }
+  .check-box { font-size: 14px; font-weight: 900; margin-right: 6px; }
+
   /* Touch Controls Overlay */
   .touch-zone { position: fixed; bottom: 16px; z-index: 15; display: flex; gap: 10px; }
   #touchDPad { left: 16px; flex-direction: column; align-items: center; }
@@ -47,13 +69,13 @@
   #touchAction { right: 16px; flex-direction: column; align-items: flex-end; }
   .tbtn {
     width: 58px; height: 58px; border-radius: 50%;
-    background: rgba(17, 26, 46, 0.85); border: 2px solid rgba(255, 255, 255, 0.25);
+    background: rgba(17, 26, 46, 0.88); border: 2px solid rgba(255, 255, 255, 0.25);
     color: #fff; font-size: 22px; font-weight: 900;
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 6px 16px rgba(0,0,0,0.5); backdrop-filter: blur(6px);
   }
   .tbtn:active, .tbtn.active { transform: scale(0.92); background: rgba(46, 204, 113, 0.85); border-color: #58d68d; }
-  .tbtn.list-btn { width: auto; height: 50px; border-radius: 25px; padding: 0 18px; font-size: 15px; background: linear-gradient(180deg, #f39c12, #d35400); border-color: #f1c40f; }
+  .tbtn.grab-btn { width: auto; height: 52px; border-radius: 26px; padding: 0 20px; font-size: 16px; background: linear-gradient(180deg, #f39c12, #d35400); border-color: #f1c40f; }
 
   /* Overlay Panel Modals */
   .overlay-panel {
@@ -62,44 +84,37 @@
     background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px);
   }
   .panel-card {
-    background: linear-gradient(135deg, #0e1a30, #172747);
-    border: 2px solid #3498db; border-radius: 20px; padding: 22px;
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    border: 2px solid #38bdf8; border-radius: 20px; padding: 22px;
     width: min(94vw, 500px); color: #fff;
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
     display: flex; flex-direction: column; gap: 14px; text-align: center;
   }
-  .panel-title { font-size: 26px; font-weight: 900; color: #2ecc71; text-shadow: 0 2px 4px rgba(0,0,0,0.6); }
-  .panel-sub { font-size: 14px; color: #a9c7eb; }
+  .panel-title { font-size: 26px; font-weight: 900; color: #4ade80; text-shadow: 0 2px 4px rgba(0,0,0,0.6); }
+  .panel-sub { font-size: 14px; color: #cbd5e1; }
   .panel-btn {
     font-size: 16px; font-weight: 800; padding: 12px 20px; border-radius: 12px; border: none;
     cursor: pointer; transition: transform 0.1s ease; outline: none;
   }
   .panel-btn:active { transform: scale(0.96); }
-  .btn-green { background: linear-gradient(180deg, #2ecc71, #27ae60); color: #fff; }
-  .btn-blue { background: linear-gradient(180deg, #3498db, #2980b9); color: #fff; }
-  .btn-gold { background: linear-gradient(180deg, #f39c12, #d35400); color: #fff; }
+  .btn-green { background: linear-gradient(180deg, #22c55e, #16a34a); color: #fff; }
+  .btn-blue { background: linear-gradient(180deg, #0284c7, #0369a1); color: #fff; }
+  .btn-gold { background: linear-gradient(180deg, #f59e0b, #d97706); color: #fff; }
 
   /* Shelf Inspection Items Grid */
-  .items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; max-height: 280px; overflow-y: auto; }
+  .items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 10px; max-height: 280px; overflow-y: auto; }
   .item-card {
-    background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(52, 152, 219, 0.4);
-    border-radius: 12px; padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+    background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(56, 189, 248, 0.4);
+    border-radius: 12px; padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 4px;
   }
-  .item-icon { font-size: 32px; }
-  .item-name { font-size: 13px; font-weight: 800; color: #ffd700; }
+  .item-icon { font-size: 34px; }
+  .item-name { font-size: 13px; font-weight: 800; color: #fbbf24; }
+  .item-price { font-size: 12px; color: #4ade80; font-weight: 700; }
   .item-action-btn {
     font-size: 12px; font-weight: 800; padding: 6px 12px; border-radius: 8px; border: none;
-    cursor: pointer; background: #2ecc71; color: #fff; width: 100%; margin-top: 4px;
+    cursor: pointer; background: #22c55e; color: #fff; width: 100%; margin-top: 4px;
   }
-  .item-action-btn.put-back { background: #e74c3c; }
-
-  /* Shopping List Checklist */
-  .checklist { display: flex; flex-direction: column; gap: 8px; text-align: left; max-height: 260px; overflow-y: auto; }
-  .check-item {
-    display: flex; align-items: center; justify-content: space-between;
-    background: rgba(255, 255, 255, 0.07); padding: 10px 14px; border-radius: 10px; font-size: 15px; font-weight: 700;
-  }
-  .check-item.done { background: rgba(46, 204, 113, 0.25); border: 1px solid #2ecc71; text-decoration: line-through; color: #a9c7eb; }
+  .item-action-btn.put-back { background: #ef4444; }
 
   /* Leaderboard List */
   .leaderboard-list { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; }
@@ -107,18 +122,18 @@
     display: flex; align-items: center; justify-content: space-between;
     background: rgba(255, 255, 255, 0.08); padding: 8px 12px; border-radius: 10px; font-size: 14px; font-weight: 700;
   }
-  .lb-rank { width: 28px; font-size: 15px; color: #f1c40f; text-align: left; }
+  .lb-rank { width: 28px; font-size: 15px; color: #fbbf24; text-align: left; }
   .lb-name { flex: 1; text-align: left; margin: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
-  .lb-score { color: #2ecc71; font-weight: 900; font-size: 15px; }
+  .lb-score { color: #4ade80; font-weight: 900; font-size: 15px; }
 
   .name-inputs { display: flex; flex-direction: column; gap: 12px; }
   .input-group { display: flex; flex-direction: column; gap: 4px; text-align: left; }
-  .input-group label { font-size: 13px; font-weight: 800; color: #a9c7eb; }
+  .input-group label { font-size: 13px; font-weight: 800; color: #cbd5e1; }
   .input-group input {
-    background: #091222; border: 2px solid #3498db; border-radius: 10px;
+    background: #0f172a; border: 2px solid #38bdf8; border-radius: 10px;
     color: #fff; font-size: 17px; font-weight: 700; padding: 10px 14px; outline: none;
   }
-  .input-group input:focus { border-color: #2ecc71; box-shadow: 0 0 10px rgba(46, 204, 113, 0.5); }
+  .input-group input:focus { border-color: #4ade80; box-shadow: 0 0 10px rgba(74, 222, 128, 0.5); }
 </style>
 </head>
 <body>
@@ -129,6 +144,15 @@
     <button type="button" data-lang="en">🇬🇧 EN</button>
     <button type="button" data-lang="ro">🇷🇴 RO</button>
   </div>
+</div>
+
+<!-- Persistent Real Paper Shopping List Notepad -->
+<div id="paperShoppingList">
+  <div class="paper-header">
+    <span>📋 LISTĂ / LIST</span>
+    <span id="paperProgress">0/0</span>
+  </div>
+  <div id="paperItems"></div>
 </div>
 
 <canvas id="game"></canvas>
@@ -143,8 +167,7 @@
   <div class="tbtn" id="btnDown">▼</div>
 </div>
 <div class="touch-zone" id="touchAction" style="display:none;">
-  <div class="tbtn list-btn" id="btnShowList">📋 List</div>
-  <div class="tbtn" id="btnGrab">🛒</div>
+  <div class="tbtn grab-btn" id="btnGrab">🛒 Raft / Shelf</div>
 </div>
 
 <!-- Shelf Inspection Modal -->
@@ -154,16 +177,6 @@
     <div class="panel-sub" id="shelfSub">Tap items to put them in your cart or back on shelf!</div>
     <div class="items-grid" id="shelfItemsGrid"></div>
     <button type="button" class="panel-btn btn-blue" id="shelfCloseBtn">CLOSE SHELF</button>
-  </div>
-</div>
-
-<!-- Shopping List Modal -->
-<div class="overlay-panel" id="listModal">
-  <div class="panel-card">
-    <div class="panel-title" id="listTitle">📋 SHOPPING LIST</div>
-    <div class="panel-sub" id="listSub">Collect these exact products from the supermarket shelves!</div>
-    <div class="checklist" id="listChecklist"></div>
-    <button type="button" class="panel-btn btn-green" id="listCloseBtn">CLOSE LIST</button>
   </div>
 </div>
 
@@ -211,6 +224,8 @@ const TEXT = {
     time: '⏱ TIME',
     score: 'SCORE',
     grabHint: 'Press SPACE or tap 🛒 to inspect shelf',
+    notOnList: '⚠️ NOT ON LIST! (-50 PTS)',
+    itemAdded: '✓ ADDED TO CART (+150 PTS)',
     paused: 'GAME PAUSED ⏸',
     pausedHint: 'Press P, ESC, tap ⏸ or click Resume to continue',
     resume: 'RESUME',
@@ -238,6 +253,8 @@ const TEXT = {
     time: '⏱ TIMP',
     score: 'SCOR',
     grabHint: 'Apasă SPACE sau atinge 🛒 pentru raft',
+    notOnList: '⚠️ NU ESTE PE LISTĂ! (-50 PCT)',
+    itemAdded: '✓ ADĂUGAT ÎN COȘ (+150 PCT)',
     paused: 'JOC PAUZAT ⏸',
     pausedHint: 'Apasă P, Esc, atinge ⏸ sau apăsă Continuă',
     resume: 'CONTINUĂ',
@@ -267,6 +284,7 @@ document.getElementById('langToggle').addEventListener('click', e => {
   LANG = btn.dataset.lang;
   try { localStorage.setItem('ohanaLang', LANG); } catch (err) {}
   updateLangToggleUI();
+  updatePaperShoppingListUI();
 });
 updateLangToggleUI();
 
@@ -292,9 +310,16 @@ function playSfx(type) {
       gain.gain.setValueAtTime(0.15, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
       osc.start(now); osc.stop(now + 0.1);
+    } else if (type === 'wrong') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(160, now);
+      osc.frequency.linearRampToValueAtTime(100, now + 0.2);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.start(now); osc.stop(now + 0.2);
     } else if (type === 'beep') {
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(1760, now); // A6 beep
+      osc.frequency.setValueAtTime(1760, now);
       gain.gain.setValueAtTime(0.2, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
       osc.start(now); osc.stop(now + 0.12);
@@ -342,55 +367,57 @@ function updateTouchVisibility() {
 
 // ============ PRODUCT DATABASE ============
 const PRODUCTS = [
-  { id: 'bread', name: 'Fresh Bread', category: 'bakery', icon: '🍞', color: '#e67e22' },
-  { id: 'croissant', name: 'Butter Croissant', category: 'bakery', icon: '🥐', color: '#f39c12' },
-  { id: 'donut', name: 'Glazed Donut', category: 'bakery', icon: '🍩', color: '#e74c3c' },
+  { id: 'bread', name: 'Fresh Bread', nameRo: 'Pâine Proaspătă', category: 'bakery', icon: '🍞', price: '4.99 LEI' },
+  { id: 'croissant', name: 'Butter Croissant', nameRo: 'Croissant cu Unt', category: 'bakery', icon: '🥐', price: '3.50 LEI' },
+  { id: 'donut', name: 'Glazed Donut', nameRo: 'Gogoașă Glazurată', category: 'bakery', icon: '🍩', price: '2.99 LEI' },
 
-  { id: 'apple', name: 'Red Apple', category: 'produce', icon: '🍎', color: '#e74c3c' },
-  { id: 'banana', name: 'Fresh Bananas', category: 'produce', icon: '🍌', color: '#f1c40f' },
-  { id: 'carrot', name: 'Organic Carrots', category: 'produce', icon: '🥕', color: '#e67e22' },
-  { id: 'watermelon', name: 'Sweet Watermelon', category: 'produce', icon: '🍉', color: '#2ecc71' },
+  { id: 'apple', name: 'Red Apple', nameRo: 'Mere Roșii', category: 'produce', icon: '🍎', price: '5.99 LEI/kg' },
+  { id: 'banana', name: 'Fresh Bananas', nameRo: 'Banane Bio', category: 'produce', icon: '🍌', price: '6.49 LEI/kg' },
+  { id: 'carrot', name: 'Organic Carrots', nameRo: 'Morcovi Dulci', category: 'produce', icon: '🥕', price: '3.99 LEI/kg' },
+  { id: 'watermelon', name: 'Sweet Watermelon', nameRo: 'Pepene Verde', category: 'produce', icon: '🍉', price: '2.49 LEI/kg' },
 
-  { id: 'milk', name: 'Fresh Milk', category: 'dairy', icon: '🥛', color: '#3498db' },
-  { id: 'cheese', name: 'Cheddar Cheese', category: 'dairy', icon: '🧀', color: '#f1c40f' },
-  { id: 'butter', name: 'Cream Butter', category: 'dairy', icon: '🧈', color: '#f39c12' },
-  { id: 'yogurt', name: 'Fruit Yogurt', category: 'dairy', icon: '🍦', color: '#9b59b6' },
+  { id: 'milk', name: 'Fresh Milk 3.5%', nameRo: 'Lapte Proaspăt', category: 'dairy', icon: '🥛', price: '6.99 LEI' },
+  { id: 'cheese', name: 'Cheddar Cheese', nameRo: 'Cașcaval Rucăr', category: 'dairy', icon: '🧀', price: '12.50 LEI' },
+  { id: 'butter', name: 'Cream Butter 82%', nameRo: 'Unt de Masă', category: 'dairy', icon: '🧈', price: '10.99 LEI' },
+  { id: 'yogurt', name: 'Fruit Yogurt', nameRo: 'Iaurt cu Fructe', category: 'dairy', icon: '🍦', price: '2.79 LEI' },
 
-  { id: 'chicken', name: 'Fresh Chicken', category: 'meat', icon: '🍗', color: '#d35400' },
-  { id: 'steak', name: 'Prime Steak', category: 'meat', icon: '🥩', color: '#c0392b' },
-  { id: 'sausage', name: 'Grill Sausage', category: 'meat', icon: '🌭', color: '#e74c3c' },
+  { id: 'chicken', name: 'Fresh Chicken', nameRo: 'Pui Întreg', category: 'meat', icon: '🍗', price: '18.99 LEI/kg' },
+  { id: 'steak', name: 'Prime Beef Steak', nameRo: 'Antrecot Vită', category: 'meat', icon: '🥩', price: '34.99 LEI/kg' },
+  { id: 'sausage', name: 'Grill Sausages', nameRo: 'Cârnați Oltenești', category: 'meat', icon: '🌭', price: '14.99 LEI' },
 
-  { id: 'chocolate', name: 'Milk Chocolate', category: 'snacks', icon: '🍫', color: '#7e5109' },
-  { id: 'chips', name: 'Crunchy Chips', category: 'snacks', icon: '🍿', color: '#f39c12' },
-  { id: 'soda', name: 'Fizzy Soda', category: 'snacks', icon: '🥤', color: '#e74c3c' },
+  { id: 'chocolate', name: 'Milk Chocolate', nameRo: 'Ciocolată cu Lapte', category: 'snacks', icon: '🍫', price: '4.49 LEI' },
+  { id: 'chips', name: 'Crunchy Chips', nameRo: 'Chipsuri Cartofi', category: 'snacks', icon: '🍿', price: '6.29 LEI' },
+  { id: 'soda', name: 'Fizzy Soda 2L', nameRo: 'Suc Carbogazificat', category: 'snacks', icon: '🥤', price: '7.99 LEI' },
 
-  { id: 'soap', name: 'Clean Soap', category: 'household', icon: '🧼', color: '#1abc9c' },
-  { id: 'detergent', name: 'Bio Detergent', category: 'household', icon: '🧴', color: '#3498db' },
-  { id: 'paper', name: 'Soft Towel Roll', category: 'household', icon: '🧻', color: '#bdc3c7' }
+  { id: 'soap', name: 'Clean Soap', nameRo: 'Săpun Lichid', category: 'household', icon: '🧼', price: '5.49 LEI' },
+  { id: 'detergent', name: 'Bio Detergent', nameRo: 'Detergent Automat', category: 'household', icon: '🧴', price: '29.99 LEI' },
+  { id: 'paper', name: 'Towel Roll 4x', nameRo: 'Hârtie Prosop', category: 'household', icon: '🧻', color: '#bdc3c7', price: '11.99 LEI' }
 ];
 
 // ============ 10 PROGRESSIVE LEVELS ============
 const LEVELS = [
-  { id: 1, name: 'Quick Morning Run', targetItems: ['bread', 'milk', 'apple'], timer: 0 },
-  { id: 2, name: 'Breakfast Feast', targetItems: ['croissant', 'butter', 'cheese', 'milk'], timer: 0 },
-  { id: 3, name: 'Fruit Basket Run', targetItems: ['banana', 'apple', 'watermelon', 'carrot'], timer: 0 },
+  { id: 1, name: 'Morning Essentials', targetItems: ['bread', 'milk', 'apple'], timer: 0 },
+  { id: 2, name: 'Breakfast Feast', targetItems: ['croissant', 'butter', 'cheese', 'yogurt'], timer: 0 },
+  { id: 3, name: 'Fresh Fruit Basket', targetItems: ['banana', 'apple', 'watermelon', 'carrot'], timer: 0 },
   { id: 4, name: 'Weekend BBQ Party', targetItems: ['steak', 'sausage', 'chicken', 'soda', 'chips'], timer: 120 },
   { id: 5, name: 'Sweet Tooth Hunt', targetItems: ['chocolate', 'donut', 'chips', 'yogurt', 'soda'], timer: 100 },
-  { id: 6, name: 'Clean House Sweep', targetItems: ['soap', 'detergent', 'paper', 'milk', 'bread'], timer: 90 },
-  { id: 7, name: 'Supermarket Challenge', targetItems: ['steak', 'cheese', 'watermelon', 'croissant', 'detergent', 'chocolate'], timer: 85 },
-  { id: 8, name: 'Big Family Shopping', targetItems: ['chicken', 'sausage', 'butter', 'banana', 'paper', 'soap', 'donut'], timer: 80 },
-  { id: 9, name: 'Rush Hour Dash', targetItems: ['steak', 'cheese', 'bread', 'apple', 'yogurt', 'soda', 'chips', 'detergent'], timer: 75 },
+  { id: 6, name: 'Home Cleaning Sweep', targetItems: ['soap', 'detergent', 'paper', 'milk', 'bread'], timer: 90 },
+  { id: 7, name: 'Supermarket Challenge', targetItems: ['steak', 'cheese', 'watermelon', 'croissant', 'detergent', 'chocolate'], timer: 100 },
+  { id: 8, name: 'Family Mega Shopping', targetItems: ['chicken', 'sausage', 'butter', 'banana', 'paper', 'soap', 'donut'], timer: 90 },
+  { id: 9, name: 'Rush Hour Dash', targetItems: ['steak', 'cheese', 'bread', 'apple', 'yogurt', 'soda', 'chips', 'detergent'], timer: 80 },
   { id: 10, name: 'Grand Hypermarket Master', targetItems: ['chicken', 'steak', 'sausage', 'watermelon', 'banana', 'chocolate', 'croissant', 'milk', 'soap'], timer: 70 }
 ];
 
 // ============ GAME STATE & VARIABLES ============
-let gameState = 'TITLE'; // TITLE, PLAY, SHELF_VIEW, LIST_VIEW, PAUSED, LEVEL_CLEAR, GAME_OVER, VICTORY
+let gameState = 'TITLE';
 let currentLevelIdx = 0;
 let score = 0;
 let levelTimer = 0;
 let stateCooldown = 0;
 let pendingState = null;
 let activeShelf = null;
+let feedbackMsg = '';
+let feedbackTimer = 0;
 
 // Player Position & Cart Inventory
 const player = {
@@ -400,35 +427,72 @@ const player = {
 
 // Supermarket Aisles & Shelves Definition
 let shelves = [];
-let checkoutZone = { x: 700, y: 460, w: 100, h: 70 };
+let checkoutZone = { x: 720, y: 460, w: 110, h: 75 };
 
 function initSupermarketLevel(lvlIdx) {
   const lvl = LEVELS[lvlIdx];
   levelTimer = lvl.timer;
-  player.x = 120;
-  player.y = 480;
+  player.x = 130;
+  player.y = 490;
   player.cart = [];
 
   shelves = [
-    // Bakery Aisle
-    { x: 160, y: 150, w: 140, h: 48, cat: 'bakery', name: '🥐 Bakery Stand', items: ['bread', 'croissant', 'donut'] },
-    // Produce Aisle
-    { x: 360, y: 150, w: 140, h: 48, cat: 'produce', name: '🥦 Fresh Produce', items: ['apple', 'banana', 'carrot', 'watermelon'] },
-    // Dairy Aisle
-    { x: 560, y: 150, w: 140, h: 48, cat: 'dairy', name: '🥛 Dairy Fridge', items: ['milk', 'cheese', 'butter', 'yogurt'] },
-
-    // Meat Aisle
-    { x: 160, y: 330, w: 140, h: 48, cat: 'meat', name: '🥩 Butchery Counter', items: ['chicken', 'steak', 'sausage'] },
-    // Snacks Aisle
-    { x: 360, y: 330, w: 140, h: 48, cat: 'snacks', name: '🍿 Snacks & Sweets', items: ['chocolate', 'chips', 'soda'] },
-    // Household Aisle
-    { x: 560, y: 330, w: 140, h: 48, cat: 'household', name: '🧼 Household Goods', items: ['soap', 'detergent', 'paper'] },
+    // Aisle 1 - Bakery & Produce
+    { x: 160, y: 150, w: 150, h: 54, cat: 'bakery', name: '🥖 FLEISCH & BAKERY', items: ['bread', 'croissant', 'donut'] },
+    { x: 370, y: 150, w: 150, h: 54, cat: 'produce', name: '🍎 PRODUCE & FRUITS', items: ['apple', 'banana', 'carrot', 'watermelon'] },
+    // Aisle 2 - Dairy & Butchery
+    { x: 580, y: 150, w: 150, h: 54, cat: 'dairy', name: '🥛 DAIRY & CHEESE', items: ['milk', 'cheese', 'butter', 'yogurt'] },
+    { x: 160, y: 340, w: 150, h: 54, cat: 'meat', name: '🥩 BUTCHERY COUNTER', items: ['chicken', 'steak', 'sausage'] },
+    // Aisle 3 - Snacks & Household
+    { x: 370, y: 340, w: 150, h: 54, cat: 'snacks', name: '🍿 SNACKS & DRINKS', items: ['chocolate', 'chips', 'soda'] },
+    { x: 580, y: 340, w: 150, h: 54, cat: 'household', name: '🧼 HOUSEHOLD GOODS', items: ['soap', 'detergent', 'paper'] },
   ];
+
+  updatePaperShoppingListUI();
+  document.getElementById('paperShoppingList').style.display = 'flex';
+}
+
+function updatePaperShoppingListUI() {
+  const lvl = LEVELS[currentLevelIdx];
+  const container = document.getElementById('paperItems');
+  const progressEl = document.getElementById('paperProgress');
+
+  if (!lvl || !container) return;
+
+  let collectedCount = 0;
+  let html = '';
+
+  lvl.targetItems.forEach(itemId => {
+    const prod = PRODUCTS.find(p => p.id === itemId);
+    if (!prod) return;
+    const isCollected = player.cart.includes(itemId);
+    if (isCollected) collectedCount++;
+
+    const nameStr = LANG === 'ro' ? prod.nameRo : prod.name;
+    html += `
+      <div class="paper-item ${isCollected ? 'checked' : ''}">
+        <span><span class="check-box">${isCollected ? '☑' : '☐'}</span> ${prod.icon} ${nameStr}</span>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+  progressEl.innerText = `${collectedCount}/${lvl.targetItems.length}`;
+}
+
+function showFeedback(msg, isWarning = false) {
+  feedbackMsg = msg;
+  feedbackTimer = 2.2;
 }
 
 function setGameState(newState) {
   pendingState = newState;
   stateCooldown = 0.35;
+  if (newState !== 'PLAY') {
+    document.getElementById('paperShoppingList').style.display = 'none';
+  } else {
+    document.getElementById('paperShoppingList').style.display = 'flex';
+  }
 }
 
 // ============ GAME LOGIC & CONTROLS ============
@@ -461,7 +525,6 @@ bindTouchBtn('btnDown', 'ArrowDown');
 bindTouchBtn('btnLeft', 'ArrowLeft');
 bindTouchBtn('btnRight', 'ArrowRight');
 
-document.getElementById('btnShowList').addEventListener('click', () => openListModal());
 document.getElementById('btnGrab').addEventListener('click', () => interactWithNearestShelf());
 
 function interactWithNearestShelf() {
@@ -476,7 +539,7 @@ function getNearbyShelf() {
     const cx = s.x + s.w / 2;
     const cy = s.y + s.h / 2;
     const dist = Math.hypot(player.x - cx, player.y - cy);
-    if (dist < 85) return s;
+    if (dist < 90) return s;
   }
   return null;
 }
@@ -535,6 +598,8 @@ function checkOutCart() {
     } else {
       setGameState('VICTORY');
     }
+  } else {
+    showFeedback('⚠️ SCAN INCOMPLETE: COLLECT ALL LIST ITEMS FIRST!', true);
   }
 }
 
@@ -582,6 +647,22 @@ function render() {
       ]);
     }
   }
+
+  // Feedback Notification Floater
+  if (feedbackTimer > 0 && feedbackMsg) {
+    ctx.save();
+    ctx.font = 'bold 15px -apple-system, sans-serif';
+    const mw = ctx.measureText(feedbackMsg).width;
+    ctx.fillStyle = feedbackMsg.includes('⚠️') ? 'rgba(239, 68, 68, 0.95)' : 'rgba(34, 197, 94, 0.95)';
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(W / 2 - mw / 2 - 16, 104, mw + 32, 34, 17);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(feedbackMsg, W / 2, 121);
+    ctx.restore();
+  }
 }
 
 function renderTitle() {
@@ -615,86 +696,119 @@ function renderTitle() {
 function renderSupermarket() {
   const lvl = LEVELS[currentLevelIdx];
 
-  // Supermarket Floor Tiles
-  ctx.fillStyle = '#1e2d4a';
+  // Polished Marble Hypermarket Floor Tiles
+  ctx.fillStyle = '#f1f5f9';
   ctx.fillRect(0, 50, W, H - 50);
 
-  // Aisle Grid Floor Pattern
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  // Tile Grid Lines
+  ctx.strokeStyle = 'rgba(203, 213, 225, 0.6)';
   ctx.lineWidth = 1;
-  for (let x = 0; x < W; x += 40) {
+  for (let x = 0; x < W; x += 50) {
     ctx.beginPath(); ctx.moveTo(x, 50); ctx.lineTo(x, H); ctx.stroke();
   }
+  for (let y = 50; y < H; y += 50) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
 
-  // Draw Shelves
+  // Draw Aisle Category Banners & Realistic Multi-Tier Shelves
   shelves.forEach(s => {
-    ctx.fillStyle = '#0f182c';
-    ctx.strokeStyle = '#3498db';
+    // Shelf Base & Shadow
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.25)';
+    ctx.fillRect(s.x + 6, s.y + 6, s.w, s.h);
+
+    // Shelf Wooden/Metallic Frame
+    ctx.fillStyle = '#334155';
+    ctx.strokeStyle = '#0284c7';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(s.x, s.y, s.w, s.h, 10);
+    ctx.roundRect(s.x, s.y, s.w, s.h, 8);
     ctx.fill(); ctx.stroke();
 
-    ctx.fillStyle = '#ffd700';
-    ctx.font = 'bold 13px -apple-system, sans-serif';
+    // Category Header Sign
+    ctx.fillStyle = '#0284c7';
+    ctx.fillRect(s.x, s.y, s.w, 18);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 11px -apple-system, sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(s.name, s.x + s.w / 2, s.y + s.h / 2);
+    ctx.fillText(s.name, s.x + s.w / 2, s.y + 9);
+
+    // Products sitting on shelf tier
+    s.items.forEach((itemId, idx) => {
+      const prod = PRODUCTS.find(p => p.id === itemId);
+      if (prod) {
+        ctx.font = '18px sans-serif';
+        ctx.fillText(prod.icon, s.x + 22 + idx * 36, s.y + 36);
+      }
+    });
   });
 
-  // Highlight Nearby Shelf
+  // Highlight Nearby Proximity Shelf
   const nearShelf = getNearbyShelf();
   if (nearShelf) {
-    ctx.strokeStyle = '#2ecc71';
+    ctx.strokeStyle = '#22c55e';
     ctx.lineWidth = 3;
     ctx.strokeRect(nearShelf.x - 4, nearShelf.y - 4, nearShelf.w + 8, nearShelf.h + 8);
 
-    ctx.fillStyle = '#2ecc71';
+    ctx.fillStyle = '#16a34a';
     ctx.font = 'bold 13px -apple-system, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(t('grabHint'), player.x, player.y - 32);
+    ctx.fillText(t('grabHint'), player.x, player.y - 34);
   }
 
-  // Draw Checkout Counter Zone
-  ctx.fillStyle = 'rgba(46, 204, 113, 0.25)';
-  ctx.strokeStyle = '#2ecc71';
-  ctx.lineWidth = 2;
+  // Draw Checkout POS Conveyor Belt & Rubber Texture
+  ctx.fillStyle = '#1e293b';
   ctx.fillRect(checkoutZone.x, checkoutZone.y, checkoutZone.w, checkoutZone.h);
+  ctx.strokeStyle = '#22c55e';
+  ctx.lineWidth = 3;
   ctx.strokeRect(checkoutZone.x, checkoutZone.y, checkoutZone.w, checkoutZone.h);
 
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 14px -apple-system, sans-serif';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('💳 CHECKOUT', checkoutZone.x + checkoutZone.w / 2, checkoutZone.y + checkoutZone.h / 2);
+  // Scanner Laser Light
+  ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
+  ctx.fillRect(checkoutZone.x + 10, checkoutZone.y + 10, checkoutZone.w - 20, 8);
 
-  // Draw Player & Shopping Cart (Top-Down View)
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 13px -apple-system, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('💳 POS CHECKOUT', checkoutZone.x + checkoutZone.w / 2, checkoutZone.y + checkoutZone.h / 2 + 6);
+
+  // Draw Player Character & Metallic Grid Shopping Cart (Top-Down View)
   ctx.save();
   ctx.translate(player.x, player.y);
 
-  // Cart
-  ctx.fillStyle = '#95a5a6';
-  ctx.strokeStyle = '#7f8c8d';
+  // Cart Mesh Grid
+  ctx.fillStyle = '#94a3b8';
+  ctx.strokeStyle = '#64748b';
   ctx.lineWidth = 2;
-  ctx.fillRect(-14, -28, 28, 20);
-  ctx.strokeRect(-14, -28, 28, 20);
+  ctx.fillRect(-16, -30, 32, 22);
+  ctx.strokeRect(-16, -30, 32, 22);
 
-  // Player Character Circle
-  ctx.fillStyle = '#e74c3c';
+  // Collected Items inside cart grid
+  player.cart.slice(0, 4).forEach((itemId, idx) => {
+    const prod = PRODUCTS.find(p => p.id === itemId);
+    if (prod) {
+      ctx.font = '12px sans-serif';
+      ctx.fillText(prod.icon, -10 + (idx % 2) * 14, -22 + Math.floor(idx / 2) * 10);
+    }
+  });
+
+  // Player Body Circle
+  ctx.fillStyle = '#0284c7';
   ctx.beginPath();
   ctx.arc(0, 0, player.r, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = '#fff';
+  ctx.strokeStyle = '#ffffff';
   ctx.lineWidth = 2;
   ctx.stroke();
 
   ctx.restore();
 
-  // Top Resource HUD Bar (Y = 50..92)
-  ctx.fillStyle = '#091222';
+  // Resource HUD Bar (Y = 50..92)
+  ctx.fillStyle = '#0f172a';
   ctx.fillRect(0, 50, W, 42);
   ctx.strokeStyle = 'rgba(255,255,255,0.15)';
   ctx.strokeRect(0, 50, W, 42);
 
-  ctx.fillStyle = '#2ecc71';
+  ctx.fillStyle = '#4ade80';
   ctx.font = 'bold 14px -apple-system, sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
@@ -702,13 +816,13 @@ function renderSupermarket() {
   const reqCount = lvl.targetItems.length;
   const timeText = levelTimer > 0 ? `  ·  ⏱ ${Math.ceil(levelTimer)}s` : '';
 
-  ctx.fillText(`🛒 LEVEL ${currentLevelIdx + 1}: ${lvl.name}  ·  📋 LIST: ${cartCount}/${reqCount}${timeText}  ·  ⭐ SCORE: ${score}`, W / 2, 71);
+  ctx.fillText(`🛒 LEVEL ${currentLevelIdx + 1}: ${lvl.name}  ·  📋 CART: ${cartCount}/${reqCount}${timeText}  ·  ⭐ SCORE: ${score}`, W / 2 + 100, 71);
 }
 
 function drawMenuBtn(x, y, w, h, text, onClick) {
   ctx.save();
-  ctx.fillStyle = '#27ae60';
-  ctx.strokeStyle = '#58d68d';
+  ctx.fillStyle = '#22c55e';
+  ctx.strokeStyle = '#4ade80';
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.roundRect(x - w / 2, y - h / 2, w, h, 12);
@@ -740,18 +854,18 @@ function drawModalCard(title, sub, buttons) {
   const cardX = (W - cardW) / 2;
   const cardY = (H - cardH) / 2;
 
-  ctx.fillStyle = '#0e1a30';
-  ctx.strokeStyle = '#3498db';
+  ctx.fillStyle = '#0f172a';
+  ctx.strokeStyle = '#38bdf8';
   ctx.lineWidth = 3;
   ctx.roundRect(cardX, cardY, cardW, cardH, 20);
   ctx.fill(); ctx.stroke();
 
-  ctx.fillStyle = '#2ecc71';
+  ctx.fillStyle = '#4ade80';
   ctx.font = 'bold 26px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText(title, W / 2, cardY + 45);
 
-  ctx.fillStyle = '#a9c7eb';
+  ctx.fillStyle = '#cbd5e1';
   ctx.font = '14px sans-serif';
   ctx.fillText(sub, W / 2, cardY + 85);
 
@@ -762,7 +876,7 @@ function drawModalCard(title, sub, buttons) {
   ctx.restore();
 }
 
-// ============ SHELF & LIST MODAL ENGINES ============
+// ============ SHELF INSPECTION MODAL ============
 function openShelfModal(shelf) {
   activeShelf = shelf;
   document.getElementById('shelfTitle').innerText = shelf.name;
@@ -774,11 +888,13 @@ function openShelfModal(shelf) {
     const prod = PRODUCTS.find(p => p.id === itemId);
     if (!prod) return;
     const inCartCount = player.cart.filter(id => id === itemId).length;
+    const nameStr = LANG === 'ro' ? prod.nameRo : prod.name;
 
     html += `
       <div class="item-card">
         <div class="item-icon">${prod.icon}</div>
-        <div class="item-name">${prod.name}</div>
+        <div class="item-name">${nameStr}</div>
+        <div class="item-price">${prod.price}</div>
         <button class="item-action-btn" onclick="toggleCartItem('${prod.id}')">
           ${t('putInCart')}
         </button>
@@ -797,8 +913,21 @@ function openShelfModal(shelf) {
 }
 
 window.toggleCartItem = function(itemId) {
-  player.cart.push(itemId);
-  playSfx('pop');
+  const lvl = LEVELS[currentLevelIdx];
+  const isRequired = lvl.targetItems.includes(itemId);
+
+  if (isRequired) {
+    player.cart.push(itemId);
+    score += 150;
+    playSfx('pop');
+    showFeedback(t('itemAdded'));
+  } else {
+    playSfx('wrong');
+    score = Math.max(0, score - 50);
+    showFeedback(t('notOnList'), true);
+  }
+
+  updatePaperShoppingListUI();
   if (activeShelf) openShelfModal(activeShelf);
 };
 
@@ -807,40 +936,13 @@ window.removeCartItem = function(itemId) {
   if (idx !== -1) {
     player.cart.splice(idx, 1);
     playSfx('pop');
+    updatePaperShoppingListUI();
     if (activeShelf) openShelfModal(activeShelf);
   }
 };
 
 document.getElementById('shelfCloseBtn').addEventListener('click', () => {
   document.getElementById('shelfModal').style.display = 'none';
-  setGameState('PLAY');
-});
-
-function openListModal() {
-  const lvl = LEVELS[currentLevelIdx];
-  const container = document.getElementById('listChecklist');
-  let html = '';
-
-  lvl.targetItems.forEach(itemId => {
-    const prod = PRODUCTS.find(p => p.id === itemId);
-    if (!prod) return;
-    const hasItem = player.cart.includes(itemId);
-
-    html += `
-      <div class="check-item ${hasItem ? 'done' : ''}">
-        <span>${prod.icon} ${prod.name}</span>
-        <span>${hasItem ? '✓ IN CART' : '❌ NEEDED'}</span>
-      </div>
-    `;
-  });
-
-  container.innerHTML = html;
-  document.getElementById('listModal').style.display = 'flex';
-  setGameState('LIST_VIEW');
-}
-
-document.getElementById('listCloseBtn').addEventListener('click', () => {
-  document.getElementById('listModal').style.display = 'none';
   setGameState('PLAY');
 });
 
@@ -865,7 +967,7 @@ function openLeaderboardModal() {
   document.getElementById('lbTitle').innerText = t('topScores');
 
   if (!board.length) {
-    listEl.innerHTML = `<div style="text-align:center; padding:20px; color:#a9c7eb;">${t('noScoresYet')}</div>`;
+    listEl.innerHTML = `<div style="text-align:center; padding:20px; color:#cbd5e1;">${t('noScoresYet')}</div>`;
   } else {
     let html = '';
     board.slice(0, 10).forEach((entry, idx) => {
@@ -914,6 +1016,7 @@ function gameLoop(now) {
   }
 
   if (stateCooldown > 0) stateCooldown -= dt;
+  if (feedbackTimer > 0) feedbackTimer -= dt;
 
   update(dt);
   render();
