@@ -427,25 +427,21 @@ const player = {
 
 // Supermarket Aisles & Shelves Definition
 let shelves = [];
-let checkoutZone = { x: 635, y: 470, w: 110, h: 75 };
+let checkoutZone = { x: 650, y: 470, w: 110, h: 75 };
 
 function initSupermarketLevel(lvlIdx) {
   const lvl = LEVELS[lvlIdx];
   levelTimer = lvl.timer;
   player.x = 260;
-  player.y = 490;
+  player.y = 485;
   player.cart = [];
 
   shelves = [
-    // Aisle 1 - Bakery & Produce & Dairy
-    { x: 245, y: 150, w: 150, h: 54, cat: 'bakery', name: '🥖 FLEISCH & BAKERY', items: ['bread', 'croissant', 'donut'] },
-    { x: 440, y: 150, w: 150, h: 54, cat: 'produce', name: '🍎 PRODUCE & FRUITS', items: ['apple', 'banana', 'carrot', 'watermelon'] },
-    { x: 635, y: 150, w: 150, h: 54, cat: 'dairy', name: '🥛 DAIRY & CHEESE', items: ['milk', 'cheese', 'butter', 'yogurt'] },
+    // Continuous Aisle 1 - Bakery, Produce & Dairy
+    { x: 240, y: 145, w: 520, h: 95, cat: 'bakery', name: '🥖 BAKERY  ·  🍎 PRODUCE  ·  🥛 DAIRY', items: ['bread', 'croissant', 'donut', 'apple', 'banana', 'carrot', 'watermelon', 'milk', 'cheese', 'butter', 'yogurt'] },
 
-    // Aisle 2 - Butchery, Snacks & Household
-    { x: 245, y: 340, w: 150, h: 54, cat: 'meat', name: '🥩 BUTCHERY COUNTER', items: ['chicken', 'steak', 'sausage'] },
-    { x: 440, y: 340, w: 150, h: 54, cat: 'snacks', name: '🍿 SNACKS & DRINKS', items: ['chocolate', 'chips', 'soda'] },
-    { x: 635, y: 340, w: 150, h: 54, cat: 'household', name: '🧼 HOUSEHOLD GOODS', items: ['soap', 'detergent', 'paper'] },
+    // Continuous Aisle 2 - Butchery, Snacks & Household
+    { x: 240, y: 325, w: 520, h: 95, cat: 'meat', name: '🥩 BUTCHERY  ·  🍿 SNACKS  ·  🧼 HOUSEHOLD', items: ['chicken', 'steak', 'sausage', 'chocolate', 'chips', 'soda', 'soap', 'detergent', 'paper'] },
   ];
 
   updatePaperShoppingListUI();
@@ -710,61 +706,68 @@ function renderSupermarket() {
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
   }
 
-  // Draw Aisle Category Banners & Realistic Multi-Tier Shelves
+  // Draw Full-Length Continuous Aisle Category Banners & Pseudo-3D Multi-Tier Shelves
   shelves.forEach(s => {
-    // 1. Realistic Ground Shadow
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
-    ctx.fillRect(s.x + 4, s.y + s.h - 4, s.w, 10);
+    // 1. Realistic Ground Shadow Projected onto Store Floor
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.4)';
+    ctx.fillRect(s.x + 6, s.y + s.h - 2, s.w, 14);
 
-    // 2. Main Metallic / Wooden Shelf Structure Body
+    // 2. Main Metallic / Wooden Shelf Structure Body (Pseudo-3D Isometric Facade)
     const shelfGrad = ctx.createLinearGradient(s.x, s.y, s.x, s.y + s.h);
     shelfGrad.addColorStop(0, '#1e293b');
-    shelfGrad.addColorStop(0.3, '#334155');
-    shelfGrad.addColorStop(0.7, '#1e293b');
+    shelfGrad.addColorStop(0.2, '#334155');
+    shelfGrad.addColorStop(0.8, '#1e293b');
     shelfGrad.addColorStop(1, '#0f172a');
     ctx.fillStyle = shelfGrad;
     ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(s.x, s.y, s.w, s.h, 6);
+    ctx.roundRect(s.x, s.y, s.w, s.h, 8);
     ctx.fill(); ctx.stroke();
 
-    // 3. Top Aisle LED Category Header Sign Banner
+    // 3. Top Continuous Aisle LED Category Header Sign Banner
     ctx.fillStyle = '#0284c7';
-    ctx.fillRect(s.x, s.y, s.w, 20);
+    ctx.fillRect(s.x, s.y, s.w, 22);
     ctx.fillStyle = '#38bdf8';
-    ctx.fillRect(s.x, s.y + 18, s.w, 2); // Glowing LED strip
+    ctx.fillRect(s.x, s.y + 20, s.w, 2); // Glowing LED strip
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 11px -apple-system, sans-serif';
+    ctx.font = 'bold 12px -apple-system, sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(s.name, s.x + s.w / 2, s.y + 10);
+    ctx.fillText(s.name, s.x + s.w / 2, s.y + 11);
 
-    // 4. Middle Shelf Layer Rails & Price Tag Rail (Yellow Price Strip)
+    // 4. Multi-Tier Steel Shelf Layers (Back Tier & Front Tier)
     ctx.fillStyle = '#475569';
-    ctx.fillRect(s.x + 4, s.y + 24, s.w - 8, 4); // Middle tier steel shelf
+    ctx.fillRect(s.x + 6, s.y + 28, s.w - 12, 4); // Back tier rail
+    ctx.fillRect(s.x + 6, s.y + 56, s.w - 12, 4); // Front tier rail
 
-    ctx.fillStyle = '#f59e0b'; // Yellow Lidl/Kaufland Price Strip Rail
-    ctx.fillRect(s.x, s.y + s.h - 8, s.w, 8);
+    // Yellow Price Tag Rail along front edge
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(s.x, s.y + s.h - 10, s.w, 10);
     ctx.fillStyle = '#1e293b';
     ctx.font = '9px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('PRICE: 4.99 LEI | 9.99 LEI', s.x + s.w / 2, s.y + s.h - 3);
+    ctx.fillText('🏷️ BEST QUALITY & DISCOUNT OFFER — LIDL & KAUFLAND SPECIAL', s.x + s.w / 2, s.y + s.h - 4);
 
-    // 5. Products Arranged Neatly on Shelf Tiers (with individual 3D shadows)
+    // 5. Products Stacked in Multiple Rows (Back Row & Front Row)
     s.items.forEach((itemId, idx) => {
       const prod = PRODUCTS.find(p => p.id === itemId);
       if (prod) {
-        const itemX = s.x + 22 + idx * 36;
-        const itemY = s.y + 38;
+        // Calculate multi-row stacking coordinates
+        const itemX = s.x + 26 + (idx % 11) * 44;
 
-        // Small drop shadow behind product
+        // Back Row (Stacked behind on upper tier)
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.beginPath(); ctx.ellipse(itemX, itemY + 8, 10, 4, 0, 0, Math.PI * 2); ctx.fill();
-
-        ctx.font = '19px sans-serif';
+        ctx.beginPath(); ctx.ellipse(itemX, s.y + 36, 10, 4, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.font = '16px sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(prod.icon, itemX, itemY);
+        ctx.fillText(prod.icon, itemX, s.y + 34);
+
+        // Front Row (Stacked in front on lower tier with shadows)
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.beginPath(); ctx.ellipse(itemX, s.y + 68, 12, 5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.font = '20px sans-serif';
+        ctx.fillText(prod.icon, itemX, s.y + 66);
       }
     });
   });
