@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Supermarket Dash - Lidl & Kaufland Quest</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #091222; color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  /* Top Control Header Bar */
+  .top-control-bar {
+    position: fixed; top: 0; left: 0; right: 0; height: 50px; z-index: 25;
+    background: rgba(9, 18, 34, 0.95); border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 14px;
+    backdrop-filter: blur(8px);
+  }
+  #homeLink {
+    color: #fff; text-decoration: none; font-weight: 800; font-size: 14px;
+    background: rgba(255, 255, 255, 0.12); padding: 7px 14px; border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2); transition: transform 0.1s ease;
+  }
+  #homeLink:active { transform: scale(0.95); }
+
+  .langToggle {
+    display: flex; background: rgba(0, 0, 0, 0.5); border-radius: 999px; padding: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  .langToggle button {
+    border: none; background: transparent; color: #a9c7eb; font-weight: 800; font-size: 13px;
+    padding: 6px 12px; border-radius: 999px; cursor: pointer; transition: background 0.15s ease;
+  }
+  .langToggle button.active { background: #2ecc71; color: #fff; }
+
+  /* Touch Controls Overlay */
+  .touch-zone { position: fixed; bottom: 16px; z-index: 15; display: flex; gap: 10px; }
+  #touchDPad { left: 16px; flex-direction: column; align-items: center; }
+  .dpad-row { display: flex; gap: 10px; }
+  #touchAction { right: 16px; flex-direction: column; align-items: flex-end; }
+  .tbtn {
+    width: 58px; height: 58px; border-radius: 50%;
+    background: rgba(17, 26, 46, 0.85); border: 2px solid rgba(255, 255, 255, 0.25);
+    color: #fff; font-size: 22px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.5); backdrop-filter: blur(6px);
+  }
+  .tbtn:active, .tbtn.active { transform: scale(0.92); background: rgba(46, 204, 113, 0.85); border-color: #58d68d; }
+  .tbtn.list-btn { width: auto; height: 50px; border-radius: 25px; padding: 0 18px; font-size: 15px; background: linear-gradient(180deg, #f39c12, #d35400); border-color: #f1c40f; }
+
+  /* Overlay Panel Modals */
+  .overlay-panel {
+    position: fixed; inset: 0; z-index: 30;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px);
+  }
+  .panel-card {
+    background: linear-gradient(135deg, #0e1a30, #172747);
+    border: 2px solid #3498db; border-radius: 20px; padding: 22px;
+    width: min(94vw, 500px); color: #fff;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
+    display: flex; flex-direction: column; gap: 14px; text-align: center;
+  }
+  .panel-title { font-size: 26px; font-weight: 900; color: #2ecc71; text-shadow: 0 2px 4px rgba(0,0,0,0.6); }
+  .panel-sub { font-size: 14px; color: #a9c7eb; }
+  .panel-btn {
+    font-size: 16px; font-weight: 800; padding: 12px 20px; border-radius: 12px; border: none;
+    cursor: pointer; transition: transform 0.1s ease; outline: none;
+  }
+  .panel-btn:active { transform: scale(0.96); }
+  .btn-green { background: linear-gradient(180deg, #2ecc71, #27ae60); color: #fff; }
+  .btn-blue { background: linear-gradient(180deg, #3498db, #2980b9); color: #fff; }
+  .btn-gold { background: linear-gradient(180deg, #f39c12, #d35400); color: #fff; }
+
+  /* Shelf Inspection Items Grid */
+  .items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; max-height: 280px; overflow-y: auto; }
+  .item-card {
+    background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(52, 152, 219, 0.4);
+    border-radius: 12px; padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .item-icon { font-size: 32px; }
+  .item-name { font-size: 13px; font-weight: 800; color: #ffd700; }
+  .item-action-btn {
+    font-size: 12px; font-weight: 800; padding: 6px 12px; border-radius: 8px; border: none;
+    cursor: pointer; background: #2ecc71; color: #fff; width: 100%; margin-top: 4px;
+  }
+  .item-action-btn.put-back { background: #e74c3c; }
+
+  /* Shopping List Checklist */
+  .checklist { display: flex; flex-direction: column; gap: 8px; text-align: left; max-height: 260px; overflow-y: auto; }
+  .check-item {
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(255, 255, 255, 0.07); padding: 10px 14px; border-radius: 10px; font-size: 15px; font-weight: 700;
+  }
+  .check-item.done { background: rgba(46, 204, 113, 0.25); border: 1px solid #2ecc71; text-decoration: line-through; color: #a9c7eb; }
+
+  /* Leaderboard List */
+  .leaderboard-list { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; }
+  .lb-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(255, 255, 255, 0.08); padding: 8px 12px; border-radius: 10px; font-size: 14px; font-weight: 700;
+  }
+  .lb-rank { width: 28px; font-size: 15px; color: #f1c40f; text-align: left; }
+  .lb-name { flex: 1; text-align: left; margin: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
+  .lb-score { color: #2ecc71; font-weight: 900; font-size: 15px; }
+
+  .name-inputs { display: flex; flex-direction: column; gap: 12px; }
+  .input-group { display: flex; flex-direction: column; gap: 4px; text-align: left; }
+  .input-group label { font-size: 13px; font-weight: 800; color: #a9c7eb; }
+  .input-group input {
+    background: #091222; border: 2px solid #3498db; border-radius: 10px;
+    color: #fff; font-size: 17px; font-weight: 700; padding: 10px 14px; outline: none;
+  }
+  .input-group input:focus { border-color: #2ecc71; box-shadow: 0 0 10px rgba(46, 204, 113, 0.5); }
+</style>
+</head>
+<body>
+<!-- Top Control Header Bar -->
+<div class="top-control-bar">
+  <a id="homeLink" href="index.html">← Games</a>
+  <div class="langToggle" id="langToggle">
+    <button type="button" data-lang="en">🇬🇧 EN</button>
+    <button type="button" data-lang="ro">🇷🇴 RO</button>
+  </div>
+</div>
+
+<canvas id="game"></canvas>
+
+<!-- Mobile Touch Controls -->
+<div class="touch-zone" id="touchDPad" style="display:none;">
+  <div class="tbtn" id="btnUp">▲</div>
+  <div class="dpad-row">
+    <div class="tbtn" id="btnLeft">◀</div>
+    <div class="tbtn" id="btnRight">▶</div>
+  </div>
+  <div class="tbtn" id="btnDown">▼</div>
+</div>
+<div class="touch-zone" id="touchAction" style="display:none;">
+  <div class="tbtn list-btn" id="btnShowList">📋 List</div>
+  <div class="tbtn" id="btnGrab">🛒</div>
+</div>
+
+<!-- Shelf Inspection Modal -->
+<div class="overlay-panel" id="shelfModal">
+  <div class="panel-card">
+    <div class="panel-title" id="shelfTitle">🛒 SUPERMARKET SHELF</div>
+    <div class="panel-sub" id="shelfSub">Tap items to put them in your cart or back on shelf!</div>
+    <div class="items-grid" id="shelfItemsGrid"></div>
+    <button type="button" class="panel-btn btn-blue" id="shelfCloseBtn">CLOSE SHELF</button>
+  </div>
+</div>
+
+<!-- Shopping List Modal -->
+<div class="overlay-panel" id="listModal">
+  <div class="panel-card">
+    <div class="panel-title" id="listTitle">📋 SHOPPING LIST</div>
+    <div class="panel-sub" id="listSub">Collect these exact products from the supermarket shelves!</div>
+    <div class="checklist" id="listChecklist"></div>
+    <button type="button" class="panel-btn btn-green" id="listCloseBtn">CLOSE LIST</button>
+  </div>
+</div>
+
+<!-- Leaderboard Modal -->
+<div class="overlay-panel" id="leaderboardModal">
+  <div class="panel-card">
+    <div class="panel-title" id="lbTitle">🏆 TOP SHOPPERS</div>
+    <div class="leaderboard-list" id="lbList"></div>
+    <button type="button" class="panel-btn btn-green" id="lbCloseBtn">CLOSE</button>
+  </div>
+</div>
+
+<!-- Name Prompt Modal -->
+<div class="overlay-panel" id="namePromptModal">
+  <div class="panel-card">
+    <div class="panel-title" id="nameTitle">🎉 SHOPPING CHAMPION!</div>
+    <div class="panel-sub" id="nameSub">ENTER YOUR NAME FOR THE LEADERBOARD:</div>
+    <div class="name-inputs">
+      <div class="input-group">
+        <label for="p1NameInput" id="p1NameLabel">YOUR NAME:</label>
+        <input type="text" id="p1NameInput" maxlength="12" placeholder="Lilo" autocomplete="off">
+      </div>
+    </div>
+    <button type="button" class="panel-btn btn-green" id="saveScoreBtn">SAVE SCORE 🏆</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ============ I18N SETUP ============
+let LANG = 'en';
+try { LANG = localStorage.getItem('ohanaLang') === 'ro' ? 'ro' : 'en'; } catch (e) {}
+
+const TEXT = {
+  en: {
+    title: 'SUPERMARKET DASH',
+    sub: 'Lidl & Kaufland Shopping Quest (10 Levels)',
+    start: 'START SHOPPING 🛒',
+    topScores: '🏆 TOP SCORES',
+    level: 'LEVEL',
+    list: '📋 LIST',
+    cart: '🛒 CART',
+    checkout: '💳 CHECKOUT',
+    time: '⏱ TIME',
+    score: 'SCORE',
+    grabHint: 'Press SPACE or tap 🛒 to inspect shelf',
+    paused: 'GAME PAUSED ⏸',
+    pausedHint: 'Press P, ESC, tap ⏸ or click Resume to continue',
+    resume: 'RESUME',
+    restart: 'RESTART',
+    menu: 'MAIN MENU',
+    levelClear: 'LEVEL CLEAR! ⭐',
+    nextLevel: 'NEXT LEVEL ➡',
+    gameOver: 'TIME EXPIRED! ⌛',
+    tryAgain: 'TRY AGAIN',
+    victory: '🏆 GRAND HYPERMARKET MASTER! 🏆',
+    close: 'CLOSE',
+    noScoresYet: 'No high scores yet — be the first!',
+    putInCart: '+ IN CART',
+    putBack: '- RETURN',
+  },
+  ro: {
+    title: 'SUPERMARKET DASH',
+    sub: 'Misiune la Cumpărături Lidl & Kaufland (10 Nivele)',
+    start: 'ÎNCEPE CUMPĂRĂTURILE 🛒',
+    topScores: '🏆 CELE MAI BUNE SCORURI',
+    level: 'NIVELUL',
+    list: '📋 LISTĂ',
+    cart: '🛒 COȘ',
+    checkout: '💳 CASĂ DE MARCAT',
+    time: '⏱ TIMP',
+    score: 'SCOR',
+    grabHint: 'Apasă SPACE sau atinge 🛒 pentru raft',
+    paused: 'JOC PAUZAT ⏸',
+    pausedHint: 'Apasă P, Esc, atinge ⏸ sau apăsă Continuă',
+    resume: 'CONTINUĂ',
+    restart: 'RESTART',
+    menu: 'MENIU PRINCIPAL',
+    levelClear: 'NIVEL COMPLETAT! ⭐',
+    nextLevel: 'NIVELUL URMĂTOR ➡',
+    gameOver: 'TIMPUL A EXPIRAT! ⌛',
+    tryAgain: 'ÎNCEARCĂ DIN NOU',
+    victory: '🏆 MAESTRU AL HIPERMARKETULUI! 🏆',
+    close: 'ÎNCHIDE',
+    noScoresYet: 'Niciun scor încă — fii primul!',
+    putInCart: '+ ÎN COȘ',
+    putBack: '- ÎNAPOI',
+  }
+};
+const t = key => (TEXT[LANG] && TEXT[LANG][key]) ? TEXT[LANG][key] : TEXT['en'][key];
+
+function updateLangToggleUI() {
+  document.querySelectorAll('#langToggle button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === LANG);
+  });
+}
+document.getElementById('langToggle').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-lang]');
+  if (!btn) return;
+  LANG = btn.dataset.lang;
+  try { localStorage.setItem('ohanaLang', LANG); } catch (err) {}
+  updateLangToggleUI();
+});
+updateLangToggleUI();
+
+// ============ WEBAUDIO SOUND ENGINE ============
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playSfx(type) {
+  if (!audioCtx) return;
+  try {
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+
+    if (type === 'pop') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(400, now);
+      osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.start(now); osc.stop(now + 0.1);
+    } else if (type === 'beep') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(1760, now); // A6 beep
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc.start(now); osc.stop(now + 0.12);
+    } else if (type === 'fanfare') {
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((freq, idx) => {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'triangle'; o.frequency.value = freq;
+        o.connect(g); g.connect(audioCtx.destination);
+        const startTime = now + idx * 0.09;
+        g.gain.setValueAtTime(0.12, startTime);
+        g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.25);
+        o.start(startTime); o.stop(startTime + 0.25);
+      });
+    }
+  } catch (e) {}
+}
+
+// ============ CANVAS SETUP ============
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0;
+
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 100));
+resize();
+
+const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 1024);
+function updateTouchVisibility() {
+  const showTouch = isTouchDevice && gameState === 'PLAY';
+  document.getElementById('touchDPad').style.display = showTouch ? 'flex' : 'none';
+  document.getElementById('touchAction').style.display = showTouch ? 'flex' : 'none';
+}
+
+// ============ PRODUCT DATABASE ============
+const PRODUCTS = [
+  { id: 'bread', name: 'Fresh Bread', category: 'bakery', icon: '🍞', color: '#e67e22' },
+  { id: 'croissant', name: 'Butter Croissant', category: 'bakery', icon: '🥐', color: '#f39c12' },
+  { id: 'donut', name: 'Glazed Donut', category: 'bakery', icon: '🍩', color: '#e74c3c' },
+
+  { id: 'apple', name: 'Red Apple', category: 'produce', icon: '🍎', color: '#e74c3c' },
+  { id: 'banana', name: 'Fresh Bananas', category: 'produce', icon: '🍌', color: '#f1c40f' },
+  { id: 'carrot', name: 'Organic Carrots', category: 'produce', icon: '🥕', color: '#e67e22' },
+  { id: 'watermelon', name: 'Sweet Watermelon', category: 'produce', icon: '🍉', color: '#2ecc71' },
+
+  { id: 'milk', name: 'Fresh Milk', category: 'dairy', icon: '🥛', color: '#3498db' },
+  { id: 'cheese', name: 'Cheddar Cheese', category: 'dairy', icon: '🧀', color: '#f1c40f' },
+  { id: 'butter', name: 'Cream Butter', category: 'dairy', icon: '🧈', color: '#f39c12' },
+  { id: 'yogurt', name: 'Fruit Yogurt', category: 'dairy', icon: '🍦', color: '#9b59b6' },
+
+  { id: 'chicken', name: 'Fresh Chicken', category: 'meat', icon: '🍗', color: '#d35400' },
+  { id: 'steak', name: 'Prime Steak', category: 'meat', icon: '🥩', color: '#c0392b' },
+  { id: 'sausage', name: 'Grill Sausage', category: 'meat', icon: '🌭', color: '#e74c3c' },
+
+  { id: 'chocolate', name: 'Milk Chocolate', category: 'snacks', icon: '🍫', color: '#7e5109' },
+  { id: 'chips', name: 'Crunchy Chips', category: 'snacks', icon: '🍿', color: '#f39c12' },
+  { id: 'soda', name: 'Fizzy Soda', category: 'snacks', icon: '🥤', color: '#e74c3c' },
+
+  { id: 'soap', name: 'Clean Soap', category: 'household', icon: '🧼', color: '#1abc9c' },
+  { id: 'detergent', name: 'Bio Detergent', category: 'household', icon: '🧴', color: '#3498db' },
+  { id: 'paper', name: 'Soft Towel Roll', category: 'household', icon: '🧻', color: '#bdc3c7' }
+];
+
+// ============ 10 PROGRESSIVE LEVELS ============
+const LEVELS = [
+  { id: 1, name: 'Quick Morning Run', targetItems: ['bread', 'milk', 'apple'], timer: 0 },
+  { id: 2, name: 'Breakfast Feast', targetItems: ['croissant', 'butter', 'cheese', 'milk'], timer: 0 },
+  { id: 3, name: 'Fruit Basket Run', targetItems: ['banana', 'apple', 'watermelon', 'carrot'], timer: 0 },
+  { id: 4, name: 'Weekend BBQ Party', targetItems: ['steak', 'sausage', 'chicken', 'soda', 'chips'], timer: 120 },
+  { id: 5, name: 'Sweet Tooth Hunt', targetItems: ['chocolate', 'donut', 'chips', 'yogurt', 'soda'], timer: 100 },
+  { id: 6, name: 'Clean House Sweep', targetItems: ['soap', 'detergent', 'paper', 'milk', 'bread'], timer: 90 },
+  { id: 7, name: 'Supermarket Challenge', targetItems: ['steak', 'cheese', 'watermelon', 'croissant', 'detergent', 'chocolate'], timer: 85 },
+  { id: 8, name: 'Big Family Shopping', targetItems: ['chicken', 'sausage', 'butter', 'banana', 'paper', 'soap', 'donut'], timer: 80 },
+  { id: 9, name: 'Rush Hour Dash', targetItems: ['steak', 'cheese', 'bread', 'apple', 'yogurt', 'soda', 'chips', 'detergent'], timer: 75 },
+  { id: 10, name: 'Grand Hypermarket Master', targetItems: ['chicken', 'steak', 'sausage', 'watermelon', 'banana', 'chocolate', 'croissant', 'milk', 'soap'], timer: 70 }
+];
+
+// ============ GAME STATE & VARIABLES ============
+let gameState = 'TITLE'; // TITLE, PLAY, SHELF_VIEW, LIST_VIEW, PAUSED, LEVEL_CLEAR, GAME_OVER, VICTORY
+let currentLevelIdx = 0;
+let score = 0;
+let levelTimer = 0;
+let stateCooldown = 0;
+let pendingState = null;
+let activeShelf = null;
+
+// Player Position & Cart Inventory
+const player = {
+  x: 200, y: 300, vx: 0, vy: 0, speed: 240, r: 18,
+  cart: [] // Array of product ids inside cart
+};
+
+// Supermarket Aisles & Shelves Definition
+let shelves = [];
+let checkoutZone = { x: 700, y: 460, w: 100, h: 70 };
+
+function initSupermarketLevel(lvlIdx) {
+  const lvl = LEVELS[lvlIdx];
+  levelTimer = lvl.timer;
+  player.x = 120;
+  player.y = 480;
+  player.cart = [];
+
+  shelves = [
+    // Bakery Aisle
+    { x: 160, y: 150, w: 140, h: 48, cat: 'bakery', name: '🥐 Bakery Stand', items: ['bread', 'croissant', 'donut'] },
+    // Produce Aisle
+    { x: 360, y: 150, w: 140, h: 48, cat: 'produce', name: '🥦 Fresh Produce', items: ['apple', 'banana', 'carrot', 'watermelon'] },
+    // Dairy Aisle
+    { x: 560, y: 150, w: 140, h: 48, cat: 'dairy', name: '🥛 Dairy Fridge', items: ['milk', 'cheese', 'butter', 'yogurt'] },
+
+    // Meat Aisle
+    { x: 160, y: 330, w: 140, h: 48, cat: 'meat', name: '🥩 Butchery Counter', items: ['chicken', 'steak', 'sausage'] },
+    // Snacks Aisle
+    { x: 360, y: 330, w: 140, h: 48, cat: 'snacks', name: '🍿 Snacks & Sweets', items: ['chocolate', 'chips', 'soda'] },
+    // Household Aisle
+    { x: 560, y: 330, w: 140, h: 48, cat: 'household', name: '🧼 Household Goods', items: ['soap', 'detergent', 'paper'] },
+  ];
+}
+
+function setGameState(newState) {
+  pendingState = newState;
+  stateCooldown = 0.35;
+}
+
+// ============ GAME LOGIC & CONTROLS ============
+const keys = {};
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  initAudio();
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
+
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    if (gameState === 'PLAY') setGameState('PAUSED');
+    else if (gameState === 'PAUSED') setGameState('PLAY');
+  } else if (e.code === 'Space') {
+    if (gameState === 'PLAY') interactWithNearestShelf();
+  }
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// Touch Control Binds
+function bindTouchBtn(id, keyName) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const on = e => { e.preventDefault(); initAudio(); keys[keyName] = true; };
+  const off = e => { e.preventDefault(); keys[keyName] = false; };
+  el.addEventListener('touchstart', on); el.addEventListener('touchend', off);
+  el.addEventListener('mousedown', on); el.addEventListener('mouseup', off);
+}
+bindTouchBtn('btnUp', 'ArrowUp');
+bindTouchBtn('btnDown', 'ArrowDown');
+bindTouchBtn('btnLeft', 'ArrowLeft');
+bindTouchBtn('btnRight', 'ArrowRight');
+
+document.getElementById('btnShowList').addEventListener('click', () => openListModal());
+document.getElementById('btnGrab').addEventListener('click', () => interactWithNearestShelf());
+
+function interactWithNearestShelf() {
+  const nearShelf = getNearbyShelf();
+  if (nearShelf) {
+    openShelfModal(nearShelf);
+  }
+}
+
+function getNearbyShelf() {
+  for (const s of shelves) {
+    const cx = s.x + s.w / 2;
+    const cy = s.y + s.h / 2;
+    const dist = Math.hypot(player.x - cx, player.y - cy);
+    if (dist < 85) return s;
+  }
+  return null;
+}
+
+function update(dt) {
+  if (gameState !== 'PLAY') return;
+
+  // Timer countdown
+  if (levelTimer > 0) {
+    levelTimer -= dt;
+    if (levelTimer <= 0) {
+      setGameState('GAME_OVER');
+      return;
+    }
+  }
+
+  // Player Movement & Physics
+  let dx = 0, dy = 0;
+  if (keys['ArrowLeft'] || keys['KeyA']) dx -= 1;
+  if (keys['ArrowRight'] || keys['KeyD']) dx += 1;
+  if (keys['ArrowUp'] || keys['KeyW']) dy -= 1;
+  if (keys['ArrowDown'] || keys['KeyS']) dy += 1;
+
+  if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
+
+  const nextX = player.x + dx * player.speed * dt;
+  const nextY = player.y + dy * player.speed * dt;
+
+  // Bounds & Shelf Collision Detection
+  const minX = 40, maxX = W - 40, minY = 100, maxY = H - 60;
+  if (nextX >= minX && nextX <= maxX) player.x = nextX;
+  if (nextY >= minY && nextY <= maxY) player.y = nextY;
+
+  // Checkout Register Area Check
+  if (player.x >= checkoutZone.x && player.x <= checkoutZone.x + checkoutZone.w &&
+      player.y >= checkoutZone.y && player.y <= checkoutZone.y + checkoutZone.h) {
+    checkOutCart();
+  }
+}
+
+function checkOutCart() {
+  const lvl = LEVELS[currentLevelIdx];
+  const req = lvl.targetItems.slice().sort();
+  const got = player.cart.slice().sort();
+
+  // Check if all list items are matched
+  const isMatch = req.length === got.length && req.every((val, idx) => val === got[idx]);
+
+  if (isMatch) {
+    playSfx('beep');
+    playSfx('fanfare');
+    score += 500 + (levelTimer > 0 ? Math.floor(levelTimer * 10) : 0);
+
+    if (currentLevelIdx + 1 < LEVELS.length) {
+      setGameState('LEVEL_CLEAR');
+    } else {
+      setGameState('VICTORY');
+    }
+  }
+}
+
+// ============ RENDER ENGINE ============
+let menuClick = null;
+canvas.addEventListener('click', e => {
+  initAudio();
+  const rect = canvas.getBoundingClientRect();
+  menuClick = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+});
+
+function render() {
+  ctx.clearRect(0, 0, W, H);
+  updateTouchVisibility();
+
+  if (gameState === 'TITLE') {
+    renderTitle();
+  } else if (gameState === 'PLAY' || gameState === 'PAUSED' || gameState === 'LEVEL_CLEAR' || gameState === 'GAME_OVER' || gameState === 'VICTORY') {
+    renderSupermarket();
+
+    if (gameState === 'PAUSED') {
+      drawModalCard(t('paused'), t('pausedHint'), [
+        { label: t('resume'), action: () => setGameState('PLAY') },
+        { label: t('restart'), action: () => initSupermarketLevel(currentLevelIdx) },
+        { label: t('menu'), action: () => setGameState('TITLE') }
+      ]);
+    } else if (gameState === 'LEVEL_CLEAR') {
+      drawModalCard(t('levelClear'), `Score: ${score}`, [
+        { label: t('nextLevel'), action: () => {
+          currentLevelIdx++;
+          initSupermarketLevel(currentLevelIdx);
+          setGameState('PLAY');
+        }}
+      ]);
+    } else if (gameState === 'GAME_OVER') {
+      drawModalCard(t('gameOver'), 'Item list incomplete!', [
+        { label: t('tryAgain'), action: () => {
+          initSupermarketLevel(currentLevelIdx);
+          setGameState('PLAY');
+        }}
+      ]);
+    } else if (gameState === 'VICTORY') {
+      drawModalCard(t('victory'), `Final Score: ${score}`, [
+        { label: 'SAVE SCORE 🏆', action: () => openNamePromptModal() }
+      ]);
+    }
+  }
+}
+
+function renderTitle() {
+  ctx.fillStyle = '#091222';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#f1c40f';
+  ctx.font = 'bold 36px -apple-system, sans-serif';
+  ctx.fillText(t('title'), W / 2, 110);
+
+  ctx.fillStyle = '#a9c7eb';
+  ctx.font = 'bold 15px -apple-system, sans-serif';
+  ctx.fillText(t('sub'), W / 2, 150);
+
+  drawMenuBtn(W / 2, 230, 260, 52, t('start'), () => {
+    currentLevelIdx = 0;
+    score = 0;
+    initSupermarketLevel(0);
+    setGameState('PLAY');
+  });
+
+  drawMenuBtn(W / 2, 300, 260, 48, t('topScores'), () => {
+    openLeaderboardModal();
+  });
+
+  ctx.restore();
+}
+
+function renderSupermarket() {
+  const lvl = LEVELS[currentLevelIdx];
+
+  // Supermarket Floor Tiles
+  ctx.fillStyle = '#1e2d4a';
+  ctx.fillRect(0, 50, W, H - 50);
+
+  // Aisle Grid Floor Pattern
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 40) {
+    ctx.beginPath(); ctx.moveTo(x, 50); ctx.lineTo(x, H); ctx.stroke();
+  }
+
+  // Draw Shelves
+  shelves.forEach(s => {
+    ctx.fillStyle = '#0f182c';
+    ctx.strokeStyle = '#3498db';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(s.x, s.y, s.w, s.h, 10);
+    ctx.fill(); ctx.stroke();
+
+    ctx.fillStyle = '#ffd700';
+    ctx.font = 'bold 13px -apple-system, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(s.name, s.x + s.w / 2, s.y + s.h / 2);
+  });
+
+  // Highlight Nearby Shelf
+  const nearShelf = getNearbyShelf();
+  if (nearShelf) {
+    ctx.strokeStyle = '#2ecc71';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(nearShelf.x - 4, nearShelf.y - 4, nearShelf.w + 8, nearShelf.h + 8);
+
+    ctx.fillStyle = '#2ecc71';
+    ctx.font = 'bold 13px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(t('grabHint'), player.x, player.y - 32);
+  }
+
+  // Draw Checkout Counter Zone
+  ctx.fillStyle = 'rgba(46, 204, 113, 0.25)';
+  ctx.strokeStyle = '#2ecc71';
+  ctx.lineWidth = 2;
+  ctx.fillRect(checkoutZone.x, checkoutZone.y, checkoutZone.w, checkoutZone.h);
+  ctx.strokeRect(checkoutZone.x, checkoutZone.y, checkoutZone.w, checkoutZone.h);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 14px -apple-system, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('💳 CHECKOUT', checkoutZone.x + checkoutZone.w / 2, checkoutZone.y + checkoutZone.h / 2);
+
+  // Draw Player & Shopping Cart (Top-Down View)
+  ctx.save();
+  ctx.translate(player.x, player.y);
+
+  // Cart
+  ctx.fillStyle = '#95a5a6';
+  ctx.strokeStyle = '#7f8c8d';
+  ctx.lineWidth = 2;
+  ctx.fillRect(-14, -28, 28, 20);
+  ctx.strokeRect(-14, -28, 28, 20);
+
+  // Player Character Circle
+  ctx.fillStyle = '#e74c3c';
+  ctx.beginPath();
+  ctx.arc(0, 0, player.r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.restore();
+
+  // Top Resource HUD Bar (Y = 50..92)
+  ctx.fillStyle = '#091222';
+  ctx.fillRect(0, 50, W, 42);
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.strokeRect(0, 50, W, 42);
+
+  ctx.fillStyle = '#2ecc71';
+  ctx.font = 'bold 14px -apple-system, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+  const cartCount = player.cart.length;
+  const reqCount = lvl.targetItems.length;
+  const timeText = levelTimer > 0 ? `  ·  ⏱ ${Math.ceil(levelTimer)}s` : '';
+
+  ctx.fillText(`🛒 LEVEL ${currentLevelIdx + 1}: ${lvl.name}  ·  📋 LIST: ${cartCount}/${reqCount}${timeText}  ·  ⭐ SCORE: ${score}`, W / 2, 71);
+}
+
+function drawMenuBtn(x, y, w, h, text, onClick) {
+  ctx.save();
+  ctx.fillStyle = '#27ae60';
+  ctx.strokeStyle = '#58d68d';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(x - w / 2, y - h / 2, w, h, 12);
+  ctx.fill(); ctx.stroke();
+
+  ctx.font = 'bold 15px -apple-system, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(text, x, y);
+  ctx.restore();
+
+  if (menuClick && stateCooldown <= 0) {
+    if (menuClick.x >= x - w/2 && menuClick.x <= x + w/2 && menuClick.y >= y - h/2 && menuClick.y <= y + h/2) {
+      playSfx('pop');
+      menuClick = null;
+      stateCooldown = 0.35;
+      onClick();
+    }
+  }
+}
+
+function drawModalCard(title, sub, buttons) {
+  ctx.save();
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.fillRect(0, 0, W, H);
+
+  const cardW = Math.min(W * 0.9, 420);
+  const cardH = 260;
+  const cardX = (W - cardW) / 2;
+  const cardY = (H - cardH) / 2;
+
+  ctx.fillStyle = '#0e1a30';
+  ctx.strokeStyle = '#3498db';
+  ctx.lineWidth = 3;
+  ctx.roundRect(cardX, cardY, cardW, cardH, 20);
+  ctx.fill(); ctx.stroke();
+
+  ctx.fillStyle = '#2ecc71';
+  ctx.font = 'bold 26px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(title, W / 2, cardY + 45);
+
+  ctx.fillStyle = '#a9c7eb';
+  ctx.font = '14px sans-serif';
+  ctx.fillText(sub, W / 2, cardY + 85);
+
+  buttons.forEach((btn, idx) => {
+    drawMenuBtn(W / 2, cardY + 140 + idx * 52, 240, 44, btn.label, btn.action);
+  });
+
+  ctx.restore();
+}
+
+// ============ SHELF & LIST MODAL ENGINES ============
+function openShelfModal(shelf) {
+  activeShelf = shelf;
+  document.getElementById('shelfTitle').innerText = shelf.name;
+  
+  const container = document.getElementById('shelfItemsGrid');
+  let html = '';
+
+  shelf.items.forEach(itemId => {
+    const prod = PRODUCTS.find(p => p.id === itemId);
+    if (!prod) return;
+    const inCartCount = player.cart.filter(id => id === itemId).length;
+
+    html += `
+      <div class="item-card">
+        <div class="item-icon">${prod.icon}</div>
+        <div class="item-name">${prod.name}</div>
+        <button class="item-action-btn" onclick="toggleCartItem('${prod.id}')">
+          ${t('putInCart')}
+        </button>
+        ${inCartCount > 0 ? `
+          <button class="item-action-btn put-back" onclick="removeCartItem('${prod.id}')">
+            ${t('putBack')} (${inCartCount})
+          </button>
+        ` : ''}
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+  document.getElementById('shelfModal').style.display = 'flex';
+  setGameState('SHELF_VIEW');
+}
+
+window.toggleCartItem = function(itemId) {
+  player.cart.push(itemId);
+  playSfx('pop');
+  if (activeShelf) openShelfModal(activeShelf);
+};
+
+window.removeCartItem = function(itemId) {
+  const idx = player.cart.indexOf(itemId);
+  if (idx !== -1) {
+    player.cart.splice(idx, 1);
+    playSfx('pop');
+    if (activeShelf) openShelfModal(activeShelf);
+  }
+};
+
+document.getElementById('shelfCloseBtn').addEventListener('click', () => {
+  document.getElementById('shelfModal').style.display = 'none';
+  setGameState('PLAY');
+});
+
+function openListModal() {
+  const lvl = LEVELS[currentLevelIdx];
+  const container = document.getElementById('listChecklist');
+  let html = '';
+
+  lvl.targetItems.forEach(itemId => {
+    const prod = PRODUCTS.find(p => p.id === itemId);
+    if (!prod) return;
+    const hasItem = player.cart.includes(itemId);
+
+    html += `
+      <div class="check-item ${hasItem ? 'done' : ''}">
+        <span>${prod.icon} ${prod.name}</span>
+        <span>${hasItem ? '✓ IN CART' : '❌ NEEDED'}</span>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+  document.getElementById('listModal').style.display = 'flex';
+  setGameState('LIST_VIEW');
+}
+
+document.getElementById('listCloseBtn').addEventListener('click', () => {
+  document.getElementById('listModal').style.display = 'none';
+  setGameState('PLAY');
+});
+
+// ============ LEADERBOARD ENGINE ============
+function loadLeaderboard() {
+  try {
+    const saved = localStorage.getItem('supermarketLeaderboard');
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return [];
+}
+
+function saveLeaderboard(board) {
+  try {
+    localStorage.setItem('supermarketLeaderboard', JSON.stringify(board));
+  } catch (e) {}
+}
+
+function openLeaderboardModal() {
+  const board = loadLeaderboard();
+  const listEl = document.getElementById('lbList');
+  document.getElementById('lbTitle').innerText = t('topScores');
+
+  if (!board.length) {
+    listEl.innerHTML = `<div style="text-align:center; padding:20px; color:#a9c7eb;">${t('noScoresYet')}</div>`;
+  } else {
+    let html = '';
+    board.slice(0, 10).forEach((entry, idx) => {
+      const rankBadge = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : `#${idx + 1}`));
+      html += `
+        <div class="lb-row">
+          <span class="lb-rank">${rankBadge}</span>
+          <span class="lb-name">${entry.name}</span>
+          <span class="lb-score">${entry.score}</span>
+        </div>
+      `;
+    });
+    listEl.innerHTML = html;
+  }
+  document.getElementById('leaderboardModal').style.display = 'flex';
+}
+
+document.getElementById('lbCloseBtn').addEventListener('click', () => {
+  document.getElementById('leaderboardModal').style.display = 'none';
+});
+
+function openNamePromptModal() {
+  document.getElementById('namePromptModal').style.display = 'flex';
+}
+
+document.getElementById('saveScoreBtn').addEventListener('click', () => {
+  const name = (document.getElementById('p1NameInput').value.trim() || 'Lilo').slice(0, 12);
+  const board = loadLeaderboard();
+  board.push({ name, score });
+  board.sort((a, b) => b.score - a.score);
+  saveLeaderboard(board.slice(0, 10));
+
+  document.getElementById('namePromptModal').style.display = 'none';
+  openLeaderboardModal();
+});
+
+// ============ MAIN GAME LOOP ============
+let lastTime = performance.now();
+function gameLoop(now) {
+  const dt = Math.min(0.05, (now - lastTime) / 1000);
+  lastTime = now;
+
+  if (pendingState !== null) {
+    gameState = pendingState;
+    pendingState = null;
+  }
+
+  if (stateCooldown > 0) stateCooldown -= dt;
+
+  update(dt);
+  render();
+  requestAnimationFrame(gameLoop);
+}
+requestAnimationFrame(gameLoop);
+
+</script>
+</body>
+</html>

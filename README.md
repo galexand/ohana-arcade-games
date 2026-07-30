@@ -20,8 +20,9 @@ drop a new `.html` file in the folder and add one entry to the `GAMES` array in 
 | **Super Batter** | `super-batter.html` | Timing-based batting game: play Experiment 608, swing at the right moment to smash back balls from a pitching machine, across 12 levels |
 | **Super Cooking** | `super-cooking.html` | Cook with Capy: mix, boil and fry 6 recipes for the Ohana, one step at a time |
 | **Super Jumper** | `super-jumper.html` | 12-world platform adventure with friends, experiments and a golden medal |
-| **Super Rings** | `super-rings.html` | 20-level behind-the-ball ring flyer: steer a ball with your finger through a pseudo-3D corridor, fly through floating rings, unlock ball skins |
+| **Super Rings** | `super-rings.html` | 20-level behind-the-ball 3D platformer: roll and jump a ball across floating platforms, through rings and over checkpoints, unlock ball skins |
 | **Super Roll** | `super-roll.html` | 20-level rolling-ball platformer: steer Stitch-the-ball with your finger, jump through the rings, reach the goal |
+| **Supermarket Dash** | `supermarket-dash.html` | Top-down supermarket shopping adventure (Lidl & Kaufland quest): navigate aisles, grab products from shelves into cart, scan items at cash register across 10 progressive levels |
 | **Whack Hämsterviel** | `whack-hamsterviel.html` | Whack-a-mole: bonk Hämsterviel with your finger, spare the friends, beat the clock |
 
 ---
@@ -194,31 +195,32 @@ Progress is saved in `localStorage`: `superCookingUnlocked` (how many recipes ar
 
 # 🎯 Super Rings
 
-A **behind-the-ball** pseudo-3D ring flyer across **20 levels** — instead of watching your ball
-from the side, the camera sits right behind it looking down a scrolling corridor, so rings and
-checkpoints grow larger and rush toward you as the world auto-advances.
+A **behind-the-ball** pseudo-3D **3D platformer** across **20 levels** — the camera sits behind and
+above your ball as you roll and jump it across floating platforms, hop through airborne rings, and
+roll over turquoise checkpoint squares. There's no auto-scroll: the ball only moves when you do.
 
 ### Controls
 
-- **Touch (primary)**: drag your finger anywhere on the screen — **left/right** moves the ball
-  sideways, **up/down** moves it higher (to reach tall rings) or lower. The ball eases smoothly
-  toward your finger, clamped inside the corridor. Forward motion is always automatic.
-- **Keyboard**: ← → / `A` `D` to move sideways, ↑ ↓ / `W` `S` to move up/down.
+- **Touch (primary)**: drag your finger — **left/right** rolls the ball sideways, **up/down**
+  drives it forward/back in depth (drag up = forward, into the screen). A big **⬆ jump button**
+  (bottom-right) makes the ball hop.
+- **Keyboard**: ← → / `A` `D` to move sideways, ↑ / `W` forward and ↓ / `S` back, `Space` to jump.
+- The ball rolls with momentum and eases toward your input; jumping has coyote-time and a jump
+  buffer so timing is forgiving for younger players.
 
 ### The core loop
 
-- **Rings** float ahead in the corridor and approach the camera — position the ball so it flies
-  **through** the ring as it reaches the ball's depth. A clean pass pops with a sparkle burst and a
-  chime, and the ring lights up green.
-- **Missing a ring** (it reaches the ball's plane with the ball outside it) or **hitting a hazard
-  ring** (⚠, from level 12 on) costs one of **3 hearts** — losing all hearts respawns the ball at
-  the **last checkpoint square** touched, hearts refilled, no harsh game over.
-- **Checkpoint squares** are glowing gates placed at the level start and a few points along the
-  way; reaching one lights it up and becomes the new respawn point.
-- Reach the big glowing **goal portal** at the end of the corridor to clear the level.
-- From level 8, some rings **drift** up and down; from level 12, sparse hazard rings appear to
-  dodge. Speed and ring count rise gradually, and the corridor rotates through four backdrops —
-  space, sky, neon and sunset — while staying beatable throughout.
+- **Platforms** float in space with **gaps** between them — roll and jump across. Miss a jump and
+  fall into a gap: you lose one of **3 hearts** and respawn at the **last checkpoint** (turquoise
+  square) you rolled over; hearts refill if they hit zero, so it's never a hard game over.
+- **Rings** float in the air, often bridging a gap — jump **through** one for a sparkle burst, a
+  chime, and it lights up green. Rings are a bonus/skill target, not fatal to miss.
+- **Checkpoints** are flat turquoise squares sitting on platform tops; rolling over one (while
+  grounded) lights it up and becomes the new respawn point.
+- Reach the big glowing **goal portal** at the end of the platform path to clear the level.
+- From level 8, some platforms **move** back and forth; gaps widen, platforms shrink, and heights
+  vary more as levels progress, while the backdrop rotates through four themes — space, sky, neon
+  and sunset — staying beatable throughout.
 
 ### Level select, progression & ball skins
 
@@ -449,7 +451,7 @@ any game, without having to choose again.
 | `spaceship-racers.html` | The pseudo-3D spaceship racing game. |
 | `super-batter.html` | The batting game — 12 levels tuned in `levelConfig()`, ball physics and swing/hit detection in `update()`. |
 | `super-cooking.html` | The cooking game — recipes in the `RECIPES` array, ingredients drawn in `drawIngredientIcon`. |
-| `super-rings.html` | The behind-the-ball ring flyer — 20 levels generated by `levelConfig()`, pseudo-3D `project()` corridor, 8 procedural ball skins in the `SKINS` array. |
+| `super-rings.html` | The behind-the-ball 3D platformer — 20 levels generated by `levelConfig()` (platforms, rings, checkpoints), pseudo-3D `project()`/`projWorld()` camera, 8 procedural ball skins in the `SKINS` array. |
 | `super-roll.html` | The rolling-ball platformer — 20 levels generated by `buildLevel()` from difficulty parameters (see the `LEVEL GENERATOR` comment block). |
 | `whack-hamsterviel.html` | The whack-a-mole game. |
 | `serve.py` | Dev server with no-cache headers on port 8642. |

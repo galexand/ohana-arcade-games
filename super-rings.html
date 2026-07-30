@@ -74,8 +74,8 @@ const T = {
     play: 'PLAY',
     levels: 'LEVELS',
     skins: 'SKINS',
-    hint: 'Fly your ball through the floating rings!',
-    controlsHint: 'Drag to move · Arrows / WASD on keyboard',
+    hint: 'Roll and jump across floating platforms!',
+    controlsHint: 'Drag to roll the ball, tap ⬆ to jump — hop across the platforms and through the rings!',
     back: '‹ Back',
     level: 'Level ',
     ring: 'Ring ',
@@ -85,7 +85,7 @@ const T = {
     stars: 'Stars: ',
     tapContinue: 'Tap to continue',
     champion: '🏆 CHAMPION! 🏆',
-    conquered: 'You flew through all 20 levels!',
+    conquered: 'You rolled and jumped through all 20 levels!',
     tapMenu: 'Tap for level select',
     locked: 'Locked',
     unlockAt: (n) => 'Beat level ' + n,
@@ -102,8 +102,8 @@ const T = {
     play: 'JOACĂ',
     levels: 'NIVELE',
     skins: 'SKINURI',
-    hint: 'Zboară cu mingea prin cercurile plutitoare!',
-    controlsHint: 'Trage cu degetul · Săgeți / WASD pe tastatură',
+    hint: 'Rostogolește și sari peste platforme plutitoare!',
+    controlsHint: 'Trage ca să rostogolești mingea, atinge ⬆ ca să sari — treci din platformă în platformă și prin cercuri!',
     back: '‹ Înapoi',
     level: 'Nivel ',
     ring: 'Cerc ',
@@ -113,7 +113,7 @@ const T = {
     stars: 'Stele: ',
     tapContinue: 'Atinge pentru a continua',
     champion: '🏆 CAMPION! 🏆',
-    conquered: 'Ai zburat prin toate cele 20 de nivele!',
+    conquered: 'Ai rostogolit și sărit prin toate cele 20 de nivele!',
     tapMenu: 'Atinge pentru alegerea nivelelor',
     locked: 'Blocat',
     unlockAt: (n) => 'Treci de nivelul ' + n,
@@ -152,7 +152,10 @@ function beep(freq, dur, type, vol, slide) {
 const sfx = {
   ringPass()  { beep(660, 0.1, 'sine', 0.08, 300); setTimeout(() => beep(880, 0.12, 'sine', 0.07, 200), 60); },
   checkpoint(){ beep(700, 0.08, 'sine', 0.06, 260); setTimeout(() => beep(980, 0.12, 'sine', 0.06, 160), 70); },
-  miss()      { beep(220, 0.22, 'sawtooth', 0.09, -140); },
+  jump()      { beep(520, 0.09, 'square', 0.06, 180); },
+  land()      { beep(200, 0.06, 'square', 0.05, -60); },
+  launch()    { beep(180, 0.18, 'sine', 0.1, 700); setTimeout(() => beep(880, 0.12, 'square', 0.08, -200), 90); },
+  fall()      { beep(220, 0.22, 'sawtooth', 0.09, -140); },
   respawn()   { [440, 350, 280].forEach((f, i) => setTimeout(() => beep(f, 0.16, 'triangle', 0.06), i * 90)); },
   levelDone() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 0.2, 'square', 0.08), i * 120)); },
   unlock()    { [660, 880, 1108].forEach((f, i) => setTimeout(() => beep(f, 0.16, 'square', 0.07), i * 90)); },
@@ -160,29 +163,57 @@ const sfx = {
   tick()      { beep(500, 0.05, 'square', 0.04); },
 };
 
-// ============ PROJECTION (behind-the-ball corridor) ============
-const FOCAL = 340;                // focal length used in scale = FOCAL / z
-const CORRIDOR_HALF_X = 260;      // world half-width of the corridor
-const CORRIDOR_TOP = 220;         // world height above ball-plane
-const CORRIDOR_BOTTOM = 40;
-const HORIZON_FRAC = 0.40;        // horizon line as a fraction of H
+// ============ PROJECTION (behind-the-ball 3D platformer) ============
+// A minimal pseudo-3D pinhole camera: the camera sits behind and above the
+// ball, always looking straight down the +Z axis (no yaw/roll), so every
+// world point (wx, wy, wz) is projected via its offset from the camera.
+const FOCAL = 340;
+const HORIZON_FRAC = 0.34;
 
-function project(ox, oy, z) {
-  const scale = FOCAL / Math.max(1, z);
+function project(ox, oy, d) {
+  const scale = FOCAL / Math.max(1, d);
   return {
     x: W / 2 + ox * scale,
     y: H * HORIZON_FRAC + oy * scale,
     scale,
   };
 }
+// projWorld: project a world-space point relative to the current camera.
+function projWorld(wx, wy, wz) {
+  const d = wz - camera.z;
+  const ox = wx - camera.x;
+  const oy = camera.y - wy; // camera is above the ground, so ground offsets are positive (down-screen)
+  return project(ox, oy, d);
+}
+
+// ============ PHYSICS TUNING ============
+const BALL_R = 20;
+const GRAVITY = 0.85;
+const JUMP_VY = 17.5; // slightly boosted so the biggest ordinary gaps stay clearable at full speed
+const MAX_SPEED = 6.0;
+const MOVE_EASE = 0.18;
+const COYOTE_FRAMES = 10;
+const JUMP_BUFFER_FRAMES = 10;
+const LAND_TOL = 6;
+const FOOT_TOL = 24; // forgiving footprint margin so near-edge landings still count
+const CAM_BACK = 190;   // camera trails this far behind the ball in Z
+const CAM_HEIGHT = 150; // camera eye sits this far above the ball
+const CAM_EASE_XZ = 0.14;
+const CAM_EASE_Y = 0.08;
+// ramps / launch pads / tumbling
+const SLOPE_ACCEL = 0.4;       // forward speed gained per frame per unit of downhill slope
+const SLOPE_SIDE_ACCEL = 0.22; // gentle sideways drift on banked platforms
+const BOOST_DECAY = 0.965;     // per-frame decay of a launch-pad's extra kick
+const TUMBLE_BASE = 0.16;      // rad/frame somersault rate for a normal jump
+const TUMBLE_PER_EXTRA_VY = 0.016; // extra rad/frame per unit of vy above a normal jump (bigger launches flip faster)
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
 // ============ LEVEL GENERATION ============
-// Each level is a sequence of "gates" (rings, checkpoints, hazards) placed at
-// increasing world-depth `z0` (distance ahead when spawned). The ball's own
-// depth stays fixed at BALL_Z; the world scrolls toward the camera by
-// decreasing every gate's remaining z each frame (speed = forward velocity).
-const BALL_Z = 130; // depth-plane where the ball lives / where pass-through is judged
-
+// Each level is a winding path of floating rectangular platforms along +Z,
+// separated by gaps the ball must jump across. Rings float over/near the
+// gaps (bonus, non-fatal); turquoise checkpoint squares sit on platform tops.
 function themeFor(n) {
   const t = ['space', 'sky', 'neon', 'sunset'];
   return t[Math.floor((n - 1) / 5) % t.length];
@@ -190,42 +221,110 @@ function themeFor(n) {
 
 function levelConfig(n) {
   const diff = (n - 1) / 19; // 0..1
-  const ringCount = 10 + Math.floor(diff * 14);          // 10..24
-  const speed = 5.4 + diff * 5.6;                          // world units/frame closing speed
-  const spacing = 900 - diff * 260;                        // depth gap between rings
-  const spreadX = 90 + diff * 150;                          // lateral placement range
-  const spreadY = 40 + diff * 90;                           // vertical placement range
-  const moving = n >= 8;
-  const hazards = n >= 12;
   const name = tr('level') + n;
-
-  const rings = [];
-  let z = 1600;
-  // simple deterministic pseudo-random so a level is stable across replays
+  const theme = themeFor(n);
   let seed = n * 7919 + 13;
   function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return (seed % 1000) / 1000; }
 
-  for (let i = 0; i < ringCount; i++) {
-    const ox = (rnd() * 2 - 1) * spreadX;
-    const oy = (rnd() * 2 - 1) * spreadY - 20;
-    const drift = moving && rnd() < 0.45 ? { amp: 30 + rnd() * 40, spd: 0.02 + rnd() * 0.02, phase: rnd() * 6.28 } : null;
-    rings.push({ z0: z, ox, oy, drift, r: 46, passed: false, missed: false });
-    z += spacing + rnd() * 220;
-    if (hazards && i > 2 && rnd() < 0.3) {
-      const hox = (rnd() * 2 - 1) * spreadX;
-      const hoy = (rnd() * 2 - 1) * spreadY - 20;
-      rings.push({ z0: z - 120, ox: hox, oy: hoy, hazard: true, r: 30, passed: false, missed: false });
+  const platCount = 9 + Math.floor(diff * 5); // 9..14 platforms after the start pad
+  const movingChance = n >= 8 ? 0.25 + diff * 0.25 : 0;
+  const heightsOn = diff > 0.15;
+  const wanderOn = diff > 0.2;
+  const rampsOn = n >= 2;      // gentle ramps from level ~2-3
+  const launchOn = n >= 4;     // launch pads from level ~4-5
+
+  const platforms = [];
+  platforms.push({ x: 0, z: 0, hx: 130, hz: 140, h: 0, moving: null, slopeZ: 0, slopeX: 0, launch: null, start: true });
+  let x = 0, z = 0, h = 0;
+  let prevLaunch = false, prevSlopeZ = 0;
+
+  for (let i = 0; i < platCount; i++) {
+    const hx = clamp(lerp(100, 58, diff) + (rnd() - 0.5) * 20, 45, 130);
+    const hz = clamp(lerp(90, 58, diff) + (rnd() - 0.5) * 20, 45, 130);
+
+    // base gaps are noticeably bigger than before, and grow with difficulty
+    let gapMin = lerp(55, 120, diff);
+    let gapMax = lerp(95, 240, diff);
+    if (prevSlopeZ < -0.3) { gapMin += 25; gapMax += 45; } // a steep down-ramp gives extra reach
+    if (prevLaunch) { gapMin = lerp(230, 340, diff); gapMax = lerp(280, 430, diff); } // launch pads fling across BIG gaps
+
+    const gap = gapMin + rnd() * (gapMax - gapMin);
+    const prev = platforms[platforms.length - 1];
+    z = prev.z + prev.hz + gap + hz;
+    if (heightsOn && i > 0 && rnd() < 0.5 && !prevLaunch) {
+      const step = (rnd() < 0.5 ? -1 : 1) * lerp(20, 55, diff) * (0.5 + rnd() * 0.5);
+      h = clamp(h + step, -90, 150);
+    }
+    if (prevLaunch) {
+      // the far side of a launch also sits higher up, since the boost flings the ball up too
+      h = clamp(h + lerp(50, 150, diff) * (0.5 + rnd() * 0.5), -90, 260);
+    }
+    if (wanderOn) x = clamp(x + (rnd() * 2 - 1) * lerp(25, 100, diff), -190, 190);
+
+    let moving = null;
+    if (movingChance && i > 1 && !prevLaunch && rnd() < movingChance) {
+      moving = {
+        axis: rnd() < 0.5 ? 'x' : 'z',
+        amp: 35 + rnd() * 45,
+        spd: 0.018 + rnd() * 0.018,
+        phase: rnd() * 6.28,
+        baseX: x, baseZ: z,
+      };
+    }
+
+    // sloped ramps (rise/run along Z, occasional gentle bank along X)
+    let slopeZ = 0, slopeX = 0;
+    if (rampsOn && !moving && !prevLaunch && i > 0 && i < platCount - 1 && rnd() < clamp(0.18 + diff * 0.3, 0, 0.5)) {
+      const steep = n >= 10 && rnd() < 0.4;
+      slopeZ = (rnd() < 0.5 ? -1 : 1) * (steep ? lerp(0.35, 0.62, diff) : lerp(0.12, 0.32, diff));
+      if (rnd() < 0.3) slopeX = (rnd() < 0.5 ? -1 : 1) * lerp(0.05, 0.16, diff);
+    }
+
+    // launch pads: a glowing boost pad that flings the ball into a big airborne tumble
+    let launch = null;
+    const launchChance = launchOn ? clamp(0.12 + diff * 0.22, 0, 0.4) : 0;
+    if (!prevLaunch && !slopeZ && !moving && launchChance && i > 1 && i < platCount - 1 && rnd() < launchChance) {
+      launch = { vy: lerp(24, 34, diff) + rnd() * 4, vzBoost: lerp(4, 7.5, diff), vxBoost: 0 };
+    }
+
+    platforms.push({ x, z, hx, hz, h, moving, slopeZ, slopeX, launch, start: false });
+    prevLaunch = !!launch;
+    prevSlopeZ = slopeZ;
+  }
+
+  const last = platforms[platforms.length - 1];
+  const goal = { x: last.x, z: last.z, h: last.h };
+
+  // rings: mostly bridging the gaps (a natural arc across), some bonus rings over platforms
+  const rings = [];
+  for (let i = 0; i < platforms.length - 1; i++) {
+    const a = platforms[i], b = platforms[i + 1];
+    if (rnd() < 0.78) {
+      const midZ = (a.z + a.hz + (b.z - b.hz)) / 2;
+      const midX = (a.x + b.x) / 2 + (rnd() * 2 - 1) * 18;
+      const midH = Math.max(a.h, b.h) + 65 + rnd() * 35;
+      rings.push({ x: midX, y: midH, z: midZ, r: 44 - diff * 8, passed: false });
     }
   }
-  // checkpoints: start + a couple mid-level, spaced by index
-  const checkpoints = [{ z0: 20, ox: 0, oy: -20 }];
-  const cpEvery = Math.max(3, Math.floor(ringCount / 3));
-  for (let i = cpEvery; i < ringCount; i += cpEvery) {
-    checkpoints.push({ z0: rings[i].z0 - 40, ox: 0, oy: -20 });
+  for (let i = 2; i < platforms.length; i += 3) {
+    if (rnd() < 0.35) {
+      const p = platforms[i];
+      rings.push({ x: p.x + (rnd() * 2 - 1) * p.hx * 0.4, y: p.h + 95, z: p.z, r: 40, passed: false });
+    }
   }
-  const goalZ = z + 300;
 
-  return { n, name, theme: themeFor(n), rings, checkpoints, goalZ, speed, ringCount };
+  // checkpoints: start + roughly every 4 platforms
+  const checkpoints = [{ x: 0, z: 0, h: 0, hit: false, size: 62 }];
+  for (let i = 4; i < platforms.length; i += 4) {
+    const p = platforms[i];
+    checkpoints.push({ x: p.x, z: p.z, h: p.h, hit: false, size: 62 });
+  }
+
+  let minH = 0;
+  for (const p of platforms) if (p.h < minH) minH = p.h;
+  const deathY = minH - 320;
+
+  return { n, name, theme, platforms, rings, checkpoints, goal, ringCount: rings.length, deathY };
 }
 
 // ============ SKINS ============
@@ -382,17 +481,16 @@ function drawSkinStitch(r, spin) {
 
 // ============ THEMES ============
 const THEMES = {
-  space:  { sky: ['#07051c', '#1a1240', '#2c1a56'], wall: '#1c1240', floor: '#120b2c', line: '#7dfcff', stars: true, accent: '#8f6bff' },
-  sky:    { sky: ['#2b6fb0', '#7ec7e8', '#dff3ff'], wall: '#3b7fc0', floor: '#295a91', line: '#ffffff', stars: false, accent: '#ffe066' },
-  neon:   { sky: ['#0a0a12', '#1a0a2a', '#2a0a3a'], wall: '#220a33', floor: '#150720', line: '#ff2fd0', stars: true, accent: '#2fffe0' },
-  sunset: { sky: ['#3a1050', '#a3396b', '#f0975a'], wall: '#5a2050', floor: '#3a1436', line: '#ffd27a', stars: false, accent: '#ff7a5c' },
+  space:  { sky: ['#07051c', '#1a1240', '#2c1a56'], platform: '#372a6b', platformTop: '#4d3a94', line: '#7dfcff', stars: true, accent: '#8f6bff' },
+  sky:    { sky: ['#2b6fb0', '#7ec7e8', '#dff3ff'], platform: '#2c5f8c', platformTop: '#3a7fc0', line: '#ffffff', stars: false, accent: '#ffe066' },
+  neon:   { sky: ['#0a0a12', '#1a0a2a', '#2a0a3a'], platform: '#3a1450', platformTop: '#521c70', line: '#ff2fd0', stars: true, accent: '#2fffe0' },
+  sunset: { sky: ['#3a1050', '#a3396b', '#f0975a'], platform: '#6a2a4a', platformTop: '#8a3a5e', line: '#ffd27a', stars: false, accent: '#ff7a5c' },
 };
 
 // ============ PROGRESS (localStorage) ============
 const UNLOCK_KEY = 'superRingsUnlocked';
 const SKIN_KEY = 'superRingsSkin';
 const SKIN_UNLOCK_KEY = 'superRingsSkinsUnlocked';
-function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 function getUnlocked() {
   try { return clamp(parseInt(localStorage.getItem(UNLOCK_KEY) || '1', 10) || 1, 1, 20); } catch (e) { return 1; }
 }
@@ -431,54 +529,74 @@ function syncSkinUnlocks() {
 // ============ GAME STATE ============
 const state = { mode: 'title', levelIdx: 0, msg: '', msgT: 0, stars: 0, newSkinUnlocked: null };
 const player = {
-  x: 0, y: 0, tx: 0, ty: 0,          // world offsets, target offsets (input)
+  x: 0, y: BALL_R, z: 0,
+  vx: 0, vy: 0, vz: 0,
+  boostVx: 0, boostVz: 0,   // extra momentum from launch pads / ramps, decays over time
+  tumble: 0, tumbleRate: 0, // whole-ball somersault rotation while airborne
   hearts: 3, invuln: 0,
   squash: 0, spin: 0,
-  checkpoint: null,
+  grounded: true, groundPlatform: null, framesSinceGrounded: 0, jumpBuffer: 0,
+  checkpoint: { x: 0, z: 0, h: 0 },
 };
+const camera = { x: 0, y: CAM_HEIGHT, z: -CAM_BACK };
 let level = null, theme = THEMES.space;
 let ringsPassedCount = 0, ringsTotal = 0;
-let parts = [], flashT = 0, shakeT = 0, respawnT = 0;
-let distTraveled = 0;
+let parts = [], flashT = 0, shakeT = 0, respawnT = 0, levelT = 0;
 let unlockedSkins = syncSkinUnlocks();
 let skinPickerFrom = 'title'; // where to return after picking
-
-const X_LIMIT = CORRIDOR_HALF_X - 30;
-const Y_TOP = -CORRIDOR_TOP + 30;
-const Y_BOTTOM = CORRIDOR_BOTTOM - 10;
 
 function newLevelRuntimeState() {
   ringsPassedCount = 0;
   ringsTotal = level.ringCount;
-  parts = []; flashT = 0; shakeT = 0; respawnT = 0;
-  distTraveled = 0;
+  parts = []; flashT = 0; shakeT = 0; respawnT = 0; levelT = 0;
+}
+
+function snapCameraToPlayer() {
+  camera.x = player.x;
+  camera.z = player.z - CAM_BACK;
+  camera.y = player.y + CAM_HEIGHT;
 }
 
 function startLevel(idx) {
   level = levelConfig(idx + 1);
   theme = THEMES[level.theme];
-  // deep clone gates so re-tries reset state
-  level.rings = level.rings.map(r => Object.assign({}, r, { passed: false, missed: false, z: r.z0 }));
-  level.checkpoints = level.checkpoints.map(c => Object.assign({}, c, { z: c.z0, hit: false }));
-  player.x = 0; player.y = 0; player.tx = 0; player.ty = 0;
-  player.hearts = 3; player.invuln = 60; player.squash = 0; player.spin = 0;
-  player.checkpoint = { z: 0, ox: 0, oy: 0 };
+  level.platforms = level.platforms.map(p => Object.assign({}, p, p.moving ? { moving: Object.assign({}, p.moving) } : {}));
+  level.rings = level.rings.map(r => Object.assign({}, r, { passed: false }));
+  level.checkpoints = level.checkpoints.map(c => Object.assign({}, c, { hit: false }));
   level.checkpoints[0].hit = true;
+  player.x = 0; player.z = 0; player.y = BALL_R;
+  player.vx = 0; player.vy = 0; player.vz = 0;
+  player.boostVx = 0; player.boostVz = 0; player.tumble = 0; player.tumbleRate = 0;
+  player.hearts = 3; player.invuln = 40; player.squash = 0; player.spin = 0;
+  player.grounded = true; player.groundPlatform = level.platforms[0]; player.framesSinceGrounded = 0; player.jumpBuffer = 0;
+  player.checkpoint = { x: 0, z: 0, h: 0 };
+  snapCameraToPlayer();
   state.levelIdx = idx;
   state.mode = 'play';
   state.msg = ''; state.msgT = 0;
-  scroll = 0;
   newLevelRuntimeState();
 }
 
-// The world is modeled as a single scroll offset `scroll` (total depth consumed
-// by forward motion). Every gate's current depth = z0 - scroll, and a checkpoint
-// simply remembers the scroll value (plus the player's x/y) at the moment it was hit.
-let scroll = 0;
-
 // ============ INPUT ============
-let dragging = false, dragId = null, dragStartX = 0, dragStartY = 0, dragBaseX = 0, dragBaseY = 0;
+let dragging = false, dragId = null, dragStartX = 0, dragStartY = 0;
+let dragDX = 0, dragDY = 0;
+let jumpTouchId = null;
 const keys = {};
+let jumpQueuedInput = false;
+
+function jumpButtonBounds() {
+  const r = 42 * K;
+  return { cx: W - r - 22, cy: H - r - 26 - (window.__safeBottom || 0), r: r * 1.25 };
+}
+function inJumpButton(x, y) {
+  const b = jumpButtonBounds();
+  const dx = x - b.cx, dy = y - b.cy;
+  return dx * dx + dy * dy <= b.r * b.r;
+}
+
+function queueJump() {
+  jumpQueuedInput = true;
+}
 
 function onPointerDown(x, y, id) {
   initAudio();
@@ -491,20 +609,18 @@ function onPointerDown(x, y, id) {
   if (state.mode === 'levelcomplete') { state.mode = 'levelselect'; return; }
   if (state.mode === 'champion') { state.mode = 'levelselect'; return; }
   if (state.mode === 'play') {
+    if (inJumpButton(x, y)) { jumpTouchId = id; queueJump(); return; }
     dragging = true; dragId = id;
-    dragStartX = x; dragStartY = y;
-    dragBaseX = player.tx; dragBaseY = player.ty;
+    dragStartX = x; dragStartY = y; dragDX = 0; dragDY = 0;
   }
 }
 function onPointerMove(x, y, id) {
   if (state.mode !== 'play' || !dragging || id !== dragId) return;
-  const dx = x - dragStartX, dy = y - dragStartY;
-  const sens = 1.0;
-  player.tx = clamp(dragBaseX + dx * sens, -X_LIMIT, X_LIMIT);
-  player.ty = clamp(dragBaseY + dy * sens, Y_TOP, Y_BOTTOM);
+  dragDX = x - dragStartX; dragDY = y - dragStartY;
 }
 function onPointerUp(id) {
-  if (id === dragId) { dragging = false; dragId = null; }
+  if (id === dragId) { dragging = false; dragId = null; dragDX = 0; dragDY = 0; }
+  if (id === jumpTouchId) jumpTouchId = null;
 }
 
 canvas.addEventListener('touchstart', e => {
@@ -528,6 +644,9 @@ window.addEventListener('mouseup', e => onPointerUp('mouse'));
 
 window.addEventListener('keydown', e => {
   initAudio();
+  if (!keys[e.code]) {
+    if (e.code === 'Space') queueJump();
+  }
   keys[e.code] = true;
   if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
   if (state.mode === 'title' && (e.code === 'Enter' || e.code === 'Space')) state.mode = 'levelselect';
@@ -599,16 +718,88 @@ function burst(sx, sy, color, n) {
   }
 }
 
-function keyboardInput() {
-  const left = keys.ArrowLeft || keys.KeyA;
-  const right = keys.ArrowRight || keys.KeyD;
-  const up = keys.ArrowUp || keys.KeyW;
-  const down = keys.ArrowDown || keys.KeyS;
-  const spd = 4.2;
-  if (left) player.tx = clamp(player.tx - spd, -X_LIMIT, X_LIMIT);
-  if (right) player.tx = clamp(player.tx + spd, -X_LIMIT, X_LIMIT);
-  if (up) player.ty = clamp(player.ty - spd, Y_TOP, Y_BOTTOM);
-  if (down) player.ty = clamp(player.ty + spd, Y_TOP, Y_BOTTOM);
+function desiredVelocity() {
+  let dvx = 0, dvz = 0;
+  if (dragging) {
+    dvx = clamp(dragDX * 0.06, -1, 1) * MAX_SPEED;
+    dvz = clamp(-dragDY * 0.06, -1, 1) * MAX_SPEED;
+  } else {
+    const left = keys.ArrowLeft || keys.KeyA;
+    const right = keys.ArrowRight || keys.KeyD;
+    const fwd = keys.ArrowUp || keys.KeyW;
+    const back = keys.ArrowDown || keys.KeyS;
+    if (left) dvx -= MAX_SPEED;
+    if (right) dvx += MAX_SPEED;
+    if (fwd) dvz += MAX_SPEED;
+    if (back) dvz -= MAX_SPEED;
+  }
+  return { dvx, dvz };
+}
+
+function footprintContains(p, x, z, tol) {
+  return x > p.x - p.hx - tol && x < p.x + p.hx + tol && z > p.z - p.hz - tol && z < p.z + p.hz + tol;
+}
+
+// height of a platform's (possibly sloped) top surface directly under (x, z)
+function platformTopAt(p, x, z) {
+  let top = p.h;
+  if (p.slopeZ) top += p.slopeZ * (z - p.z);
+  if (p.slopeX) top += p.slopeX * (x - p.x);
+  return top;
+}
+
+function updateMovingPlatforms() {
+  for (const p of level.platforms) {
+    if (!p.moving) { p.prevX = p.x; p.prevZ = p.z; continue; }
+    p.prevX = p.x; p.prevZ = p.z;
+    const off = Math.sin(levelT * p.moving.spd + p.moving.phase) * p.moving.amp;
+    if (p.moving.axis === 'x') p.x = p.moving.baseX + off;
+    else p.z = p.moving.baseZ + off;
+  }
+}
+
+// send the ball airborne with a given upward speed, and kick off a somersault
+// scaled to how big the jump/launch is (bigger launches flip faster)
+function becomeAirborne(vy) {
+  player.vy = vy;
+  player.grounded = false;
+  player.groundPlatform = null;
+  player.framesSinceGrounded = COYOTE_FRAMES + 1;
+  player.squash = 1;
+  player.tumbleRate = TUMBLE_BASE + Math.max(0, vy - JUMP_VY) * TUMBLE_PER_EXTRA_VY;
+}
+
+function tryJump() {
+  const canJump = player.grounded || player.framesSinceGrounded <= COYOTE_FRAMES;
+  if (canJump) {
+    becomeAirborne(JUMP_VY);
+    player.jumpBuffer = 0;
+    sfx.jump();
+  } else {
+    player.jumpBuffer = JUMP_BUFFER_FRAMES;
+  }
+}
+
+function loseHeartAndRespawn() {
+  player.hearts--;
+  if (player.hearts <= 0) player.hearts = 3; // kid-friendly: never a hard game over
+  respawnT = 40;
+  player.invuln = 70;
+  flashT = 10; shakeT = 14;
+  sfx.fall();
+  const cp = player.checkpoint;
+  player.x = cp.x; player.z = cp.z; player.y = cp.h + BALL_R;
+  player.vx = 0; player.vy = 0; player.vz = 0;
+  player.boostVx = 0; player.boostVz = 0; player.tumble = 0; player.tumbleRate = 0;
+  player.grounded = true; player.framesSinceGrounded = 0;
+  // find the platform under the checkpoint so it carries the ball if it's moving
+  player.groundPlatform = null;
+  for (const p of level.platforms) {
+    if (footprintContains(p, cp.x, cp.z, FOOT_TOL)) { player.groundPlatform = p; break; }
+  }
+  snapCameraToPlayer();
+  sfx.respawn();
+  state.msg = tr('respawning'); state.msgT = 90;
 }
 
 function update() {
@@ -617,109 +808,143 @@ function update() {
   if (shakeT > 0) shakeT--;
   if (state.msgT > 0) state.msgT--;
 
-  if (state.mode !== 'play') return;
+  if (state.mode !== 'play') { jumpQueuedInput = false; return; }
 
-  keyboardInput();
-  player.x += (player.tx - player.x) * 0.22;
-  player.y += (player.ty - player.y) * 0.22;
-  player.spin += 0.12 + Math.abs(player.x) * 0.0005;
+  levelT++;
   if (player.squash > 0) player.squash -= 0.05;
 
-  if (respawnT > 0) { respawnT--; return; }
-  if (player.invuln > 0) player.invuln--;
-
-  scroll += level.speed;
-  distTraveled = scroll;
-
-  // checkpoints
-  for (const c of level.checkpoints) {
-    if (c.hit) continue;
-    const z = c.z0 - scroll;
-    if (z <= BALL_Z + 30 && z > BALL_Z - 60) {
-      c.hit = true;
-      player.checkpoint = { z: scroll, ox: player.x, oy: player.y };
-      sfx.checkpoint();
-      state.msg = tr('checkpointHit'); state.msgT = 60;
-      burst(W / 2, H * HORIZON_FRAC, theme.accent, 14);
-    }
+  if (jumpQueuedInput) { tryJump(); jumpQueuedInput = false; }
+  if (player.jumpBuffer > 0) {
+    player.jumpBuffer--;
+    if (player.grounded || player.framesSinceGrounded <= COYOTE_FRAMES) tryJump();
   }
 
-  // rings
-  for (const r of level.rings) {
-    if (r.passed || r.missed) continue;
-    const z = r.z0 - scroll;
-    let ox = r.ox, oy = r.oy;
-    if (r.drift) { ox += Math.sin(scroll * r.drift.spd + r.drift.phase) * r.drift.amp; }
-    r.curOx = ox; r.curOy = oy;
-    if (z <= BALL_Z && z > BALL_Z - 90) {
-      const dx = player.x - ox, dy = player.y - oy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const inside = dist < r.r * 0.72;
-      if (r.hazard) {
-        if (inside && player.invuln <= 0) {
-          r.missed = true;
-          loseHeart();
-          burst(project(ox, oy, BALL_Z).x, project(ox, oy, BALL_Z).y, '#ff5c5c', 14);
-        } else if (z <= BALL_Z - 60) {
-          r.missed = true; // passed the hazard depth without hitting -> fine
-        }
-      } else {
-        if (inside) {
-          r.passed = true;
-          ringsPassedCount++;
-          sfx.ringPass();
-          const p = project(ox, oy, BALL_Z);
-          burst(p.x, p.y, theme.accent, 16);
-        } else if (z <= BALL_Z - 60) {
-          r.missed = true;
-          sfx.miss();
-          loseHeart();
-        }
+  if (respawnT > 0) { respawnT--; updateCamera(); return; }
+  if (player.invuln > 0) player.invuln--;
+
+  updateMovingPlatforms();
+
+  // carry the ball along with the platform it stands on
+  if (player.grounded && player.groundPlatform && player.groundPlatform.moving) {
+    player.x += player.groundPlatform.x - player.groundPlatform.prevX;
+    player.z += player.groundPlatform.z - player.groundPlatform.prevZ;
+  }
+
+  const { dvx, dvz } = desiredVelocity();
+  player.vx += (dvx - player.vx) * MOVE_EASE;
+  player.vz += (dvz - player.vz) * MOVE_EASE;
+  // rolling down a slope gains a little speed; rolling up one slows down gently
+  if (player.grounded && player.groundPlatform) {
+    const gp = player.groundPlatform;
+    if (gp.slopeZ) player.boostVz -= gp.slopeZ * SLOPE_ACCEL;
+    if (gp.slopeX) player.boostVx -= gp.slopeX * SLOPE_SIDE_ACCEL;
+  }
+  player.x += player.vx + player.boostVx;
+  player.z += player.vz + player.boostVz;
+  player.boostVx *= BOOST_DECAY;
+  player.boostVz *= BOOST_DECAY;
+  player.spin += 0.05 + Math.hypot(player.vx, player.vz) * 0.02;
+
+  if (!player.grounded) {
+    player.vy -= GRAVITY;
+    player.y += player.vy;
+    player.tumble += player.tumbleRate;
+  } else {
+    player.vy = 0;
+  }
+
+  // collision: find a platform under the ball to land on (using its local, possibly sloped, top height)
+  let landed = null, landedTop = 0;
+  for (const p of level.platforms) {
+    if (!footprintContains(p, player.x, player.z, FOOT_TOL)) continue;
+    if (player.vy > 0.5) continue; // moving upward through/near a platform: no landing
+    const top = platformTopAt(p, player.x, player.z);
+    if (player.y - BALL_R <= top + LAND_TOL) {
+      if (!landed || top > landedTop) { landed = p; landedTop = top; }
+    }
+  }
+  if (landed) {
+    const wasAirborne = !player.grounded;
+    player.y = landedTop + BALL_R;
+    player.vy = 0;
+    player.grounded = true;
+    player.groundPlatform = landed;
+    player.framesSinceGrounded = 0;
+    player.boostVx = 0; player.boostVz = 0;
+    if (wasAirborne) { player.squash = 1; player.tumble = 0; player.tumbleRate = 0; sfx.land(); }
+    // launch pads fling the ball right back into the air with a big boost
+    if (landed.launch) {
+      const L = landed.launch;
+      becomeAirborne(L.vy);
+      player.boostVz += L.vzBoost;
+      player.boostVx += L.vxBoost || 0;
+      sfx.launch();
+      const lp = projWorld(player.x, player.y, player.z);
+      burst(lp.x, lp.y, '#ff9d3c', 20);
+    }
+  } else {
+    player.grounded = false;
+    player.groundPlatform = null;
+    player.framesSinceGrounded++;
+  }
+
+  // fall off the world -> lose a heart, respawn at last checkpoint
+  if (player.y < level.deathY) {
+    loseHeartAndRespawn();
+    updateCamera();
+    return;
+  }
+
+  // checkpoints: roll over the turquoise square while grounded
+  if (player.grounded) {
+    for (const c of level.checkpoints) {
+      if (c.hit) continue;
+      if (Math.abs(player.x - c.x) < c.size * 0.7 + BALL_R && Math.abs(player.z - c.z) < c.size * 0.7 + BALL_R) {
+        c.hit = true;
+        player.checkpoint = { x: c.x, z: c.z, h: c.h };
+        sfx.checkpoint();
+        state.msg = tr('checkpointHit'); state.msgT = 60;
+        const p = projWorld(c.x, c.h + 4, c.z);
+        burst(p.x, p.y, theme.accent, 14);
       }
     }
   }
 
-  // goal
-  const goalZ = level.goalZ - scroll;
-  if (goalZ <= BALL_Z + 10) {
-    completeLevel();
-  }
-}
-
-function loseHeart() {
-  if (player.invuln > 0) return;
-  player.hearts--;
-  player.invuln = 60;
-  player.squash = 1;
-  flashT = 10; shakeT = 14;
-  sfx.miss();
-  if (player.hearts <= 0) respawnAtCheckpoint2();
-}
-
-function respawnAtCheckpoint2() {
-  respawnT = 45;
-  player.hearts = 3;
-  player.invuln = 90;
-  scroll = player.checkpoint.z;
-  player.tx = player.checkpoint.ox; player.x = player.checkpoint.ox;
-  player.ty = player.checkpoint.oy; player.y = player.checkpoint.oy;
+  // rings: jump through them (bonus, non-fatal)
   for (const r of level.rings) {
-    if (r.z0 - scroll > BALL_Z - 90 || (!r.passed && !r.missed)) {
-      // only reset rings that hadn't been resolved yet, or that are now ahead again
+    if (r.passed) continue;
+    const dx = player.x - r.x, dz = player.z - r.z;
+    const distXZ = Math.hypot(dx, dz);
+    if (distXZ < r.r * 0.75 && Math.abs(player.y - r.y) < r.r * 0.7) {
+      r.passed = true;
+      ringsPassedCount++;
+      sfx.ringPass();
+      const p = projWorld(r.x, r.y, r.z);
+      burst(p.x, p.y, theme.accent, 16);
     }
-    if (r.z0 - scroll > BALL_Z - 90) { r.passed = false; r.missed = false; }
   }
-  for (const c of level.checkpoints) { if (c.z0 - scroll > 0) c.hit = false; }
-  sfx.respawn();
-  state.msg = tr('respawning'); state.msgT = 90;
+
+  // goal
+  if (player.grounded) {
+    const g = level.goal;
+    if (Math.hypot(player.x - g.x, player.z - g.z) < 90) completeLevel();
+  }
+
+  updateCamera();
+}
+
+function updateCamera() {
+  camera.x += (player.x - camera.x) * CAM_EASE_XZ;
+  camera.z += ((player.z - CAM_BACK) - camera.z) * CAM_EASE_XZ;
+  camera.y += ((player.y + CAM_HEIGHT) - camera.y) * CAM_EASE_Y;
 }
 
 function completeLevel() {
-  const missedCount = level.rings.filter(r => !r.hazard && r.missed).length;
+  const missed = level.ringCount - ringsPassedCount;
   const heartsLeft = player.hearts;
   let stars = 1;
-  if (missedCount === 0 && heartsLeft === 3) stars = 3;
-  else if (missedCount <= 2) stars = 2;
+  if (missed === 0 && heartsLeft === 3) stars = 3;
+  else if (heartsLeft >= 2) stars = 2;
   state.stars = stars;
   setStars(state.levelIdx + 1, stars);
   const lvlNum = state.levelIdx + 1;
@@ -778,88 +1003,105 @@ function drawBackground(t) {
   }
 }
 
-// draws the corridor: a floor plane and two side walls converging to a
-// vanishing point at the horizon, using the same project() perspective as
-// gates so everything reads as one consistent tunnel
-function drawCorridor(t) {
+function drawHorizonGlow() {
   const horizonY = H * HORIZON_FRAC;
-  const nearZ = 60, farZ = 2600;
-  const steps = 22;
+  const grad = ctx.createLinearGradient(0, horizonY - 40, 0, horizonY + 40);
+  grad.addColorStop(0, 'rgba(255,255,255,0)');
+  grad.addColorStop(0.5, theme.line + '33');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, horizonY - 40, W, 80);
+}
 
-  // floor: draw as a fan of receding quads for a subtle grid look
+// ============ RENDER: PLATFORMS ============
+const PLATFORM_THICKNESS = 46;
+
+function drawPlatform(p) {
+  const nearZ = p.z - p.hz, farZ = p.z + p.hz;
+  if (farZ - camera.z < -60 || nearZ - camera.z > 2600) return;
+  const xL = p.x - p.hx, xR = p.x + p.hx;
+  // per-corner top height so sloped (ramp) platforms read as visibly tilted slabs
+  const topNL = platformTopAt(p, xL, nearZ), topNR = platformTopAt(p, xR, nearZ);
+  const topFL = platformTopAt(p, xL, farZ), topFR = platformTopAt(p, xR, farZ);
+
+  const tl = projWorld(xL, topNL, nearZ);
+  const tr = projWorld(xR, topNR, nearZ);
+  const tlF = projWorld(xL, topFL, farZ);
+  const trF = projWorld(xR, topFR, farZ);
+  const bl = projWorld(xL, topNL - PLATFORM_THICKNESS, nearZ);
+  const br = projWorld(xR, topNR - PLATFORM_THICKNESS, nearZ);
+
+  const isRamp = !!(p.slopeZ || p.slopeX);
+  const topFill = p.launch ? '#ffb23c' : (isRamp ? lighten(theme.platformTop, 0.14) : theme.platformTop);
+  const sideFill = p.launch ? '#c97324' : theme.platform;
+
+  // front (near) side face, gives the slab some depth
   ctx.save();
-  const floorGrad = ctx.createLinearGradient(0, horizonY, 0, H);
-  floorGrad.addColorStop(0, theme.wall);
-  floorGrad.addColorStop(1, theme.floor);
-  ctx.fillStyle = floorGrad;
-  const pNearL = project(-CORRIDOR_HALF_X, Y_BOTTOM + 20, nearZ);
-  const pNearR = project(CORRIDOR_HALF_X, Y_BOTTOM + 20, nearZ);
-  const pFarL = project(-CORRIDOR_HALF_X, Y_BOTTOM + 20, farZ);
-  const pFarR = project(CORRIDOR_HALF_X, Y_BOTTOM + 20, farZ);
+  ctx.fillStyle = sideFill;
   ctx.beginPath();
-  ctx.moveTo(pNearL.x, pNearL.y); ctx.lineTo(pNearR.x, pNearR.y);
-  ctx.lineTo(pFarR.x, pFarR.y); ctx.lineTo(pFarL.x, pFarL.y);
+  ctx.moveTo(tl.x, tl.y); ctx.lineTo(tr.x, tr.y); ctx.lineTo(br.x, br.y); ctx.lineTo(bl.x, bl.y);
   ctx.closePath(); ctx.fill();
+  ctx.restore();
 
-  // side walls
-  const pNearLT = project(-CORRIDOR_HALF_X, -CORRIDOR_TOP, nearZ);
-  const pFarLT = project(-CORRIDOR_HALF_X, -CORRIDOR_TOP, farZ);
-  const wallGradL = ctx.createLinearGradient(pNearLT.x, 0, pFarLT.x, 0);
-  wallGradL.addColorStop(0, theme.wall);
-  wallGradL.addColorStop(1, theme.floor);
-  ctx.fillStyle = wallGradL;
+  // top face
+  ctx.save();
+  ctx.fillStyle = topFill;
   ctx.beginPath();
-  ctx.moveTo(pNearL.x, pNearL.y); ctx.lineTo(pNearLT.x, pNearLT.y);
-  ctx.lineTo(pFarLT.x, pFarLT.y); ctx.lineTo(pFarL.x, pFarL.y);
+  ctx.moveTo(tl.x, tl.y); ctx.lineTo(tr.x, tr.y); ctx.lineTo(trF.x, trF.y); ctx.lineTo(tlF.x, tlF.y);
   ctx.closePath(); ctx.fill();
-
-  const pNearRT = project(CORRIDOR_HALF_X, -CORRIDOR_TOP, nearZ);
-  const pFarRT = project(CORRIDOR_HALF_X, -CORRIDOR_TOP, farZ);
-  ctx.fillStyle = wallGradL;
-  ctx.beginPath();
-  ctx.moveTo(pNearR.x, pNearR.y); ctx.lineTo(pNearRT.x, pNearRT.y);
-  ctx.lineTo(pFarRT.x, pFarRT.y); ctx.lineTo(pFarR.x, pFarR.y);
-  ctx.closePath(); ctx.fill();
-
-  // scrolling floor rungs for a sense of forward motion
-  ctx.strokeStyle = theme.line; ctx.globalAlpha = 0.35; ctx.lineWidth = 2;
-  const rungSpace = 260;
-  const offset = (scroll || 0) % rungSpace;
-  for (let z = nearZ + (rungSpace - offset); z < farZ; z += rungSpace) {
-    const l = project(-CORRIDOR_HALF_X, Y_BOTTOM + 20, z);
-    const r = project(CORRIDOR_HALF_X, Y_BOTTOM + 20, z);
-    ctx.beginPath(); ctx.moveTo(l.x, l.y); ctx.lineTo(r.x, r.y); ctx.stroke();
-  }
+  ctx.strokeStyle = p.launch ? '#fff2c2' : theme.line; ctx.globalAlpha = 0.4; ctx.lineWidth = Math.max(1, 2 * tl.scale);
+  ctx.stroke();
   ctx.globalAlpha = 1;
   ctx.restore();
 
-  // speed lines converging to vanishing point for extra motion cue
-  ctx.save();
-  ctx.globalAlpha = 0.12;
-  ctx.strokeStyle = '#ffffff';
-  for (let i = 0; i < 10; i++) {
-    const a = (i / 10) * Math.PI * 2;
-    const vx = W / 2, vy = horizonY;
-    ctx.beginPath();
-    ctx.moveTo(vx, vy);
-    ctx.lineTo(vx + Math.cos(a) * W, vy + Math.sin(a) * H * 0.6);
-    ctx.stroke();
+  // launch pads glow and show a stack of upward chevrons pointing the way
+  if (p.launch) {
+    const cw = projWorld(p.x, p.h + 2, p.z);
+    if (cw.scale > 0.05) {
+      ctx.save();
+      ctx.translate(cw.x, cw.y);
+      ctx.scale(1, 0.5);
+      ctx.shadowColor = '#ffb23c'; ctx.shadowBlur = Math.max(4, 12 * cw.scale);
+      ctx.strokeStyle = '#fff2c2';
+      ctx.lineWidth = Math.max(2, 4 * cw.scale);
+      ctx.lineCap = 'round';
+      for (let k = -1; k <= 1; k++) {
+        const yy = k * 26 * cw.scale;
+        ctx.beginPath();
+        ctx.moveTo(-20 * cw.scale, yy + 12 * cw.scale);
+        ctx.lineTo(0, yy - 8 * cw.scale);
+        ctx.lineTo(20 * cw.scale, yy + 12 * cw.scale);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
   }
+}
+
+function drawCheckpointPad(c) {
+  const d = c.z - camera.z;
+  if (d < -60 || d > 2600) return;
+  const cx = projWorld(c.x, c.h + 1.5, c.z);
+  const s = c.size * cx.scale;
+  if (s < 1.5) return;
+  ctx.save();
+  ctx.translate(cx.x, cx.y);
+  ctx.scale(1, 0.42); // flatten onto the ground plane
+  const color = c.hit ? '#3ad6c4' : '#40e0d0';
+  ctx.shadowColor = color; ctx.shadowBlur = Math.max(3, s * 0.3);
+  ctx.fillStyle = c.hit ? 'rgba(64,224,208,0.55)' : 'rgba(64,224,208,0.32)';
+  ctx.strokeStyle = color; ctx.lineWidth = Math.max(1.5, s * 0.08);
+  ctx.beginPath(); ctx.rect(-s / 2, -s / 2, s, s); ctx.fill(); ctx.stroke();
   ctx.restore();
 }
 
-// ============ RENDER: GATES ============
 function drawRing(r) {
-  const z = r.z0 - scroll;
-  if (z < BALL_Z - 100 || z > 2700) return;
-  const ox = r.curOx !== undefined ? r.curOx : r.ox;
-  const oy = r.curOy !== undefined ? r.curOy : r.oy;
-  const p = project(ox, oy, z);
+  const d = r.z - camera.z;
+  if (d < -100 || d > 2700) return;
+  const p = projWorld(r.x, r.y, r.z);
   const rr = r.r * p.scale;
   if (rr < 1.2) return;
-  const passedBall = z <= BALL_Z && !r.hazard;
-
-  const color = r.hazard ? '#ff5c5c' : (r.passed ? '#5cff8a' : theme.accent);
+  const color = r.passed ? '#5cff8a' : theme.accent;
 
   // back arc
   ctx.save();
@@ -870,45 +1112,21 @@ function drawRing(r) {
   ctx.globalAlpha = 1;
   ctx.restore();
 
-  // glow
+  // glow ring
   ctx.save();
   ctx.shadowColor = color; ctx.shadowBlur = Math.max(4, rr * 0.5);
   ctx.strokeStyle = color;
   ctx.lineWidth = Math.max(2, rr * 0.16);
   ctx.beginPath(); ctx.ellipse(p.x, p.y, rr, rr * 0.92, 0, 0, Math.PI * 2); ctx.stroke();
   ctx.restore();
-
-  if (r.hazard) {
-    ctx.save();
-    ctx.fillStyle = '#ffdc5c';
-    ctx.font = 'bold ' + Math.max(8, rr * 0.9) + 'px -apple-system, sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('⚠', p.x, p.y);
-    ctx.restore();
-  }
-}
-
-function drawCheckpoint(c) {
-  const z = c.z0 - scroll;
-  if (z < BALL_Z - 100 || z > 2700) return;
-  const p = project(c.ox, c.oy, z);
-  const size = 90 * p.scale;
-  if (size < 2) return;
-  ctx.save();
-  ctx.translate(p.x, p.y);
-  const color = c.hit ? '#5cff8a' : '#ffe066';
-  ctx.shadowColor = color; ctx.shadowBlur = Math.max(4, size * 0.3);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = Math.max(2, size * 0.08);
-  ctx.strokeRect(-size / 2, -size / 2, size, size);
-  ctx.restore();
 }
 
 function drawGoal() {
-  const z = level.goalZ - scroll;
-  if (z < BALL_Z - 100 || z > 3200) return;
-  const p = project(0, -60, z);
-  const rr = 140 * p.scale;
+  const g = level.goal;
+  const d = g.z - camera.z;
+  if (d < -100 || d > 3200) return;
+  const p = projWorld(g.x, g.h + 110, g.z);
+  const rr = 130 * p.scale;
   if (rr < 1.5) return;
   ctx.save();
   ctx.shadowColor = '#ffe066'; ctx.shadowBlur = Math.max(6, rr * 0.4);
@@ -924,33 +1142,27 @@ function drawGoal() {
 
 // ============ RENDER: PLAYER BALL ============
 function drawPlayer() {
-  const p = project(player.x, player.y, BALL_Z);
+  const p = projWorld(player.x, player.y, player.z);
   const r = 34 * p.scale * (1 - player.squash * 0.35);
   const rY = r * (1 + player.squash * 0.35);
 
-  // shadow
+  // shadow on the ground below the ball (fades out the higher it is)
+  const groundH = player.groundPlatform ? platformTopAt(player.groundPlatform, player.x, player.z) : (level ? level.goal.h : 0);
+  const shadowP = projWorld(player.x, groundH, player.z);
+  const heightAbove = Math.max(0, player.y - BALL_R - groundH);
   ctx.save();
-  ctx.globalAlpha = 0.35;
+  ctx.globalAlpha = clamp(0.35 - heightAbove * 0.0015, 0.06, 0.35);
   ctx.fillStyle = '#000';
+  const shR = r * (1 - Math.min(0.5, heightAbove * 0.002));
   ctx.beginPath();
-  ctx.ellipse(p.x, p.y + r * 1.15, r * 1.1, r * 0.3, 0, 0, Math.PI * 2);
+  ctx.ellipse(shadowP.x, shadowP.y, shR * 1.1, shR * 0.3, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.restore();
-
-  // motion trail
-  ctx.save();
-  ctx.globalAlpha = 0.18;
-  for (let i = 1; i <= 3; i++) {
-    const tp = project(player.x, player.y, BALL_Z + i * 22);
-    const tr2 = r * (1 - i * 0.12);
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.arc(tp.x, tp.y, Math.max(1, tr2), 0, Math.PI * 2); ctx.fill();
-  }
   ctx.restore();
 
   ctx.save();
   ctx.translate(p.x, p.y);
   ctx.scale(1, rY / r);
+  ctx.rotate(player.tumble); // exaggerated whole-ball somersault while airborne (bigger jumps/launches flip faster)
   const skin = SKINS.find(s => s.id === getEquippedSkin()) || SKINS[0];
   const flashing = player.invuln > 0 && Math.floor(player.invuln / 6) % 2 === 0;
   if (flashing) ctx.globalAlpha = 0.55;
@@ -968,13 +1180,28 @@ function drawParticles() {
   ctx.globalAlpha = 1;
 }
 
+function drawJumpButton() {
+  const b = jumpButtonBounds();
+  ctx.save();
+  ctx.globalAlpha = jumpTouchId !== null ? 0.9 : 0.6;
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath(); ctx.arc(b.cx, b.cy, b.r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(b.cx, b.cy, b.r, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = '#ffe066';
+  ctx.font = 'bold ' + (34 * K) + 'px -apple-system, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('⬆', b.cx, b.cy + 2);
+  ctx.restore();
+}
+
 function drawHUD() {
   // hearts
   ctx.save();
   ctx.font = (26 * K) + 'px -apple-system, sans-serif';
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   for (let i = 0; i < 3; i++) {
-    ctx.fillText(i < player.hearts ? '❤️' : '🖤', 14 + i * 32 * K, 14 + Math.max(0, 0) * 0 + (window.__safeTop || 0));
+    ctx.fillText(i < player.hearts ? '❤️' : '🖤', 14 + i * 32 * K, 14);
   }
   ctx.restore();
 
@@ -996,8 +1223,10 @@ function drawHUD() {
   ctx.font = (16 * K) + 'px -apple-system, sans-serif';
   ctx.textAlign = 'right'; ctx.textBaseline = 'top';
   ctx.fillStyle = '#fff';
-  ctx.fillText(ringsPassedCount + '/' + ringsTotal, W - 14, 16);
+  ctx.fillText('💍 ' + ringsPassedCount + '/' + ringsTotal, W - 14, 16);
   ctx.restore();
+
+  drawJumpButton();
 
   if (state.msgT > 0) {
     ctx.save();
@@ -1020,10 +1249,11 @@ function drawTitle() {
   ctx.textAlign = 'center';
   ctx.fillStyle = '#fff';
   ctx.font = 'bold ' + (38 * K) + 'px -apple-system, sans-serif';
-  ctx.fillText(tr('title'), W / 2, H * 0.28);
-  ctx.font = (18 * K) + 'px -apple-system, sans-serif';
-  ctx.fillText(tr('hint'), W / 2, H * 0.38);
-  ctx.fillText(tr('controlsHint'), W / 2, H * 0.44);
+  ctx.fillText(tr('title'), W / 2, H * 0.24);
+  ctx.font = (17 * K) + 'px -apple-system, sans-serif';
+  ctx.fillText(tr('hint'), W / 2, H * 0.33);
+  ctx.font = (14 * K) + 'px -apple-system, sans-serif';
+  wrapText(tr('controlsHint'), W / 2, H * 0.39, W * 0.82, 20 * K);
 
   // demo ball
   const bob = Math.sin(performance.now() / 400) * 10;
@@ -1037,6 +1267,21 @@ function drawTitle() {
   ctx.globalAlpha = 0.6 + 0.4 * Math.abs(Math.sin(performance.now() / 500));
   ctx.fillStyle = '#ffe066';
   ctx.fillText(tr('tapStart'), W / 2, H * 0.8);
+  ctx.restore();
+}
+
+function wrapText(text, cx, y, maxW, lineH) {
+  const words = text.split(' ');
+  let line = '', lines = [];
+  for (const w of words) {
+    const test = line ? line + ' ' + w : w;
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+    else line = test;
+  }
+  if (line) lines.push(line);
+  ctx.save();
+  ctx.fillStyle = '#fff';
+  for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], cx, y + i * lineH);
   ctx.restore();
 }
 
@@ -1194,15 +1439,18 @@ function render() {
   else if (state.mode === 'champion') drawChampion();
   else if (state.mode === 'play') {
     drawBackground(performance.now());
-    drawCorridor(performance.now());
-    // painter's order: far to near among gates + goal
+    drawHorizonGlow();
+
+    // painter's order: far to near among platforms, checkpoints, rings, goal & the ball
     const drawables = [];
-    drawables.push({ z: level.goalZ - scroll, fn: drawGoal });
-    for (const c of level.checkpoints) drawables.push({ z: c.z0 - scroll, fn: () => drawCheckpoint(c) });
-    for (const r of level.rings) drawables.push({ z: r.z0 - scroll, fn: () => drawRing(r) });
+    drawables.push({ z: level.goal.z, fn: drawGoal });
+    for (const p of level.platforms) drawables.push({ z: p.z + p.hz, fn: () => drawPlatform(p) });
+    for (const c of level.checkpoints) drawables.push({ z: c.z, fn: () => drawCheckpointPad(c) });
+    for (const r of level.rings) drawables.push({ z: r.z, fn: () => drawRing(r) });
+    drawables.push({ z: player.z, fn: drawPlayer });
     drawables.sort((a, b) => b.z - a.z);
     for (const d of drawables) d.fn();
-    drawPlayer();
+
     drawParticles();
     drawHUD();
   }
