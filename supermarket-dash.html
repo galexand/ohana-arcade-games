@@ -696,7 +696,7 @@ function renderTitle() {
 function renderSupermarket() {
   const lvl = LEVELS[currentLevelIdx];
 
-  // Polished Marble Hypermarket Floor Tiles
+// Polished Marble Hypermarket Floor Tiles
   ctx.fillStyle = '#f1f5f9';
   ctx.fillRect(0, 50, W, H - 50);
 
@@ -712,32 +712,59 @@ function renderSupermarket() {
 
   // Draw Aisle Category Banners & Realistic Multi-Tier Shelves
   shelves.forEach(s => {
-    // Shelf Base & Shadow
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.25)';
-    ctx.fillRect(s.x + 6, s.y + 6, s.w, s.h);
+    // 1. Realistic Ground Shadow
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
+    ctx.fillRect(s.x + 4, s.y + s.h - 4, s.w, 10);
 
-    // Shelf Wooden/Metallic Frame
-    ctx.fillStyle = '#334155';
-    ctx.strokeStyle = '#0284c7';
+    // 2. Main Metallic / Wooden Shelf Structure Body
+    const shelfGrad = ctx.createLinearGradient(s.x, s.y, s.x, s.y + s.h);
+    shelfGrad.addColorStop(0, '#1e293b');
+    shelfGrad.addColorStop(0.3, '#334155');
+    shelfGrad.addColorStop(0.7, '#1e293b');
+    shelfGrad.addColorStop(1, '#0f172a');
+    ctx.fillStyle = shelfGrad;
+    ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(s.x, s.y, s.w, s.h, 8);
+    ctx.roundRect(s.x, s.y, s.w, s.h, 6);
     ctx.fill(); ctx.stroke();
 
-    // Category Header Sign
+    // 3. Top Aisle LED Category Header Sign Banner
     ctx.fillStyle = '#0284c7';
-    ctx.fillRect(s.x, s.y, s.w, 18);
+    ctx.fillRect(s.x, s.y, s.w, 20);
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(s.x, s.y + 18, s.w, 2); // Glowing LED strip
+
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 11px -apple-system, sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(s.name, s.x + s.w / 2, s.y + 9);
+    ctx.fillText(s.name, s.x + s.w / 2, s.y + 10);
 
-    // Products sitting on shelf tier
+    // 4. Middle Shelf Layer Rails & Price Tag Rail (Yellow Price Strip)
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(s.x + 4, s.y + 24, s.w - 8, 4); // Middle tier steel shelf
+
+    ctx.fillStyle = '#f59e0b'; // Yellow Lidl/Kaufland Price Strip Rail
+    ctx.fillRect(s.x, s.y + s.h - 8, s.w, 8);
+    ctx.fillStyle = '#1e293b';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('PRICE: 4.99 LEI | 9.99 LEI', s.x + s.w / 2, s.y + s.h - 3);
+
+    // 5. Products Arranged Neatly on Shelf Tiers (with individual 3D shadows)
     s.items.forEach((itemId, idx) => {
       const prod = PRODUCTS.find(p => p.id === itemId);
       if (prod) {
-        ctx.font = '18px sans-serif';
-        ctx.fillText(prod.icon, s.x + 22 + idx * 36, s.y + 36);
+        const itemX = s.x + 22 + idx * 36;
+        const itemY = s.y + 38;
+
+        // Small drop shadow behind product
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath(); ctx.ellipse(itemX, itemY + 8, 10, 4, 0, 0, Math.PI * 2); ctx.fill();
+
+        ctx.font = '19px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(prod.icon, itemX, itemY);
       }
     });
   });
@@ -771,34 +798,106 @@ function renderSupermarket() {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('💳 POS CHECKOUT', checkoutZone.x + checkoutZone.w / 2, checkoutZone.y + checkoutZone.h / 2 + 6);
 
-  // Draw Player Character & Metallic Grid Shopping Cart (Top-Down View)
+  // Draw Realistic Human Shopper & Metallic 3D Shopping Cart (Top-Down View)
   ctx.save();
   ctx.translate(player.x, player.y);
 
-  // Cart Mesh Grid
-  ctx.fillStyle = '#94a3b8';
-  ctx.strokeStyle = '#64748b';
-  ctx.lineWidth = 2;
-  ctx.fillRect(-16, -30, 32, 22);
-  ctx.strokeRect(-16, -30, 32, 22);
+  // 1. Swivel Caster Wheels under Shopping Cart
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(-16, -34, 6, 6);
+  ctx.fillRect(10, -34, 6, 6);
+  ctx.fillRect(-16, -10, 6, 6);
+  ctx.fillRect(10, -10, 6, 6);
 
-  // Collected Items inside cart grid
-  player.cart.slice(0, 4).forEach((itemId, idx) => {
+  // 2. Realistic Metallic Wireframe Shopping Cart Basket (Chrome / Steel)
+  const cartGrad = ctx.createLinearGradient(-18, -32, 18, -10);
+  cartGrad.addColorStop(0, '#cbd5e1');
+  cartGrad.addColorStop(0.5, '#f8fafc');
+  cartGrad.addColorStop(1, '#94a3b8');
+  ctx.fillStyle = cartGrad;
+  ctx.strokeStyle = '#475569';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(-18, -32, 36, 24, 4);
+  ctx.fill(); ctx.stroke();
+
+  // Cart Inner Wire Grid Lines
+  ctx.strokeStyle = 'rgba(71, 85, 105, 0.4)';
+  ctx.lineWidth = 1;
+  for (let gx = -12; gx <= 12; gx += 8) {
+    ctx.beginPath(); ctx.moveTo(gx, -32); ctx.lineTo(gx, -8); ctx.stroke();
+  }
+  for (let gy = -26; gy <= -12; gy += 7) {
+    ctx.beginPath(); ctx.moveTo(-18, gy); ctx.lineTo(18, gy); ctx.stroke();
+  }
+
+  // Red Plastic Cart Handle Bar
+  ctx.fillStyle = '#ef4444';
+  ctx.beginPath();
+  ctx.roundRect(-16, -6, 32, 5, 2.5);
+  ctx.fill();
+
+  // Items Inside Cart (stacked nicely with shadows)
+  player.cart.slice(0, 5).forEach((itemId, idx) => {
     const prod = PRODUCTS.find(p => p.id === itemId);
     if (prod) {
-      ctx.font = '12px sans-serif';
-      ctx.fillText(prod.icon, -10 + (idx % 2) * 14, -22 + Math.floor(idx / 2) * 10);
+      ctx.shadowColor = 'rgba(0,0,0,0.3)';
+      ctx.shadowBlur = 4;
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(prod.icon, -10 + (idx % 3) * 10, -24 + Math.floor(idx / 3) * 11);
+      ctx.shadowBlur = 0;
     }
   });
 
-  // Player Body Circle
-  ctx.fillStyle = '#0284c7';
+  // 3. Human Shopper Character (Realistic Anatomy in 3/4 Top-Down View)
+  // Human Arms extending to hold the Handlebar
+  ctx.strokeStyle = '#f87171'; // Blue/Red Shirt sleeve color
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'round';
+
+  // Left Arm
   ctx.beginPath();
-  ctx.arc(0, 0, player.r, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 2;
+  ctx.moveTo(-10, 10);
+  ctx.lineTo(-12, -4);
   ctx.stroke();
+
+  // Right Arm
+  ctx.beginPath();
+  ctx.moveTo(10, 10);
+  ctx.lineTo(12, -4);
+  ctx.stroke();
+
+  // Skin Hands on Handlebar
+  ctx.fillStyle = '#fbcfe8';
+  ctx.beginPath(); ctx.arc(-12, -4, 3.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(12, -4, 3.5, 0, Math.PI * 2); ctx.fill();
+
+  // Shoulders & Apron/Shirt
+  ctx.fillStyle = '#0284c7'; // LIDL/Kaufland Blue Uniform Shirt
+  ctx.beginPath();
+  ctx.ellipse(0, 14, 18, 11, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#0369a1';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Human Head with Hair & Cap
+  // Head Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.beginPath(); ctx.ellipse(0, 15, 11, 11, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Skin Tone Face/Ears
+  ctx.fillStyle = '#fdba74';
+  ctx.beginPath(); ctx.arc(0, 12, 10.5, 0, Math.PI * 2); ctx.fill();
+
+  // Hair / Cap Visor
+  ctx.fillStyle = '#f59e0b'; // Brown/Blonde Hair or Cap
+  ctx.beginPath(); ctx.arc(0, 10, 10.5, Math.PI * 0.8, Math.PI * 2.2); ctx.fill();
+
+  // Cap Visor Front Edge
+  ctx.fillStyle = '#ef4444';
+  ctx.beginPath(); ctx.roundRect(-8, 3, 16, 4, 2); ctx.fill();
 
   ctx.restore();
 
