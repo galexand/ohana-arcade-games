@@ -868,12 +868,19 @@ function drawIsoShelf(s, isNear) {
   ctx.moveTo(t0.x, t0.y); ctx.lineTo(t1.x, t1.y); ctx.lineTo(t2.x, t2.y); ctx.lineTo(t3.x, t3.y);
   ctx.closePath(); ctx.fill(); ctx.stroke();
 
-  // Price rail text (readable, screen-space billboard)
+  // Price rail text (screen-space billboard). Font tracks the iso scale so it
+  // shrinks on small viewports; if it still overflows the shelf's front edge,
+  // shrink it further to fit inside the rail.
+  const railFont = Math.max(6, Math.min(11, iso.halfW * 27));
+  const railText = '🏷️ LIDL & KAUFLAND SPECIAL';
+  const railMaxW = Math.hypot(pr1.x - pr0.x, pr1.y - pr0.y) * 0.92;
+  ctx.font = `${railFont}px monospace`;
+  const railW = ctx.measureText(railText).width;
+  if (railW > railMaxW) ctx.font = `${Math.max(5, railFont * railMaxW / railW)}px monospace`;
   ctx.fillStyle = '#1e293b';
-  ctx.font = `${Math.max(7, Math.round(9 * spriteScale))}px monospace`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const railMid = project(s.x + s.w / 2, s.y + s.h, 9);
-  ctx.fillText('🏷️ LIDL & KAUFLAND SPECIAL', railMid.x, railMid.y);
+  ctx.fillText(railText, railMid.x, railMid.y);
 
   // Products standing on the top surface, spread along the shelf's length
   s.items.forEach((itemId, idx) => {
@@ -895,15 +902,23 @@ function drawIsoShelf(s, isNear) {
     ctx.fillText(prod.icon, iconP.x, iconP.y);
   });
 
-  // Overhead aisle category sign, floating above the shelf's center
-  const signAnchor = project(s.x + s.w / 2, s.y + s.h / 2, SHELF_H + 55);
-  ctx.font = `bold ${Math.max(9, Math.round(13 * spriteScale))}px -apple-system, sans-serif`;
+  // Overhead aisle category sign, floating above the shelf's center as a
+  // hanging pill. Font tracks the iso scale (so it shrinks on small viewports),
+  // the pill is sized from the font, and the two rows' signs are staggered in
+  // height (left row higher, right row lower) so they never collide when the
+  // store is squeezed onto a narrow portrait screen.
+  const signFont = Math.max(7, Math.min(15, iso.halfW * 34));
+  const signZ = SHELF_H + (s.x < WORLD_W / 2 ? 66 : 40);
+  const signAnchor = project(s.x + s.w / 2, s.y + s.h / 2, signZ);
+  ctx.font = `bold ${signFont}px -apple-system, sans-serif`;
   const tw = ctx.measureText(s.name).width;
-  ctx.fillStyle = '#0284c7';
+  const signPadX = signFont * 0.7;
+  const signH = signFont * 1.7;
+  ctx.fillStyle = 'rgba(2, 132, 199, 0.92)';
   ctx.beginPath();
-  ctx.roundRect(signAnchor.x - tw / 2 - 10, signAnchor.y - 14 * spriteScale, tw + 20, 28 * spriteScale, 8);
+  ctx.roundRect(signAnchor.x - tw / 2 - signPadX, signAnchor.y - signH / 2, tw + signPadX * 2, signH, 6);
   ctx.fill();
-  ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.3; ctx.stroke();
   ctx.fillStyle = '#ffffff';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(s.name, signAnchor.x, signAnchor.y);
@@ -967,17 +982,20 @@ function drawIsoCheckout(cz) {
   ctx.lineWidth = Math.max(2, 4 * spriteScale);
   ctx.beginPath(); ctx.moveTo(laserA.x, laserA.y); ctx.lineTo(laserB.x, laserB.y); ctx.stroke();
 
-  // Label sign
+  // Label sign — same iso-scaled hanging pill as the aisle signs.
+  const labelFont = Math.max(7, Math.min(15, iso.halfW * 34));
   const labelAnchor = project(cz.x + cz.w / 2, cz.y + cz.h / 2, CHECKOUT_H + 40);
-  ctx.font = `bold ${Math.max(9, Math.round(13 * spriteScale))}px -apple-system, sans-serif`;
-  ctx.fillStyle = '#ffffff';
+  ctx.font = `bold ${labelFont}px -apple-system, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const label = '💳 POS CHECKOUT';
   const tw = ctx.measureText(label).width;
-  ctx.fillStyle = '#22c55e';
+  const labelPadX = labelFont * 0.7;
+  const labelH = labelFont * 1.7;
+  ctx.fillStyle = 'rgba(34, 197, 94, 0.92)';
   ctx.beginPath();
-  ctx.roundRect(labelAnchor.x - tw / 2 - 8, labelAnchor.y - 13 * spriteScale, tw + 16, 26 * spriteScale, 7);
+  ctx.roundRect(labelAnchor.x - tw / 2 - labelPadX, labelAnchor.y - labelH / 2, tw + labelPadX * 2, labelH, 6);
   ctx.fill();
+  ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 1.3; ctx.stroke();
   ctx.fillStyle = '#ffffff';
   ctx.fillText(label, labelAnchor.x, labelAnchor.y);
 }
