@@ -1004,121 +1004,142 @@ function drawIsoCheckout(cz) {
 // on its projected ground point, with a soft shadow ellipse and a left/right
 // flip based on the last horizontal movement direction.
 function drawIsoPlayer() {
-  // iso.halfW is a world-unit->pixel scale (e.g. ~0.2-0.4, NOT a tile pixel size),
-  // so the sprite (drawn with ~36-40 unit art) needs a multiplier, not a divisor,
-  // to read as roughly 1.5 floor tiles on screen.
-  const spriteScale = iso.halfW * 2.2;
+  const spriteScale = iso.halfW * 2.4;
   const base = project(player.x, player.y, 0);
 
-  // Ground shadow
-  ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
+  // Ground shadow under grandfather & cart
+  ctx.fillStyle = 'rgba(8, 15, 30, 0.4)';
   ctx.beginPath();
-  ctx.ellipse(base.x, base.y + 4, 20 * spriteScale, 9 * spriteScale, 0, 0, Math.PI * 2);
+  ctx.ellipse(base.x, base.y + 4, 26 * spriteScale, 12 * spriteScale, 0, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.save();
-  // Raise the sprite's origin so its feet (the sprite's lowest drawn point,
-  // roughly +25 in the original local coordinate space) sit on the ground point.
-  ctx.translate(base.x, base.y - 25 * spriteScale);
+  ctx.translate(base.x, base.y - 28 * spriteScale);
   ctx.scale(spriteScale * (player.facing || 1), spriteScale);
 
-  // 1. Swivel Caster Wheels under Shopping Cart
-  ctx.fillStyle = '#1e293b';
-  ctx.fillRect(-16, -34, 6, 6);
-  ctx.fillRect(10, -34, 6, 6);
-  ctx.fillRect(-16, -10, 6, 6);
-  ctx.fillRect(10, -10, 6, 6);
+  // -------------------------------------------------------------
+  // 1. SWIVEL WHEELS & CHROME FRAME OF LARGE SHOPPING CART
+  // -------------------------------------------------------------
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(-22, -44, 7, 7);
+  ctx.fillRect(15, -44, 7, 7);
+  ctx.fillRect(-22, -12, 7, 7);
+  ctx.fillRect(15, -12, 7, 7);
 
-  // 2. Realistic Metallic Wireframe Shopping Cart Basket (Chrome / Steel)
-  const cartGrad = ctx.createLinearGradient(-18, -32, 18, -10);
+  // Chrome Wire Mesh Cart Basket (Larger 46x30px)
+  const cartGrad = ctx.createLinearGradient(-23, -42, 23, -12);
   cartGrad.addColorStop(0, '#cbd5e1');
-  cartGrad.addColorStop(0.5, '#f8fafc');
+  cartGrad.addColorStop(0.4, '#ffffff');
   cartGrad.addColorStop(1, '#94a3b8');
   ctx.fillStyle = cartGrad;
   ctx.strokeStyle = '#475569';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.2;
   ctx.beginPath();
-  ctx.roundRect(-18, -32, 36, 24, 4);
+  ctx.roundRect(-23, -42, 46, 30, 5);
   ctx.fill(); ctx.stroke();
 
-  // Cart Inner Wire Grid Lines
-  ctx.strokeStyle = 'rgba(71, 85, 105, 0.4)';
+  // Cart Wire Mesh Grid Lines
+  ctx.strokeStyle = 'rgba(71, 85, 105, 0.45)';
   ctx.lineWidth = 1;
-  for (let gx = -12; gx <= 12; gx += 8) {
-    ctx.beginPath(); ctx.moveTo(gx, -32); ctx.lineTo(gx, -8); ctx.stroke();
+  for (let gx = -16; gx <= 16; gx += 8) {
+    ctx.beginPath(); ctx.moveTo(gx, -42); ctx.lineTo(gx, -12); ctx.stroke();
   }
-  for (let gy = -26; gy <= -12; gy += 7) {
-    ctx.beginPath(); ctx.moveTo(-18, gy); ctx.lineTo(18, gy); ctx.stroke();
+  for (let gy = -36; gy <= -16; gy += 7) {
+    ctx.beginPath(); ctx.moveTo(-23, gy); ctx.lineTo(23, gy); ctx.stroke();
   }
 
   // Red Plastic Cart Handle Bar
-  ctx.fillStyle = '#ef4444';
+  ctx.fillStyle = '#dc2626';
   ctx.beginPath();
-  ctx.roundRect(-16, -6, 32, 5, 2.5);
+  ctx.roundRect(-20, -7, 40, 6, 3);
   ctx.fill();
 
-  // All Collected Items Inside Cart (stacked nicely with 3D layer offsets)
+  // -------------------------------------------------------------
+  // 2. VISIBLE STACKED PRODUCTS INSIDE THE CART BASKET
+  // -------------------------------------------------------------
   player.cart.forEach((itemId, idx) => {
     const prod = PRODUCTS.find(p => p.id === itemId);
     if (prod) {
-      const itemX = -11 + (idx % 3) * 11;
-      const itemY = -25 + Math.floor(idx / 3) * 9;
+      const itemX = -14 + (idx % 4) * 9.5;
+      const itemY = -34 + Math.floor(idx / 4) * 10;
 
-      // Drop shadow behind item in cart
+      // Drop shadow behind product in cart
       ctx.fillStyle = 'rgba(15, 23, 42, 0.4)';
       ctx.beginPath(); ctx.ellipse(itemX, itemY + 5, 6, 3, 0, 0, Math.PI * 2); ctx.fill();
 
-      // Product icon clearly visible inside metallic cart basket
-      ctx.font = '14px sans-serif';
+      // Product Icon
+      ctx.font = '13px sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(prod.icon, itemX, itemY);
     }
   });
 
-  // 3. Human Shopper Character
-  // Human Arms extending to hold the Handlebar
-  ctx.strokeStyle = '#f87171';
-  ctx.lineWidth = 6;
+  // -------------------------------------------------------------
+  // 3. GRANDFATHER CHARACTER ("Bunic cu părul alb")
+  // -------------------------------------------------------------
+  // Walking Legs under sweater
+  ctx.fillStyle = '#334155'; // Dark blue denim pants
+  ctx.fillRect(-10, 22, 7, 14);
+  ctx.fillRect(3, 22, 7, 14);
+  // Brown Shoes
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(-12, 34, 9, 5);
+  ctx.fillRect(3, 34, 9, 5);
+
+  // Arms extending to hold the handlebar
+  ctx.strokeStyle = '#0284c7'; // Blue cardigan sleeve
+  ctx.lineWidth = 6.5;
   ctx.lineCap = 'round';
 
-  // Left Arm
-  ctx.beginPath();
-  ctx.moveTo(-10, 10);
-  ctx.lineTo(-12, -4);
-  ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-12, 12); ctx.lineTo(-15, -4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(12, 12); ctx.lineTo(15, -4); ctx.stroke();
 
-  // Right Arm
-  ctx.beginPath();
-  ctx.moveTo(10, 10);
-  ctx.lineTo(12, -4);
-  ctx.stroke();
+  // Hands on Handlebar
+  ctx.fillStyle = '#fed7aa';
+  ctx.beginPath(); ctx.arc(-15, -4, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(15, -4, 4, 0, Math.PI * 2); ctx.fill();
 
-  // Skin Hands on Handlebar
-  ctx.fillStyle = '#fbcfe8';
-  ctx.beginPath(); ctx.arc(-12, -4, 3.5, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(12, -4, 3.5, 0, Math.PI * 2); ctx.fill();
-
-  // Shoulders & Apron/Shirt
-  ctx.fillStyle = '#0284c7';
+  // Torso / Knit Cardigan Sweater
+  ctx.fillStyle = '#0284c7'; // Cozy blue cardigan
   ctx.beginPath();
-  ctx.ellipse(0, 14, 18, 11, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 15, 20, 12, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = '#0369a1';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
+  ctx.strokeStyle = '#0369a1'; ctx.lineWidth = 1.5; ctx.stroke();
 
-  // Human Head with Hair & Cap
+  // White Shirt Collar
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(-5, 6); ctx.lineTo(0, 12); ctx.lineTo(5, 6); ctx.closePath();
+  ctx.fill();
+
+  // GRANDFATHER HEAD & WHITE HAIR / BEARD
+  // Head shadow
   ctx.fillStyle = 'rgba(0,0,0,0.2)';
-  ctx.beginPath(); ctx.ellipse(0, 15, 11, 11, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0, 16, 12, 12, 0, 0, Math.PI * 2); ctx.fill();
 
-  ctx.fillStyle = '#fdba74';
-  ctx.beginPath(); ctx.arc(0, 12, 10.5, 0, Math.PI * 2); ctx.fill();
+  // Skin Tone Face & Ears
+  ctx.fillStyle = '#fed7aa';
+  ctx.beginPath(); ctx.arc(0, 12, 11, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(-11, 12, 3, 0, Math.PI * 2); ctx.fill(); // Left ear
+  ctx.beginPath(); ctx.arc(11, 12, 3, 0, Math.PI * 2); ctx.fill();  // Right ear
 
-  ctx.fillStyle = '#f59e0b';
-  ctx.beginPath(); ctx.arc(0, 10, 10.5, Math.PI * 0.8, Math.PI * 2.2); ctx.fill();
+  // White Hair (Fluffy top & sides)
+  ctx.fillStyle = '#f8fafc'; // Pure white hair
+  ctx.beginPath(); ctx.arc(0, 7, 12, Math.PI * 0.85, Math.PI * 2.15); ctx.fill();
+  ctx.beginPath(); ctx.arc(-9, 10, 5, 0, Math.PI * 2); ctx.fill(); // Left hair tuft
+  ctx.beginPath(); ctx.arc(9, 10, 5, 0, Math.PI * 2); ctx.fill();  // Right hair tuft
 
-  ctx.fillStyle = '#ef4444';
-  ctx.beginPath(); ctx.roundRect(-8, 3, 16, 4, 2); ctx.fill();
+  // White Beard & Mustache
+  ctx.fillStyle = '#f8fafc';
+  ctx.beginPath(); ctx.arc(0, 17, 7, 0, Math.PI); ctx.fill(); // Beard
+  ctx.beginPath(); ctx.roundRect(-7, 14, 14, 4, 2); ctx.fill(); // Mustache
+
+  // Glasses 👓 (Grandpa Reading Eyeglasses)
+  ctx.strokeStyle = '#d97706'; // Gold frame
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(-4, 11, 3.5, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(4, 11, 3.5, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-0.5, 11); ctx.lineTo(0.5, 11); ctx.stroke(); // Bridge
 
   ctx.restore();
 }
