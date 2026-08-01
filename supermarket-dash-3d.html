@@ -14,6 +14,15 @@
     background: #0b1426; color: #fff;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
+  /* Dynamic-viewport-height fallback: 100% first for browsers that don't
+     support dvh, then 100dvh overrides it where supported. This keeps
+     fixed-position overlays (touch controls, paper list) anchored to the
+     actual VISIBLE viewport instead of the taller layout viewport iOS Safari
+     reports while its address/tab bars are shown — which is what pushed the
+     ▲ button and the bottom of the cart off-screen in landscape. */
+  @supports (height: 100dvh) {
+    html, body { height: 100dvh; }
+  }
   canvas { display: block; width: 100%; height: 100%; }
 
   /* Top Control Header Bar */
@@ -40,10 +49,14 @@
   }
   .langToggle button.active { background: #2ecc71; color: #fff; }
 
-  /* Persistent Real Paper Shopping List Notepad (Top Left Overlay) */
+  /* Persistent Real Paper Shopping List Notepad (Top Left Overlay).
+     Collapsible: tapping/clicking .paper-header toggles the "collapsed"
+     class on #paperShoppingList, which hides #paperItems (the checklist
+     rows) via CSS below — the panel shrinks to just the header pill so it
+     stops covering the left-wall products behind it. */
   #paperShoppingList {
     position: fixed; top: 102px; left: 12px; z-index: 20;
-    width: 196px; max-height: calc(100vh - 170px); overflow-y: auto;
+    width: 196px; max-height: calc(100dvh - 170px); overflow-y: auto;
     background: #fff9e6; color: #1e293b;
     border: 2px solid #d4a359; border-radius: 12px; padding: 10px 12px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.5), inset 0 0 40px rgba(245, 222, 179, 0.5);
@@ -52,8 +65,17 @@
   .paper-header {
     font-size: 14px; font-weight: 900; color: #9a3412; text-transform: uppercase;
     border-bottom: 2px dashed #cbd5e1; padding-bottom: 6px; margin-bottom: 4px;
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    cursor: pointer;
   }
+  .paper-header:active { opacity: 0.75; }
+  #paperChevron { font-size: 12px; color: #9a3412; transition: transform 0.15s ease; }
+  /* Collapsed: only the header pill (title + progress + chevron) remains
+     visible — the checklist rows are fully removed from layout, not just
+     visually hidden, so the panel's box actually shrinks. */
+  #paperShoppingList.collapsed { max-height: none; }
+  #paperShoppingList.collapsed .paper-header { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+  #paperShoppingList.collapsed #paperItems { display: none; }
   .paper-item {
     font-size: 13px; font-weight: 700; color: #334155;
     display: flex; align-items: center; justify-content: space-between;
@@ -63,16 +85,29 @@
   .check-box { font-size: 14px; font-weight: 900; margin-right: 6px; }
 
   /* Touch Controls Overlay */
-  .touch-zone { position: fixed; bottom: 16px; z-index: 15; display: flex; gap: 10px; }
-  #touchDPad { left: 16px; flex-direction: column; align-items: center; }
-  /* Turn buttons (◀/▶) are noticeably bigger than ▲/▼ so they read as the
-     distinct "turn onto another aisle" control, not just a lateral d-pad key.
-     The row's gap is also widened a touch so two big circular buttons don't
-     feel like they're touching. Column layout (unchanged) keeps this from
-     ever running wider than ~190px, so it comfortably fits a ~375px phone
-     without overlapping anything else on screen. */
-  .dpad-row { display: flex; gap: 14px; }
-  #touchAction { right: 16px; flex-direction: column; align-items: flex-end; }
+  .touch-zone {
+    position: fixed; bottom: max(16px, env(safe-area-inset-bottom)); z-index: 15;
+  }
+  /* #touchDPad uses CSS Grid (not flex) so it can be freely re-laid-out by
+     the landscape/short-height media query below without touching the DOM.
+     Portrait (default): "up" spans both columns on top, ◀/▶ side by side in
+     the middle row, "down" spans both columns on the bottom — reproducing
+     the original stacked d-pad look. Turn buttons (◀/▶) stay noticeably
+     bigger than ▲/▼ so they read as the distinct "turn onto another aisle"
+     control, not just a lateral d-pad key. */
+  #touchDPad {
+    left: max(16px, env(safe-area-inset-left));
+    display: grid;
+    grid-template-areas: "up up" "left right" "down down";
+    grid-template-columns: auto auto;
+    gap: 10px 14px;
+    justify-items: center; align-items: center;
+  }
+  #btnUp { grid-area: up; }
+  #btnDown { grid-area: down; }
+  #btnLeft { grid-area: left; }
+  #btnRight { grid-area: right; }
+  #touchAction { right: max(16px, env(safe-area-inset-right)); flex-direction: column; align-items: flex-end; }
   .tbtn {
     width: 58px; height: 58px; border-radius: 50%;
     background: rgba(17, 26, 46, 0.88); border: 2px solid rgba(255, 255, 255, 0.25);
@@ -87,6 +122,34 @@
   @keyframes turnGlow { 0%, 100% { box-shadow: 0 0 4px 2px rgba(74, 222, 128, 0.5); } 50% { box-shadow: 0 0 16px 6px rgba(74, 222, 128, 0.9); } }
   @keyframes turnGlowBig { 0%, 100% { box-shadow: 0 0 6px 3px rgba(74, 222, 128, 0.55); } 50% { box-shadow: 0 0 24px 9px rgba(74, 222, 128, 0.95); } }
   .tbtn.grab-btn { width: auto; height: 52px; border-radius: 26px; padding: 0 20px; font-size: 16px; background: linear-gradient(180deg, #f39c12, #d35400); border-color: #f1c40f; }
+
+  /* Landscape / short-height reflow (e.g. iPhone landscape ~740-900 x 350-420).
+     Compacts the top chrome and swaps the d-pad to a compact HORIZONTAL
+     layout — ◀ and ▶ as tall flanking columns with ▲ stacked directly above
+     ▼ in between — so the whole control cluster's total height drops from
+     ~218px to ~100-120px and everything (especially ▲, previously the
+     tallest/topmost element) stays on screen. Matched on the JS side by
+     chromeMetrics() (see script), which shrinks the canvas-drawn HUD bar and
+     the cart/grandpa sprite's minimum scale for the same breakpoint. */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .top-control-bar { height: 38px; padding: 0 10px; }
+    #homeLink { font-size: 12px; padding: 5px 10px; }
+    .langToggle button { font-size: 11px; padding: 4px 9px; }
+
+    #paperShoppingList { top: 44px; width: 148px; max-height: calc(100dvh - 60px); padding: 7px 9px; }
+    .paper-header { font-size: 11px; }
+    .paper-item { font-size: 10.5px; }
+
+    .touch-zone { bottom: max(8px, env(safe-area-inset-bottom)); }
+    #touchDPad {
+      grid-template-areas: "left up right" "left down right";
+      grid-template-columns: auto auto auto;
+      grid-template-rows: auto auto;
+      gap: 6px 10px;
+    }
+    #touchDPad .tbtn { width: 44px; height: 44px; font-size: 18px; }
+    #touchDPad .tbtn.turn-btn { width: 62px; height: 62px; font-size: 25px; }
+  }
 
   /* Overlay Panel Modals */
   .overlay-panel {
@@ -157,24 +220,29 @@
   </div>
 </div>
 
-<!-- Persistent Real Paper Shopping List Notepad -->
+<!-- Persistent Real Paper Shopping List Notepad — tap/click the header to
+     collapse it down to just this pill (see togglePaperList() in the script)
+     so it can be gotten out of the way of the left-wall products. -->
 <div id="paperShoppingList">
-  <div class="paper-header">
+  <div class="paper-header" id="paperHeader">
     <span>📋 LISTĂ / LIST</span>
-    <span id="paperProgress">0/0</span>
+    <span style="display:flex; align-items:center; gap:6px;">
+      <span id="paperProgress">0/0</span>
+      <span id="paperChevron">▾</span>
+    </span>
   </div>
   <div id="paperItems"></div>
 </div>
 
 <canvas id="game"></canvas>
 
-<!-- Mobile Touch Controls -->
+<!-- Mobile Touch Controls — plain siblings (no wrapper row div) so the
+     landscape media query can freely reflow ◀/▶ vs ▲/▼ via CSS Grid areas
+     without any DOM/JS changes (see #touchDPad in <style>). -->
 <div class="touch-zone" id="touchDPad" style="display:none;">
   <div class="tbtn" id="btnUp">▲</div>
-  <div class="dpad-row">
-    <div class="tbtn turn-btn" id="btnLeft">◀</div>
-    <div class="tbtn turn-btn" id="btnRight">▶</div>
-  </div>
+  <div class="tbtn turn-btn" id="btnLeft">◀</div>
+  <div class="tbtn turn-btn" id="btnRight">▶</div>
   <div class="tbtn" id="btnDown">▼</div>
 </div>
 <!-- Leaderboard Modal -->
@@ -285,6 +353,23 @@ document.getElementById('langToggle').addEventListener('click', e => {
 });
 updateLangToggleUI();
 
+// Collapsible paper shopping list: tapping/clicking the header toggles the
+// "collapsed" class (see #paperShoppingList.collapsed in <style>), which
+// hides the checklist rows so the panel shrinks down to just the header
+// pill — freeing up the left-wall products it would otherwise cover. A
+// single 'click' listener covers both mouse and touch (touch taps synthesize
+// a click event, same pattern already used for the canvas tap-to-grab).
+let paperListCollapsed = false;
+function togglePaperList() {
+  paperListCollapsed = !paperListCollapsed;
+  const panel = document.getElementById('paperShoppingList');
+  const chevron = document.getElementById('paperChevron');
+  if (panel) panel.classList.toggle('collapsed', paperListCollapsed);
+  if (chevron) chevron.textContent = paperListCollapsed ? '▸' : '▾';
+}
+const paperHeaderEl = document.getElementById('paperHeader');
+if (paperHeaderEl) paperHeaderEl.addEventListener('click', togglePaperList);
+
 // ============ WEBAUDIO SOUND ENGINE ============
 let audioCtx = null;
 function initAudio() {
@@ -344,7 +429,20 @@ let W = 0, H = 0;
 const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 1024);
 function updateTouchVisibility() {
   const showTouch = isTouchDevice && gameState === 'PLAY';
-  document.getElementById('touchDPad').style.display = showTouch ? 'flex' : 'none';
+  // #touchDPad is a CSS Grid (see <style>) — 'grid' here, NOT 'flex', or this
+  // inline style would win over the stylesheet's `display: grid` and silently
+  // break the whole portrait/landscape reflow.
+  document.getElementById('touchDPad').style.display = showTouch ? 'grid' : 'none';
+}
+
+// chromeMetrics(): the fixed top-bar/HUD-bar heights used by both the CSS
+// (.top-control-bar height, in the landscape media query) and the
+// canvas-drawn HUD bar (renderSupermarket) — kept in sync via the same
+// H < 480 breakpoint so the DOM chrome and the canvas-drawn chrome always
+// end up the same height instead of drifting apart on short viewports.
+function chromeMetrics() {
+  const compact = H < 480;
+  return { topBar: compact ? 38 : 50, hudH: compact ? 32 : 42 };
 }
 
 // ============ BEHIND-THE-CART PSEUDO-3D CAMERA ============
@@ -418,8 +516,16 @@ let turnTransition = null; // { dir: 'L'|'R', t } while a turn's visual transiti
 
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  W = window.innerWidth;
-  H = window.innerHeight;
+  // Prefer visualViewport when available — on iOS Safari, window.innerWidth/
+  // innerHeight report the LAYOUT viewport, which stays the (taller) size
+  // even while the address bar / bottom toolbar are visibly covering part of
+  // the screen; visualViewport tracks the actually-visible area, so using it
+  // keeps the canvas (and every W/H-driven layout decision below, e.g.
+  // chromeMetrics() and the cart/grandpa scale) matching what's really on
+  // screen instead of drawing UI into a region the toolbars are covering.
+  const vv = window.visualViewport;
+  W = vv ? Math.round(vv.width) : window.innerWidth;
+  H = vv ? Math.round(vv.height) : window.innerHeight;
   canvas.width = W * dpr;
   canvas.height = H * dpr;
   canvas.style.width = W + 'px';
@@ -431,6 +537,14 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 100));
+// visualViewport fires its own 'resize' (and 'scroll') as iOS Safari's
+// address/tab bars animate in/out — window's 'resize' alone doesn't always
+// catch that, which is what let fixed-position controls end up positioned
+// against a stale, too-tall viewport height.
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', resize);
+  window.visualViewport.addEventListener('scroll', resize);
+}
 resize();
 
 // ============ PRODUCT DATABASE ============
@@ -474,10 +588,15 @@ const LEVELS = [
   { id: 4, name: 'Weekend BBQ Party', targetItems: ['steak', 'sausage', 'chicken', 'soda', 'chips', 'chocolate'], timer: 120 },
   { id: 5, name: 'Sweet Tooth Hunt', targetItems: ['chocolate', 'donut', 'chips', 'yogurt', 'soda', 'croissant', 'butter'], timer: 100 },
   { id: 6, name: 'Home Cleaning Sweep', targetItems: ['soap', 'detergent', 'paper', 'milk', 'bread', 'cheese', 'croissant', 'butter'], timer: 90 },
-  { id: 7, name: 'Supermarket Challenge', targetItems: ['steak', 'cheese', 'watermelon', 'croissant', 'detergent', 'chocolate', 'banana', 'yogurt', 'chips'], timer: 100 },
-  { id: 8, name: 'Family Mega Shopping', targetItems: ['chicken', 'sausage', 'butter', 'banana', 'paper', 'soap', 'donut', 'carrot', 'watermelon', 'cheese'], timer: 90 },
-  { id: 9, name: 'Rush Hour Dash', targetItems: ['steak', 'cheese', 'bread', 'apple', 'yogurt', 'soda', 'chips', 'detergent', 'sausage', 'croissant', 'carrot'], timer: 80 },
-  { id: 10, name: 'Grand Hypermarket Master', targetItems: ['chicken', 'steak', 'sausage', 'watermelon', 'banana', 'chocolate', 'croissant', 'milk', 'soap', 'cheese', 'donut', 'paper'], timer: 70 }
+  // Levels 7-10 timers bumped up (+18/+16/+14/+12s) — bigger lists (9-12
+  // items) plus branching/maze navigation with 90° turns eat real time that
+  // the old single-corridor-era timers didn't budget for. Still a gentle
+  // downward ramp across 7-10 (118 > 106 > 94 > 82) so later levels stay a
+  // little tighter, just no longer punishingly so.
+  { id: 7, name: 'Supermarket Challenge', targetItems: ['steak', 'cheese', 'watermelon', 'croissant', 'detergent', 'chocolate', 'banana', 'yogurt', 'chips'], timer: 118 },
+  { id: 8, name: 'Family Mega Shopping', targetItems: ['chicken', 'sausage', 'butter', 'banana', 'paper', 'soap', 'donut', 'carrot', 'watermelon', 'cheese'], timer: 106 },
+  { id: 9, name: 'Rush Hour Dash', targetItems: ['steak', 'cheese', 'bread', 'apple', 'yogurt', 'soda', 'chips', 'detergent', 'sausage', 'croissant', 'carrot'], timer: 94 },
+  { id: 10, name: 'Grand Hypermarket Master', targetItems: ['chicken', 'steak', 'sausage', 'watermelon', 'banana', 'chocolate', 'croissant', 'milk', 'soap', 'cheese', 'donut', 'paper'], timer: 82 }
 ];
 
 // ============ GAME STATE & VARIABLES ============
@@ -683,14 +802,17 @@ function buildBranchingLevel(targetItems, maxBranches) {
       if (!leftIds.length) leftIds = rightIds;
     }
 
-    const branchJunctions = [];
-    if (!isLast) {
-      // Reciprocal return junction: turning the opposite direction near the
-      // branch's own entrance sends the player back to the exact spine z
-      // they turned off from, so they resume forward progress rather than
-      // restarting the spine from its entrance.
-      branchJunctions.push({ z: 260, dir: dir === 'L' ? 'R' : 'L', to: 'S', landingZ: z });
-    }
+    // Reciprocal return junction: turning the opposite direction near the
+    // branch's own entrance sends the player back to the exact spine z they
+    // turned off from, so they resume forward progress rather than
+    // restarting the spine from its entrance. EVERY branch gets this,
+    // including the final/checkout one — a player who reaches checkout
+    // missing an item must always be able to turn back onto the spine to go
+    // collect it (previously only non-final branches had a way back, which
+    // stranded the player once they'd walked onto the checkout corridor).
+    const branchJunctions = [
+      { z: 260, dir: dir === 'L' ? 'R' : 'L', to: 'S', landingZ: z }
+    ];
 
     corridors[branchId] = buildCorridor(branchId, {
       length: isLast ? 780 : 620,
@@ -1037,19 +1159,24 @@ function render() {
     }
   }
 
-  // Feedback Notification Floater
+  // Feedback Notification Floater — anchored just below the (possibly
+  // compacted, see chromeMetrics()) top bar + HUD strip, so it stays right
+  // under the chrome instead of drifting into the aisle view on short
+  // viewports where the chrome itself is shorter.
   if (feedbackTimer > 0 && feedbackMsg) {
+    const { topBar, hudH } = chromeMetrics();
+    const toastTop = topBar + hudH + 12;
     ctx.save();
     ctx.font = 'bold 15px -apple-system, sans-serif';
     const mw = ctx.measureText(feedbackMsg).width;
     ctx.fillStyle = feedbackMsg.includes('⚠️') ? 'rgba(239, 68, 68, 0.95)' : 'rgba(34, 197, 94, 0.95)';
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(W / 2 - mw / 2 - 16, 104, mw + 32, 34, 17);
+    ctx.roundRect(W / 2 - mw / 2 - 16, toastTop, mw + 32, 34, 17);
     ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(feedbackMsg, W / 2, 121);
+    ctx.fillText(feedbackMsg, W / 2, toastTop + 17);
     ctx.restore();
   }
 }
@@ -1418,14 +1545,16 @@ function cartScreenAnchor() {
 // always on top of the aisle.
 function drawCartAndPusher() {
   const anchor = cartScreenAnchor();
-  // Bumped up again (was 0.95-2.05 / H-620) so the cart reads as a bigger,
-  // more prominent foreground element — still height-driven so it scales
-  // sensibly on both desktop and a narrow ~375px mobile portrait screen, and
-  // still capped so it (plus grandpa's now-visible body) never swallows the
-  // view of the shelves/products ahead — verified in the harness that the
-  // aisle above the sprite still occupies the majority of the screen at
-  // both a 667px mobile and an 800px+ desktop viewport height.
-  const scale = Math.max(1.05, Math.min(2.2, H / 580));
+  // Height-driven so it scales sensibly on both desktop and a narrow ~375px
+  // mobile portrait screen, and capped so it never swallows the view of the
+  // shelves/products ahead. The floor was previously a flat 1.05, which
+  // meant ANY viewport shorter than ~609px (e.g. a ~390px landscape phone)
+  // got stuck at the same near-full size and the cart/grandpa clipped off
+  // the bottom of the screen. The floor now drops much lower (0.65) so short
+  // landscape viewports actually shrink the sprite to fit — portrait phones
+  // are never short enough in H to hit that floor (verified in the harness),
+  // so portrait sizing is unchanged.
+  const scale = Math.max(0.65, Math.min(2.2, H / 580));
 
   ctx.save();
   // Ground shadow
@@ -1648,8 +1777,9 @@ function drawMiniMap() {
   const graph = CORRIDOR_GRAPH;
   if (!graph || !graph.mapLayout) return;
   const lvl = LEVELS[currentLevelIdx];
+  const { topBar, hudH } = chromeMetrics();
   const boxW = 152, boxH = 128;
-  const boxX = W - boxW - 14, boxY = 98;
+  const boxX = W - boxW - 14, boxY = topBar + hudH + 6;
 
   ctx.save();
   ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
@@ -1740,14 +1870,16 @@ function renderSupermarket() {
   const lvl = LEVELS[currentLevelIdx];
   const cor = currentCorridor();
   fogRange = cor.farZ - SHELF_START_Z;
+  const { topBar, hudH } = chromeMetrics();
+  const chromeBottom = topBar + hudH;
 
   // Sky/backdrop gradient toward the vanishing point.
   const horizonY = H * HORIZON_FRAC;
-  const bgGrad = ctx.createLinearGradient(0, 50, 0, horizonY);
+  const bgGrad = ctx.createLinearGradient(0, chromeBottom, 0, horizonY);
   bgGrad.addColorStop(0, '#0b1426');
   bgGrad.addColorStop(1, '#243350');
   ctx.fillStyle = bgGrad;
-  ctx.fillRect(0, 50, W, Math.max(0, horizonY - 50));
+  ctx.fillRect(0, chromeBottom, W, Math.max(0, horizonY - chromeBottom));
   ctx.fillStyle = '#0b1426';
   ctx.fillRect(0, horizonY, W, H - horizonY);
 
@@ -1793,11 +1925,13 @@ function renderSupermarket() {
     if (hit && hit.reachable) grabProduct(hit);
   }
 
-  // Resource HUD Bar (Y = 50..92)
+  // Resource HUD Bar — height/position tracks chromeMetrics() so it shrinks
+  // to match the compacted .top-control-bar on short/landscape viewports
+  // instead of always reserving a fixed 92px of vertical chrome.
   ctx.fillStyle = '#0f172a';
-  ctx.fillRect(0, 50, W, 42);
+  ctx.fillRect(0, topBar, W, hudH);
   ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-  ctx.strokeRect(0, 50, W, 42);
+  ctx.strokeRect(0, topBar, W, hudH);
 
   ctx.fillStyle = '#4ade80';
   ctx.font = 'bold 14px -apple-system, sans-serif';
@@ -1807,7 +1941,7 @@ function renderSupermarket() {
   const reqCount = lvl.targetItems.length;
   const timeText = levelTimer > 0 ? `  ·  ⏱ ${Math.ceil(levelTimer)}s` : '';
 
-  ctx.fillText(`🛒 LEVEL ${currentLevelIdx + 1}: ${lvl.name}  ·  📋 CART: ${cartCount}/${reqCount}${timeText}  ·  ⭐ SCORE: ${score}`, W / 2 + 100, 71);
+  ctx.fillText(`🛒 LEVEL ${currentLevelIdx + 1}: ${lvl.name}  ·  📋 CART: ${cartCount}/${reqCount}${timeText}  ·  ⭐ SCORE: ${score}`, W / 2 + 100, topBar + hudH / 2);
 
   drawMiniMap();
 }

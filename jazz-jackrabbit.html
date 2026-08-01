@@ -285,6 +285,7 @@ const TEXT = {
     bossHp: 'DEVASTATOR BOSS',
     catchUp: 'CATCH UP!',
     defeatLeroyFirst: 'DEFEAT LEROY FIRST! 🔒',
+    defeatHamstervilleFirst: 'DEFEAT DR. HÄMSTERVIEL FIRST! 🔒',
     teamVictory: 'TEAM VICTORY! 🎉',
     revived: 'TEAMMATE REVIVED! 💚',
     back: '← BACK',
@@ -302,7 +303,7 @@ const TEXT = {
     sub: 'PLATFORMER ȘI TRĂGĂTOR ÎN 2 JUCĂTORI',
     modeSelect: 'ALEGE MODUL DE JOC',
     p1Solo: '1 JUCĂTOR (SOLO)',
-    p2Coop: '2 JUCĂTORI (CO-OP)',
+    p2Coop: '2 PLAYERS (CO-OP)',
     chooseChar: 'ALEGE-ȚI IEPURELE',
     jazz: 'JAZZ (VERDE)',
     spaz: 'SPAZ (ROȘU)',
@@ -331,6 +332,7 @@ const TEXT = {
     bossHp: 'BOSS DEVASTATOR',
     catchUp: 'PRINDE-L!',
     defeatLeroyFirst: 'ÎNVINGE-L PE LEROY MAI ÎNTÂI! 🔒',
+    defeatHamstervilleFirst: 'ÎNVINGE-L PE DR. HÄMSTERVIEL MAI ÎNTÂI! 🔒',
     teamVictory: 'VICTORIE ÎN ECHIPĂ! 🎉',
     revived: 'COECHIPIER REVENIT! 💚',
     back: '← ÎNAPOI',
@@ -1028,12 +1030,12 @@ class Enemy {
   constructor(x, y, type) {
     this.x = x;
     this.y = y;
-    this.type = type; // 'turtle', 'bat', 'boss'
-    this.w = type === 'boss' ? 72 : 36;
-    this.h = type === 'boss' ? 72 : 36;
-    this.vx = type === 'turtle' ? 60 : 0;
+    this.type = type; // 'turtle', 'bat', 'fox', 'cat', 'boss', 'hamsterville'
+    this.w = (type === 'boss' || type === 'hamsterville') ? 72 : 38;
+    this.h = (type === 'boss' || type === 'hamsterville') ? 72 : 38;
+    this.vx = (type === 'turtle' ? 60 : (type === 'fox' ? 110 : (type === 'cat' ? 80 : 0)));
     this.vy = 0;
-    this.hp = type === 'boss' ? 45 : (type === 'turtle' ? 3 : 2);
+    this.hp = type === 'hamsterville' ? 65 : (type === 'boss' ? 45 : (type === 'fox' ? 4 : (type === 'cat' ? 4 : (type === 'turtle' ? 3 : 2))));
     this.maxHp = this.hp;
     this.timer = 0;
     this.shootTimer = 0;
@@ -1046,7 +1048,6 @@ class Enemy {
 
     if (this.type === 'turtle') {
       this.x += this.vx * dt;
-      // Turn around at walls/edges
       const col = Math.floor((this.x + (this.vx > 0 ? this.w : 0)) / TILE_SIZE);
       const row = Math.floor((this.y + this.h) / TILE_SIZE);
       if (getTile(col, row - 1) === 1 || getTile(col, row) === 0) {
@@ -1059,19 +1060,63 @@ class Enemy {
     } else if (this.type === 'bat') {
       this.x += Math.sin(this.timer * 2) * 80 * dt;
       this.y += Math.cos(this.timer * 3) * 40 * dt;
-    } else if (this.type === 'boss') {
-      // Devastator Boss AI
+    } else if (this.type === 'fox') {
+      // Fox enemy: fast ground patrol & pounces when player is near
+      this.x += this.vx * dt;
+      const col = Math.floor((this.x + (this.vx > 0 ? this.w : 0)) / TILE_SIZE);
+      const row = Math.floor((this.y + this.h) / TILE_SIZE);
+      if (getTile(col, row - 1) === 1 || getTile(col, row) === 0) {
+        this.vx *= -1;
+      }
+      const target = player1.active ? player1 : (player2 && player2.active ? player2 : null);
+      if (target && Math.abs(target.x - this.x) < 220 && this.shootTimer > 2.0) {
+        this.shootTimer = 0;
+        this.vy = -380; // Pounce jump
+        playSfx('jump');
+        projectiles.push(new Projectile(this.x + 18, this.y + 12, target.x > this.x ? 320 : -320, 0, 'enemy', 'fox'));
+      }
+      // Gravity for fox
+      this.vy += 1200 * dt;
+      this.y += this.vy * dt;
+      if (this.y > (row - 1) * TILE_SIZE) {
+        this.y = (row - 1) * TILE_SIZE;
+        this.vy = 0;
+      }
+    } else if (this.type === 'cat') {
+      // Ninja Cat enemy: paces & throws razor claw boomerangs
+      this.x += this.vx * dt;
+      const col = Math.floor((this.x + (this.vx > 0 ? this.w : 0)) / TILE_SIZE);
+      const row = Math.floor((this.y + this.h) / TILE_SIZE);
+      if (getTile(col, row - 1) === 1 || getTile(col, row) === 0) {
+        this.vx *= -1;
+      }
+      if (this.shootTimer > 1.8) {
+        this.shootTimer = 0;
+        playSfx('laser');
+        projectiles.push(new Projectile(this.x + 18, this.y + 12, this.vx > 0 ? 340 : -340, -40, 'enemy', 'cat'));
+      }
+    } else if (this.type === 'boss' || this.type === 'hamsterville') {
+      // Leroy Boss / Dr. Hämsterviel Boss AI
       const target = player1.active ? player1 : (player2 && player2.active ? player2 : null);
       if (target) {
         const dir = target.x > this.x ? 1 : -1;
         this.dir = dir;
-        this.x += dir * 70 * dt;
+        this.x += dir * (this.type === 'hamsterville' ? 85 : 70) * dt;
+        this.y += Math.sin(this.timer * 3) * 30 * dt;
 
-        if (this.shootTimer > 1.8) {
+        const freq = this.type === 'hamsterville' ? 1.4 : 1.8;
+        if (this.shootTimer > freq) {
           this.shootTimer = 0;
           playSfx('laser');
-          projectiles.push(new Projectile(this.x + 36, this.y + 20, dir * 400, -80, 'boss', 'boss'));
-          projectiles.push(new Projectile(this.x + 36, this.y + 20, dir * 400, 80, 'boss', 'boss'));
+          if (this.type === 'hamsterville') {
+            // Triple plasma salvo
+            projectiles.push(new Projectile(this.x + 36, this.y + 20, dir * 420, -100, 'boss', 'hamsterville'));
+            projectiles.push(new Projectile(this.x + 36, this.y + 20, dir * 440, 0, 'boss', 'hamsterville'));
+            projectiles.push(new Projectile(this.x + 36, this.y + 20, dir * 420, 100, 'boss', 'hamsterville'));
+          } else {
+            projectiles.push(new Projectile(this.x + 36, this.y + 20, dir * 400, -80, 'boss', 'boss'));
+            projectiles.push(new Projectile(this.x + 36, this.y + 20, dir * 400, 80, 'boss', 'boss'));
+          }
         }
       }
     }
@@ -1100,6 +1145,106 @@ class Enemy {
       ctx.lineTo(this.x - 10, this.y + 6 + wing);
       ctx.lineTo(this.x + 6, this.y + 24);
       ctx.fill();
+    } else if (this.type === 'fox') {
+      // Fox enemy 🦊
+      const cx = this.x + 19, cy = this.y + 19;
+      ctx.fillStyle = '#e65100'; // Red-orange fox fur
+      ctx.beginPath(); ctx.arc(cx, cy, 16, 0, Math.PI * 2); ctx.fill();
+      // White chest & face muzzle
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(cx + (this.vx > 0 ? 6 : -6), cy + 4, 8, 0, Math.PI * 2); ctx.fill();
+      // Pointy fox ears
+      ctx.fillStyle = '#e65100';
+      ctx.beginPath(); ctx.moveTo(cx - 10, cy - 10); ctx.lineTo(cx - 16, cy - 24); ctx.lineTo(cx - 2, cy - 14); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(cx + 10, cy - 10); ctx.lineTo(cx + 16, cy - 24); ctx.lineTo(cx + 2, cy - 14); ctx.fill();
+      ctx.fillStyle = '#212121'; // Ear tips
+      ctx.beginPath(); ctx.arc(cx - 15, cy - 22, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + 15, cy - 22, 3, 0, Math.PI * 2); ctx.fill();
+      // Bushy tail
+      ctx.fillStyle = '#e65100';
+      ctx.beginPath(); ctx.ellipse(cx - (this.vx > 0 ? 18 : -18), cy + 4, 12, 6, 0.4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(cx - (this.vx > 0 ? 26 : -26), cy + 4, 4, 0, Math.PI * 2); ctx.fill();
+      // Eyes & nose
+      ctx.fillStyle = '#fbc02d'; ctx.beginPath(); ctx.arc(cx + (this.vx > 0 ? 6 : -6), cy - 3, 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.arc(cx + (this.vx > 0 ? 7 : -7), cy - 3, 1.8, 0, Math.PI * 2); ctx.fill();
+    } else if (this.type === 'cat') {
+      // Ninja Cat enemy 🐱
+      const cx = this.x + 19, cy = this.y + 19;
+      ctx.fillStyle = '#4a148c'; // Dark violet ninja cat body
+      ctx.beginPath(); ctx.arc(cx, cy, 15, 0, Math.PI * 2); ctx.fill();
+      // Cat ears
+      ctx.beginPath(); ctx.moveTo(cx - 12, cy - 8); ctx.lineTo(cx - 16, cy - 22); ctx.lineTo(cx - 3, cy - 12); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(cx + 12, cy - 8); ctx.lineTo(cx + 16, cy - 22); ctx.lineTo(cx + 3, cy - 12); ctx.fill();
+      // Glowing green eyes
+      ctx.fillStyle = '#76ff03';
+      ctx.beginPath(); ctx.arc(cx - 5, cy - 3, 4, 0, Math.PI * 2); ctx.arc(cx + 5, cy - 3, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(cx - 5, cy - 3, 1.5, 0, Math.PI * 2); ctx.arc(cx + 5, cy - 3, 1.5, 0, Math.PI * 2); ctx.fill();
+      // Ninja mask & Whiskers
+      ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(cx - 12, cy + 2); ctx.lineTo(cx - 18, cy); ctx.moveTo(cx + 12, cy + 2); ctx.lineTo(cx + 18, cy); ctx.stroke();
+    } else if (this.type === 'hamsterville') {
+      // Dr. Hämsterviel Boss from Lilo & Stitch!
+      const cx = this.x + 36, cy = this.y + 40;
+      const bob = Math.sin(this.timer * 5) * 4;
+
+      // HP Bar above head
+      const hpPct = Math.max(0, this.hp / this.maxHp);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(this.x - 12, this.y - 30, 96, 20);
+      ctx.fillStyle = `hsl(${hpPct * 120}, 85%, 50%)`;
+      ctx.fillRect(this.x - 10, this.y - 28, 92 * hpPct, 16);
+      ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 2; ctx.strokeRect(this.x - 12, this.y - 30, 96, 20);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 11px -apple-system, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(`DR. HÄMSTERVIEL: ${this.hp}/${this.maxHp}`, this.x + 36, this.y - 20);
+
+      ctx.save();
+      ctx.translate(cx, cy + bob);
+      if (this.dir > 0) ctx.scale(-1, 1);
+
+      // Hovering Saucer Pod Base
+      ctx.fillStyle = '#37474f';
+      ctx.beginPath(); ctx.ellipse(0, 22, 36, 12, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 2; ctx.stroke();
+      // Cyan Thruster Glow
+      ctx.fillStyle = '#00e5ff';
+      ctx.beginPath(); ctx.ellipse(0, 28, 18, 6, 0, 0, Math.PI * 2); ctx.fill();
+
+      // Red Cape
+      ctx.fillStyle = '#d50000';
+      ctx.beginPath(); ctx.moveTo(-16, -10); ctx.lineTo(-30, 18); ctx.lineTo(30, 18); ctx.lineTo(16, -10); ctx.closePath(); ctx.fill();
+
+      // White Lab Coat & Body
+      ctx.fillStyle = '#f5f5f5';
+      ctx.beginPath(); ctx.ellipse(0, 5, 20, 16, 0, 0, Math.PI * 2); ctx.fill();
+
+      // Long Pointy White Hamster Ears (behind head)
+      ctx.fillStyle = '#f5f5f5';
+      ctx.beginPath(); ctx.ellipse(-14, -28, 6, 18, -0.2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(14, -28, 6, 18, 0.2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ff80ab'; // Pink inner ear
+      ctx.beginPath(); ctx.ellipse(-14, -28, 3, 12, -0.2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(14, -28, 3, 12, 0.2, 0, Math.PI * 2); ctx.fill();
+
+      // White Hamster Head
+      ctx.fillStyle = '#f5f5f5';
+      ctx.beginPath(); ctx.arc(0, -12, 18, 0, Math.PI * 2); ctx.fill();
+
+      // Red Villain Eyes
+      ctx.fillStyle = '#ff1744';
+      ctx.beginPath(); ctx.arc(-7, -14, 5, 0, Math.PI * 2); ctx.arc(7, -14, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#000000';
+      ctx.beginPath(); ctx.arc(-7, -14, 2, 0, Math.PI * 2); ctx.arc(7, -14, 2, 0, Math.PI * 2); ctx.fill();
+
+      // Pink Nose & Angry Whiskers
+      ctx.fillStyle = '#ff80ab'; ctx.beginPath(); ctx.arc(0, -8, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#37474f'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(-6, -7); ctx.lineTo(-18, -9); ctx.moveTo(-6, -5); ctx.lineTo(-18, -3); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(6, -7); ctx.lineTo(18, -9); ctx.moveTo(6, -5); ctx.lineTo(18, -3); ctx.stroke();
+
+      ctx.restore();
     } else if (this.type === 'boss') {
       // Leroy Boss Art - Stitch's cute-menacing red clone
       const cx = this.x + 36, cy = this.y + 40;
@@ -1242,7 +1387,8 @@ const MAP_THEMES = [
   { name: 'Diamondus', bg: '#180b24', tile: '#8e44ad', accent: '#3498db' }, // Level 2
   { name: 'Tubeopolis', bg: '#091824', tile: '#2980b9', accent: '#e74c3c' }, // Level 3
   { name: 'Jungleville', bg: '#1c1b0c', tile: '#d35400', accent: '#2ecc71' }, // Level 4
-  { name: 'Devastator Fortress', bg: '#240808', tile: '#c0392b', accent: '#f1c40f' }  // Level 5
+  { name: 'Devastator Fortress', bg: '#240808', tile: '#c0392b', accent: '#f1c40f' }, // Level 5
+  { name: 'Hämsterviel Lair', bg: '#1f032b', tile: '#c026d3', accent: '#06b6d4' } // Level 6
 ];
 
 function buildLevel(levelIdx) {
@@ -1281,8 +1427,9 @@ function buildLevel(levelIdx) {
         }
         entities.push(new Collectible((c + s * 3 + 1) * TILE_SIZE, (r - 1) * TILE_SIZE, Math.random() < 0.4 ? 'carrot' : 'gem'));
       }
-      if (Math.random() < 0.5) {
-        entities.push(new Enemy((c + 4) * TILE_SIZE, (mapRows - 2) * TILE_SIZE, 'turtle'));
+      if (Math.random() < 0.6) {
+        const enemyKind = levelIdx >= 3 ? (Math.random() < 0.5 ? 'fox' : 'cat') : 'turtle';
+        entities.push(new Enemy((c + 4) * TILE_SIZE, (mapRows - 2) * TILE_SIZE, enemyKind));
       }
       c += 9;
     } 
@@ -1313,6 +1460,9 @@ function buildLevel(levelIdx) {
       levelMap[vaultRow - 1][springCol + 3] = 3;
       entities.push(new Collectible((springCol + 4) * TILE_SIZE, (vaultRow - 1) * TILE_SIZE, 'carrot'));
       entities.push(new Collectible((springCol + 5) * TILE_SIZE, (vaultRow - 1) * TILE_SIZE, 'weapon_triple'));
+      if (levelIdx >= 4) {
+        entities.push(new Enemy((springCol + 3) * TILE_SIZE, (vaultRow - 2) * TILE_SIZE, 'cat'));
+      }
       c += 9;
     }
     else if (sectionType === 2) { // Double Bridge & Flying Enemies
@@ -1324,7 +1474,8 @@ function buildLevel(levelIdx) {
           levelMap[bRow2][c + w] = 1;
         }
       }
-      entities.push(new Enemy((c + 2) * TILE_SIZE, (bRow1 - 1) * TILE_SIZE, 'turtle'));
+      const enemyKind1 = levelIdx >= 4 ? 'fox' : 'turtle';
+      entities.push(new Enemy((c + 2) * TILE_SIZE, (bRow1 - 1) * TILE_SIZE, enemyKind1));
       entities.push(new Enemy((c + 3) * TILE_SIZE, (bRow2 - 2) * TILE_SIZE, 'bat'));
       c += 8;
     }
@@ -1341,26 +1492,38 @@ function buildLevel(levelIdx) {
       }
 
       entities.push(new Collectible((c + 4) * TILE_SIZE, (mapRows - 6) * TILE_SIZE, 'gem'));
+      if (levelIdx >= 3) {
+        entities.push(new Enemy((c + 2) * TILE_SIZE, (mapRows - 2) * TILE_SIZE, 'fox'));
+      }
       c += 7;
     }
 
     sectionIndex++;
   }
 
-  // 3. Level 5 Boss Arena
-  if (levelIdx === 4) {
+  // 3. Level 5 & Level 6 Boss Arenas
+  if (levelIdx === 4) { // Leroy Boss
     const bossCol = mapCols - 12;
-    // Clear arena sky
     for (let r = 1; r < mapRows - 1; r++) {
       for (let col = bossCol - 6; col < mapCols - 1; col++) {
         levelMap[r][col] = 0;
       }
     }
-    // Solid arena ground
     for (let col = bossCol - 6; col < mapCols - 1; col++) {
       levelMap[mapRows - 1][col] = 1;
     }
     entities.push(new Enemy(bossCol * TILE_SIZE, (mapRows - 4) * TILE_SIZE, 'boss'));
+  } else if (levelIdx === 5) { // Dr. Hämsterviel Boss (Level 6)
+    const bossCol = mapCols - 12;
+    for (let r = 1; r < mapRows - 1; r++) {
+      for (let col = bossCol - 6; col < mapCols - 1; col++) {
+        levelMap[r][col] = 0;
+      }
+    }
+    for (let col = bossCol - 6; col < mapCols - 1; col++) {
+      levelMap[mapRows - 1][col] = 1;
+    }
+    entities.push(new Enemy(bossCol * TILE_SIZE, (mapRows - 5) * TILE_SIZE, 'hamsterville'));
   }
 
   // 4. Exit Flag
@@ -1567,22 +1730,22 @@ function update(dt) {
 
           if (ent.hp <= 0) {
             playSfx('explode');
-            const scoreGain = ent.type === 'boss' ? 2000 : (ent.type === 'turtle' ? 300 : 150);
+            const scoreGain = (ent.type === 'boss' || ent.type === 'hamsterville') ? 2500 : (ent.type === 'fox' || ent.type === 'cat' ? 400 : 200);
             if (player1) player1.score += scoreGain;
             if (player2) player2.score += scoreGain;
-            createParticles(ent.x + ent.w/2, ent.y + ent.h/2, ent.type === 'boss' ? '#e74c3c' : '#f39c12', ent.type === 'boss' ? 40 : 16);
+            createParticles(ent.x + ent.w/2, ent.y + ent.h/2, (ent.type === 'boss' || ent.type === 'hamsterville') ? '#e74c3c' : '#f39c12', (ent.type === 'boss' || ent.type === 'hamsterville') ? 40 : 16);
             
             const killedType = ent.type;
             entities.splice(i, 1);
             entKilled = true;
 
-            if (killedType === 'boss' && currentLevelIdx === 4) {
+            if ((killedType === 'boss' && currentLevelIdx === 4) || (killedType === 'hamsterville' && currentLevelIdx === 5)) {
               playSfx('win');
               if (currentLevelIdx + 1 > unlockedLevels) {
-                unlockedLevels = Math.min(5, currentLevelIdx + 2);
+                unlockedLevels = Math.min(6, currentLevelIdx + 2);
                 saveProgress();
               }
-              setGameState('VICTORY');
+              setGameState(currentLevelIdx === 5 ? 'VICTORY' : 'LEVEL_CLEAR');
             }
             break;
           }
@@ -1614,23 +1777,23 @@ function update(dt) {
   // Check Exit Flag Reach
   const exitCol = mapCols - 4;
   const exitX = exitCol * TILE_SIZE;
-  const isLevel5 = currentLevelIdx === 4;
-  const bossAlive = entities.some(e => e instanceof Enemy && e.type === 'boss');
+  const isBossLevel = currentLevelIdx === 4 || currentLevelIdx === 5;
+  const bossAlive = entities.some(e => e instanceof Enemy && (e.type === 'boss' || e.type === 'hamsterville'));
 
   [player1, player2].forEach(pl => {
     if (pl && pl.active && pl.x > exitX) {
-      if (isLevel5 && bossAlive) {
-        // Mandatory Boss Defeat for Level 5!
+      if (isBossLevel && bossAlive) {
+        // Mandatory Boss Defeat!
         pl.x = exitX - 16;
         pl.vx = -120;
-        showWarningMessage(t('defeatLeroyFirst'));
+        showWarningMessage(currentLevelIdx === 5 ? t('defeatHamstervilleFirst') : t('defeatLeroyFirst'));
       } else {
         playSfx('win');
         if (currentLevelIdx + 1 > unlockedLevels) {
-          unlockedLevels = Math.min(5, currentLevelIdx + 2);
+          unlockedLevels = Math.min(6, currentLevelIdx + 2);
           saveProgress();
         }
-        setGameState(isLevel5 ? 'VICTORY' : 'LEVEL_CLEAR');
+        setGameState(currentLevelIdx === 5 ? 'VICTORY' : 'LEVEL_CLEAR');
       }
     }
   });
@@ -2014,17 +2177,17 @@ function drawMenus() {
     });
   } else if (gameState === 'LEVEL_SELECT') {
     ctx.fillStyle = '#2ecc71';
-    ctx.font = 'bold 34px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    ctx.fillText(t('selectLevel'), W / 2, 65);
+    ctx.font = 'bold 32px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillText(t('selectLevel'), W / 2, 55);
 
-    const startY = 115;
-    const spacing = 48;
-    for (let i = 0; i < 5; i++) {
+    const startY = 95;
+    const spacing = 42;
+    for (let i = 0; i < 6; i++) {
       const isUnlocked = i < unlockedLevels;
       const btnY = startY + i * spacing;
       const label = `${t('level')} ${i + 1}: ${MAP_THEMES[i].name} ${isUnlocked ? '' : '🔒'}`;
 
-      drawMenuBtn(W / 2, btnY, Math.min(W * 0.85, 340), 42, label, () => {
+      drawMenuBtn(W / 2, btnY, Math.min(W * 0.88, 350), 38, label, () => {
         if (isUnlocked) {
           currentLevelIdx = i;
           buildLevel(currentLevelIdx);
@@ -2034,7 +2197,7 @@ function drawMenus() {
     }
 
     // Back Button
-    drawMenuBtn(W / 2, startY + 5 * spacing + 10, 180, 42, t('back'), () => {
+    drawMenuBtn(W / 2, startY + 6 * spacing + 6, 170, 38, t('back'), () => {
       setGameState(gameMode === '1P' ? 'CHAR_SELECT' : 'MODE_SELECT');
     });
   }
