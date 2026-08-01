@@ -1418,12 +1418,14 @@ function cartScreenAnchor() {
 // always on top of the aisle.
 function drawCartAndPusher() {
   const anchor = cartScreenAnchor();
-  // Bumped up from the original 0.7-1.6 (H/760) range so the cart + grandpa
-  // read as a clearly prominent foreground element rather than a small prop —
-  // still height-driven so it scales sensibly on both desktop and a narrow
-  // ~375px mobile portrait screen, and still capped so it never swallows the
-  // whole view of the shelves/products above it.
-  const scale = Math.max(0.95, Math.min(2.05, H / 620));
+  // Bumped up again (was 0.95-2.05 / H-620) so the cart reads as a bigger,
+  // more prominent foreground element — still height-driven so it scales
+  // sensibly on both desktop and a narrow ~375px mobile portrait screen, and
+  // still capped so it (plus grandpa's now-visible body) never swallows the
+  // view of the shelves/products ahead — verified in the harness that the
+  // aisle above the sprite still occupies the majority of the screen at
+  // both a 667px mobile and an 800px+ desktop viewport height.
+  const scale = Math.max(1.05, Math.min(2.2, H / 580));
 
   ctx.save();
   // Ground shadow
@@ -1469,68 +1471,80 @@ function drawCartAndPusher() {
     ctx.fillText(prod.icon, ix, iy);
   });
 
-  // Red handle bar
+  // Red handle bar — moved to the BACK-TOP of the basket (just above its
+  // rim at y=-18) instead of below the basket. Grandpa stands behind the
+  // cart, so he (and the handle he grips) belongs above the basket's back
+  // rim in screen space, not hanging off the bottom/front of it — that
+  // inverted placement was why only his head used to peek over the cart.
   ctx.fillStyle = '#ef4444';
   ctx.beginPath();
-  ctx.roundRect(-50, 52, 100, 12, 6);
+  ctx.roundRect(-50, -34, 100, 12, 6);
   ctx.fill();
 
   // Bunicul, standing behind the cart pushing the handle — seen from behind.
+  // Drawn entirely ABOVE the handle/basket (increasingly negative y) so a
+  // full little upper-body figure — hands, arms, a good chunk of his
+  // cardigan torso, and a clearly bigger head — shows above the cart's back
+  // rim, not just a bald spot peeking up.
   ctx.save();
-  ctx.translate(0, 60);
 
-  // Arms reaching down to the handle
-  ctx.strokeStyle = '#e7b892';
-  ctx.lineWidth = 10;
-  ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(-28, 34); ctx.lineTo(-40, 4); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(28, 34); ctx.lineTo(40, 4); ctx.stroke();
+  // Hands gripping the handle
   ctx.fillStyle = '#e7b892';
-  ctx.beginPath(); ctx.arc(-40, 2, 6, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(40, 2, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(-40, -30, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(40, -30, 7, 0, Math.PI * 2); ctx.fill();
   // Defined outline on the hands so they read clearly on the handle bar.
   ctx.strokeStyle = '#92400e'; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.arc(-40, 2, 6, 0, Math.PI * 2); ctx.stroke();
-  ctx.beginPath(); ctx.arc(40, 2, 6, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(-40, -30, 7, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(40, -30, 7, 0, Math.PI * 2); ctx.stroke();
+
+  // Arms reaching down from the shoulders to the hands on the handle
+  ctx.strokeStyle = '#e7b892';
+  ctx.lineWidth = 11;
+  ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-20, -88); ctx.lineTo(-40, -30); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(20, -88); ctx.lineTo(40, -30); ctx.stroke();
 
   // Cozy cardigan torso (seen from behind) — a soft vertical gradient plus a
   // darker, higher-contrast outline so it reads clearly against the aisle.
-  const cardiganGrad = ctx.createLinearGradient(0, 6, 0, 90);
+  // Its bottom edge sits well above the basket's rim (y=-18), so a good
+  // chunk of the torso is always visibly clear of the cart.
+  const cardiganGrad = ctx.createLinearGradient(0, -94, 0, -36);
   cardiganGrad.addColorStop(0, '#8291a8');
   cardiganGrad.addColorStop(1, '#5b6b82');
   ctx.fillStyle = cardiganGrad;
   ctx.beginPath();
-  ctx.moveTo(-30, 90); ctx.quadraticCurveTo(-34, 30, -20, 6);
-  ctx.lineTo(20, 6); ctx.quadraticCurveTo(34, 30, 30, 90);
+  ctx.moveTo(-34, -36); ctx.quadraticCurveTo(-38, -70, -22, -94);
+  ctx.lineTo(22, -94); ctx.quadraticCurveTo(38, -70, 34, -36);
   ctx.closePath(); ctx.fill();
   ctx.strokeStyle = '#334155'; ctx.lineWidth = 2.5; ctx.stroke();
   // Knit / ribbing texture accents
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
   ctx.lineWidth = 1.5;
-  [-14, -2, 10].forEach(lx => {
-    ctx.beginPath(); ctx.moveTo(lx, 20); ctx.lineTo(lx * 1.15, 82); ctx.stroke();
+  [-16, -2, 12].forEach(lx => {
+    ctx.beginPath(); ctx.moveTo(lx, -88); ctx.lineTo(lx * 1.1, -40); ctx.stroke();
   });
 
   // Skin (neck/shoulders visible from behind)
   ctx.fillStyle = '#e7b892';
-  ctx.beginPath(); ctx.ellipse(0, 8, 20, 11, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0, -90, 22, 12, 0, 0, Math.PI * 2); ctx.fill();
 
   // Head with crisp white/grey hair from behind, neat with a small bald spot
   // on top — a light-to-white gradient plus a clean outline stroke so the
-  // hair reads clearly rather than blending into the background.
+  // hair reads clearly rather than blending into the background. Sized up
+  // (19-19.5px radius, was 16-16.5) so it's clearly bigger/easier to see.
   ctx.fillStyle = '#e7b892';
-  ctx.beginPath(); ctx.arc(0, -10, 16, 0, Math.PI * 2); ctx.fill();
-  const hairGrad = ctx.createLinearGradient(0, -28, 0, 16);
+  ctx.beginPath(); ctx.arc(0, -116, 19, 0, Math.PI * 2); ctx.fill();
+  const hairGrad = ctx.createLinearGradient(0, -137, 0, -100);
   hairGrad.addColorStop(0, '#f8fafc');
   hairGrad.addColorStop(1, '#cbd5e1');
   ctx.fillStyle = hairGrad;
-  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.2;
-  ctx.beginPath(); ctx.arc(0, -12, 16.5, Math.PI * 0.85, Math.PI * 2.15); ctx.fill(); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-15, -10); ctx.quadraticCurveTo(-19, 6, -11, 16); ctx.quadraticCurveTo(-16, 0, -15, -10); ctx.fill(); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(15, -10); ctx.quadraticCurveTo(19, 6, 11, 16); ctx.quadraticCurveTo(16, 0, 15, -10); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.3;
+  ctx.beginPath(); ctx.arc(0, -118, 19.5, Math.PI * 0.85, Math.PI * 2.15); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-18, -118); ctx.quadraticCurveTo(-23, -99, -13, -85); ctx.quadraticCurveTo(-19, -102, -18, -118); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(18, -118); ctx.quadraticCurveTo(23, -99, 13, -85); ctx.quadraticCurveTo(19, -102, 18, -118); ctx.fill(); ctx.stroke();
   // Small bald spot at the crown
   ctx.fillStyle = '#e7b892';
-  ctx.beginPath(); ctx.ellipse(0, -19, 6, 4, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0, -127, 7, 4.5, 0, 0, Math.PI * 2); ctx.fill();
 
   ctx.restore();
   ctx.restore();
