@@ -65,7 +65,13 @@
   /* Touch Controls Overlay */
   .touch-zone { position: fixed; bottom: 16px; z-index: 15; display: flex; gap: 10px; }
   #touchDPad { left: 16px; flex-direction: column; align-items: center; }
-  .dpad-row { display: flex; gap: 10px; }
+  /* Turn buttons (◀/▶) are noticeably bigger than ▲/▼ so they read as the
+     distinct "turn onto another aisle" control, not just a lateral d-pad key.
+     The row's gap is also widened a touch so two big circular buttons don't
+     feel like they're touching. Column layout (unchanged) keeps this from
+     ever running wider than ~190px, so it comfortably fits a ~375px phone
+     without overlapping anything else on screen. */
+  .dpad-row { display: flex; gap: 14px; }
   #touchAction { right: 16px; flex-direction: column; align-items: flex-end; }
   .tbtn {
     width: 58px; height: 58px; border-radius: 50%;
@@ -75,8 +81,11 @@
     box-shadow: 0 6px 16px rgba(0,0,0,0.5); backdrop-filter: blur(6px);
   }
   .tbtn:active, .tbtn.active { transform: scale(0.92); background: rgba(46, 204, 113, 0.85); border-color: #58d68d; }
+  .tbtn.turn-btn { width: 82px; height: 82px; font-size: 34px; }
   .tbtn.available { border-color: #4ade80; box-shadow: 0 0 4px 2px rgba(74, 222, 128, 0.5), 0 6px 16px rgba(0,0,0,0.5); animation: turnGlow 1s ease-in-out infinite; }
+  .tbtn.turn-btn.available { animation: turnGlowBig 1s ease-in-out infinite; }
   @keyframes turnGlow { 0%, 100% { box-shadow: 0 0 4px 2px rgba(74, 222, 128, 0.5); } 50% { box-shadow: 0 0 16px 6px rgba(74, 222, 128, 0.9); } }
+  @keyframes turnGlowBig { 0%, 100% { box-shadow: 0 0 6px 3px rgba(74, 222, 128, 0.55); } 50% { box-shadow: 0 0 24px 9px rgba(74, 222, 128, 0.95); } }
   .tbtn.grab-btn { width: auto; height: 52px; border-radius: 26px; padding: 0 20px; font-size: 16px; background: linear-gradient(180deg, #f39c12, #d35400); border-color: #f1c40f; }
 
   /* Overlay Panel Modals */
@@ -163,8 +172,8 @@
 <div class="touch-zone" id="touchDPad" style="display:none;">
   <div class="tbtn" id="btnUp">▲</div>
   <div class="dpad-row">
-    <div class="tbtn" id="btnLeft">◀</div>
-    <div class="tbtn" id="btnRight">▶</div>
+    <div class="tbtn turn-btn" id="btnLeft">◀</div>
+    <div class="tbtn turn-btn" id="btnRight">▶</div>
   </div>
   <div class="tbtn" id="btnDown">▼</div>
 </div>
@@ -454,17 +463,21 @@ const PRODUCTS = [
 ];
 
 // ============ 10 PROGRESSIVE LEVELS ============
+// List sizes ramp STRICTLY from 3 (level 1) to 12 (level 10) — a clear,
+// always-increasing difficulty curve. Category spread is kept wide on the
+// branching levels (4-10) so buildBranchingLevel's category-per-branch
+// partitioning still produces a fully completable, turn-forcing layout.
 const LEVELS = [
   { id: 1, name: 'Morning Essentials', targetItems: ['bread', 'milk', 'apple'], timer: 0 },
   { id: 2, name: 'Breakfast Feast', targetItems: ['croissant', 'butter', 'cheese', 'yogurt'], timer: 0 },
-  { id: 3, name: 'Fresh Fruit Basket', targetItems: ['banana', 'apple', 'watermelon', 'carrot'], timer: 0 },
-  { id: 4, name: 'Weekend BBQ Party', targetItems: ['steak', 'sausage', 'chicken', 'soda', 'chips'], timer: 120 },
-  { id: 5, name: 'Sweet Tooth Hunt', targetItems: ['chocolate', 'donut', 'chips', 'yogurt', 'soda'], timer: 100 },
-  { id: 6, name: 'Home Cleaning Sweep', targetItems: ['soap', 'detergent', 'paper', 'milk', 'bread'], timer: 90 },
-  { id: 7, name: 'Supermarket Challenge', targetItems: ['steak', 'cheese', 'watermelon', 'croissant', 'detergent', 'chocolate'], timer: 100 },
-  { id: 8, name: 'Family Mega Shopping', targetItems: ['chicken', 'sausage', 'butter', 'banana', 'paper', 'soap', 'donut'], timer: 90 },
-  { id: 9, name: 'Rush Hour Dash', targetItems: ['steak', 'cheese', 'bread', 'apple', 'yogurt', 'soda', 'chips', 'detergent'], timer: 80 },
-  { id: 10, name: 'Grand Hypermarket Master', targetItems: ['chicken', 'steak', 'sausage', 'watermelon', 'banana', 'chocolate', 'croissant', 'milk', 'soap'], timer: 70 }
+  { id: 3, name: 'Fresh Fruit Basket', targetItems: ['banana', 'apple', 'watermelon', 'carrot', 'donut'], timer: 0 },
+  { id: 4, name: 'Weekend BBQ Party', targetItems: ['steak', 'sausage', 'chicken', 'soda', 'chips', 'chocolate'], timer: 120 },
+  { id: 5, name: 'Sweet Tooth Hunt', targetItems: ['chocolate', 'donut', 'chips', 'yogurt', 'soda', 'croissant', 'butter'], timer: 100 },
+  { id: 6, name: 'Home Cleaning Sweep', targetItems: ['soap', 'detergent', 'paper', 'milk', 'bread', 'cheese', 'croissant', 'butter'], timer: 90 },
+  { id: 7, name: 'Supermarket Challenge', targetItems: ['steak', 'cheese', 'watermelon', 'croissant', 'detergent', 'chocolate', 'banana', 'yogurt', 'chips'], timer: 100 },
+  { id: 8, name: 'Family Mega Shopping', targetItems: ['chicken', 'sausage', 'butter', 'banana', 'paper', 'soap', 'donut', 'carrot', 'watermelon', 'cheese'], timer: 90 },
+  { id: 9, name: 'Rush Hour Dash', targetItems: ['steak', 'cheese', 'bread', 'apple', 'yogurt', 'soda', 'chips', 'detergent', 'sausage', 'croissant', 'carrot'], timer: 80 },
+  { id: 10, name: 'Grand Hypermarket Master', targetItems: ['chicken', 'steak', 'sausage', 'watermelon', 'banana', 'chocolate', 'croissant', 'milk', 'soap', 'cheese', 'donut', 'paper'], timer: 70 }
 ];
 
 // ============ GAME STATE & VARIABLES ============
@@ -528,8 +541,11 @@ function idsForCats(cats) { return PRODUCTS.filter(p => cats.includes(p.category
 // the whole startZ..endZ run, repeating items as needed so the shelf is
 // visibly full its entire length (no sparse islands of product). Each tier
 // starts at a different offset into the item list so the 4 stacked slots at
-// any given depth aren't all showing the same product.
-function placeWallProducts(ids, side, startZ, endZ) {
+// any given depth aren't all showing the same product. `gaps` (optional) is a
+// list of [z0, z1] ranges — matching the visual wall opening drawn at a
+// junction (see WALL_GAP_HALF/drawShelfWall) — that get no product slots, so
+// nothing appears to float in the open doorway.
+function placeWallProducts(ids, side, startZ, endZ, gaps) {
   if (!ids.length) return [];
   const x = side === 'L' ? -(WALL_X - PRODUCT_INSET) : (WALL_X - PRODUCT_INSET);
   const slots = Math.max(1, Math.floor((endZ - startZ) / SHELF_SPACING_Z) + 1);
@@ -537,25 +553,42 @@ function placeWallProducts(ids, side, startZ, endZ) {
   const arr = [];
   TIER_Y.forEach((ty, tier) => {
     for (let i = 0; i < slots; i++) {
+      const z = startZ + i * SHELF_SPACING_Z;
+      if (gaps && gaps.some(g => z > g[0] && z < g[1])) continue;
       const idx = (i + tier * tierOffset) % ids.length;
-      arr.push({ id: ids[idx], side, x, y: ty, z: startZ + i * SHELF_SPACING_Z, tier });
+      arr.push({ id: ids[idx], side, x, y: ty, z, tier });
     }
   });
   return arr;
 }
 
+// WALL_GAP_HALF: how far (in z) on either side of a junction the shelf wall
+// opens up into a visible gap/opening — deliberately the SAME window as
+// TURN_WINDOW (see getActiveJunction) so the gap the player SEES always
+// exactly agrees with when the turn control actually lights up/works.
+const WALL_GAP_HALF = TURN_WINDOW;
+
 function buildCorridor(id, opts) {
   const length = opts.length;
   const hasCheckout = !!opts.hasCheckout;
   const shelfEndZ = Math.max(SHELF_START_Z + 10, length - (hasCheckout ? 180 : 60));
-  const products = placeWallProducts(opts.leftIds || [], 'L', SHELF_START_Z, shelfEndZ)
-    .concat(placeWallProducts(opts.rightIds || [], 'R', SHELF_START_Z, shelfEndZ));
+  const junctions = opts.junctions || [];
+  // A gap only opens on the side the junction actually turns toward — e.g. a
+  // 'L' junction opens a gap in the LEFT wall (the aisle you turn into), the
+  // right wall there stays solid shelving.
+  const gaps = {
+    L: junctions.filter(j => j.dir === 'L').map(j => [j.z - WALL_GAP_HALF, j.z + WALL_GAP_HALF]),
+    R: junctions.filter(j => j.dir === 'R').map(j => [j.z - WALL_GAP_HALF, j.z + WALL_GAP_HALF]),
+  };
+  const products = placeWallProducts(opts.leftIds || [], 'L', SHELF_START_Z, shelfEndZ, gaps.L)
+    .concat(placeWallProducts(opts.rightIds || [], 'R', SHELF_START_Z, shelfEndZ, gaps.R));
   return {
     id, length, hasCheckout,
     checkoutZ: hasCheckout ? length - 60 : null,
     farZ: length + 220,
     leftLabel: opts.leftLabel || '', rightLabel: opts.rightLabel || '',
-    junctions: opts.junctions || [],
+    junctions,
+    gaps,
     products,
   };
 }
@@ -1103,12 +1136,69 @@ function drawBackWall(cor) {
   ctx.closePath(); ctx.fill();
 }
 
+// Splits [nearZ, farZ] into the drawable wall segments once the given gap
+// ranges (a junction's opening — see WALL_GAP_HALF) are cut out of it, plus
+// the (clipped-to-view) gap ranges themselves for drawWallGapOpening().
+function wallSegments(nearZ, farZ, gaps) {
+  const clipped = (gaps || [])
+    .map(g => [Math.max(nearZ, g[0]), Math.min(farZ, g[1])])
+    .filter(g => g[1] > g[0])
+    .sort((a, b) => a[0] - b[0]);
+  const segs = [];
+  let cursor = nearZ;
+  clipped.forEach(g => {
+    if (g[0] > cursor) segs.push([cursor, g[0]]);
+    cursor = Math.max(cursor, g[1]);
+  });
+  if (cursor < farZ) segs.push([cursor, farZ]);
+  return { segs, gaps: clipped };
+}
+
+// Nudges a world-z forward past any gap it falls inside, so fixed set-dressing
+// (the category sign) never ends up floating in an open doorway.
+function nudgePastGaps(z, gaps) {
+  let moved = true;
+  while (moved) {
+    moved = false;
+    for (const g of (gaps || [])) {
+      if (z > g[0] && z < g[1]) { z = g[1] + 40; moved = true; }
+    }
+  }
+  return z;
+}
+
+// A junction's opening in the wall: a dark "doorway" backdrop (hinting empty
+// space/another aisle beyond, instead of a flat solid wall) plus a sliver of
+// the side-corridor's floor peeking through at floor level, so the opening
+// reads as "you can turn here" even before the glowing ◀/▶ cue draws.
+const GAP_PEEK_X = 130; // how far beyond the wall the floor-sliver hint extends
+function drawWallGapOpening(sideSign, x, gapZ0, gapZ1) {
+  const outerX = x + sideSign * GAP_PEEK_X;
+  const b0 = projWorld(x, 0, gapZ0), b1 = projWorld(x, 0, gapZ1);
+  const t0 = projWorld(x, WALL_TOP_Y, gapZ0), t1 = projWorld(x, WALL_TOP_Y, gapZ1);
+  ctx.fillStyle = 'rgba(4, 8, 16, 0.88)';
+  ctx.beginPath();
+  ctx.moveTo(b0.x, b0.y); ctx.lineTo(b1.x, b1.y); ctx.lineTo(t1.x, t1.y); ctx.lineTo(t0.x, t0.y);
+  ctx.closePath(); ctx.fill();
+
+  const o0 = projWorld(outerX, 0, gapZ0), o1 = projWorld(outerX, 0, gapZ1);
+  ctx.fillStyle = '#4b5568';
+  ctx.beginPath();
+  ctx.moveTo(b0.x, b0.y); ctx.lineTo(b1.x, b1.y); ctx.lineTo(o1.x, o1.y); ctx.lineTo(o0.x, o0.y);
+  ctx.closePath(); ctx.fill();
+}
+
 // One shelf wall (left or right), drawn as a back panel plus 4 solid tier
 // ledges (boards with real thickness, not just a stroked line) so it clearly
 // reads as stocked shelving rather than a flat colored wall. sideSign is -1
 // (left) or +1 (right). nearZ is clamped to camera.z + NEAR_CLIP — same fix
 // as the floor — so the wall quad's near edge is never at/behind the camera
 // (which is what caused the near-white/blown-out screen fill while walking).
+// Wherever this corridor has a junction opening toward this side (cor.gaps),
+// the panel/struts/tiers are skipped and drawWallGapOpening() draws a real
+// gap instead — see buildCorridor's WALL_GAP_HALF (kept equal to
+// TURN_WINDOW so the visible opening always agrees with when the turn
+// control actually activates).
 const TIER_PLANK_THICK = 12;
 const SHELF_STRUT_SPACING_Z = 220;
 function drawShelfWall(sideSign, label, cor) {
@@ -1117,57 +1207,66 @@ function drawShelfWall(sideSign, label, cor) {
   const farZ = cor.farZ;
   if (farZ - nearZ < 1) return;
 
-  const bBot = projWorld(x, 0, nearZ);
-  const fBot = projWorld(x, 0, farZ);
-  const fTop = projWorld(x, WALL_TOP_Y, farZ);
-  const bTop = projWorld(x, WALL_TOP_Y, nearZ);
+  const sideGaps = (cor.gaps && (sideSign === -1 ? cor.gaps.L : cor.gaps.R)) || [];
+  const { segs, gaps: visibleGaps } = wallSegments(nearZ, farZ, sideGaps);
 
-  // Back panel — a consistent medium steel tone regardless of depth (the
-  // gradient stops are fixed dark/darker colors, not distance-scaled).
-  const grad = ctx.createLinearGradient(bBot.x, bBot.y, bTop.x, bTop.y);
-  grad.addColorStop(0, '#3d4c63');
-  grad.addColorStop(1, '#232f42');
-  ctx.fillStyle = grad;
-  ctx.strokeStyle = '#1a2332'; ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.moveTo(bBot.x, bBot.y); ctx.lineTo(fBot.x, fBot.y); ctx.lineTo(fTop.x, fTop.y); ctx.lineTo(bTop.x, bTop.y);
-  ctx.closePath(); ctx.fill(); ctx.stroke();
+  segs.forEach(([segNear, segFar]) => {
+    const bBot = projWorld(x, 0, segNear);
+    const fBot = projWorld(x, 0, segFar);
+    const fTop = projWorld(x, WALL_TOP_Y, segFar);
+    const bTop = projWorld(x, WALL_TOP_Y, segNear);
 
-  // Vertical support struts at regular intervals, purely decorative structure.
-  for (let sz = Math.ceil(nearZ / SHELF_STRUT_SPACING_Z) * SHELF_STRUT_SPACING_Z; sz <= farZ; sz += SHELF_STRUT_SPACING_Z) {
-    const pb = projWorld(x, 0, sz);
-    const pt = projWorld(x, WALL_TOP_Y, sz);
-    ctx.strokeStyle = 'rgba(15, 23, 42, 0.55)';
-    ctx.lineWidth = Math.max(1, 3 * pb.scale);
-    ctx.beginPath(); ctx.moveTo(pb.x, pb.y); ctx.lineTo(pt.x, pt.y); ctx.stroke();
-  }
-
-  // 4 stocked-shelf ledges — each drawn as a proper board with thickness
-  // (top surface + a slightly darker front edge face), not a single line, so
-  // the wall unmistakably reads as 4-tier shelving full-length down the aisle.
-  TIER_Y.forEach(ty => {
-    const surfN = projWorld(x, ty, nearZ);
-    const surfF = projWorld(x, ty, farZ);
-    const edgeN = projWorld(x, ty - TIER_PLANK_THICK, nearZ);
-    const edgeF = projWorld(x, ty - TIER_PLANK_THICK, farZ);
-
-    ctx.fillStyle = '#94a3b8';
+    // Back panel — a consistent medium steel tone regardless of depth (the
+    // gradient stops are fixed dark/darker colors, not distance-scaled).
+    const grad = ctx.createLinearGradient(bBot.x, bBot.y, bTop.x, bTop.y);
+    grad.addColorStop(0, '#3d4c63');
+    grad.addColorStop(1, '#232f42');
+    ctx.fillStyle = grad;
+    ctx.strokeStyle = '#1a2332'; ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.moveTo(surfN.x, surfN.y); ctx.lineTo(surfF.x, surfF.y); ctx.lineTo(edgeF.x, edgeF.y); ctx.lineTo(edgeN.x, edgeN.y);
-    ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(15, 23, 42, 0.6)';
-    ctx.lineWidth = Math.max(1, 1.5 * surfN.scale);
-    ctx.stroke();
+    ctx.moveTo(bBot.x, bBot.y); ctx.lineTo(fBot.x, fBot.y); ctx.lineTo(fTop.x, fTop.y); ctx.lineTo(bTop.x, bTop.y);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
 
-    // Bright top edge highlight so the plank reads as a lit horizontal surface.
-    ctx.strokeStyle = 'rgba(226, 232, 240, 0.8)';
-    ctx.lineWidth = Math.max(1, 2 * surfN.scale);
-    ctx.beginPath(); ctx.moveTo(surfN.x, surfN.y); ctx.lineTo(surfF.x, surfF.y); ctx.stroke();
+    // Vertical support struts at regular intervals, purely decorative structure.
+    for (let sz = Math.ceil(segNear / SHELF_STRUT_SPACING_Z) * SHELF_STRUT_SPACING_Z; sz <= segFar; sz += SHELF_STRUT_SPACING_Z) {
+      const pb = projWorld(x, 0, sz);
+      const pt = projWorld(x, WALL_TOP_Y, sz);
+      ctx.strokeStyle = 'rgba(15, 23, 42, 0.55)';
+      ctx.lineWidth = Math.max(1, 3 * pb.scale);
+      ctx.beginPath(); ctx.moveTo(pb.x, pb.y); ctx.lineTo(pt.x, pt.y); ctx.stroke();
+    }
+
+    // 4 stocked-shelf ledges — each drawn as a proper board with thickness
+    // (top surface + a slightly darker front edge face), not a single line, so
+    // the wall unmistakably reads as 4-tier shelving full-length down the aisle.
+    TIER_Y.forEach(ty => {
+      const surfN = projWorld(x, ty, segNear);
+      const surfF = projWorld(x, ty, segFar);
+      const edgeN = projWorld(x, ty - TIER_PLANK_THICK, segNear);
+      const edgeF = projWorld(x, ty - TIER_PLANK_THICK, segFar);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath();
+      ctx.moveTo(surfN.x, surfN.y); ctx.lineTo(surfF.x, surfF.y); ctx.lineTo(edgeF.x, edgeF.y); ctx.lineTo(edgeN.x, edgeN.y);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(15, 23, 42, 0.6)';
+      ctx.lineWidth = Math.max(1, 1.5 * surfN.scale);
+      ctx.stroke();
+
+      // Bright top edge highlight so the plank reads as a lit horizontal surface.
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.8)';
+      ctx.lineWidth = Math.max(1, 2 * surfN.scale);
+      ctx.beginPath(); ctx.moveTo(surfN.x, surfN.y); ctx.lineTo(surfF.x, surfF.y); ctx.stroke();
+    });
   });
 
+  visibleGaps.forEach(([g0, g1]) => drawWallGapOpening(sideSign, x, g0, g1));
+
   // Hanging aisle category sign — fixed in the world near the aisle entrance
-  // (like a real overhead department sign), not re-anchored to the camera.
-  const signP = projWorld(x, WALL_TOP_Y + 46, SHELF_START_Z);
+  // (like a real overhead department sign), not re-anchored to the camera —
+  // nudged past a gap if a junction happens to open right where it'd sit.
+  const signZ = nudgePastGaps(SHELF_START_Z, sideGaps);
+  const signP = projWorld(x, WALL_TOP_Y + 46, signZ);
   if (signP.scale > 0.04) {
     const signFont = Math.max(8, Math.min(20, 34 * signP.scale));
     ctx.font = `bold ${signFont}px -apple-system, sans-serif`;
@@ -1319,7 +1418,12 @@ function cartScreenAnchor() {
 // always on top of the aisle.
 function drawCartAndPusher() {
   const anchor = cartScreenAnchor();
-  const scale = Math.max(0.7, Math.min(1.6, H / 760));
+  // Bumped up from the original 0.7-1.6 (H/760) range so the cart + grandpa
+  // read as a clearly prominent foreground element rather than a small prop —
+  // still height-driven so it scales sensibly on both desktop and a narrow
+  // ~375px mobile portrait screen, and still capped so it never swallows the
+  // whole view of the shelves/products above it.
+  const scale = Math.max(0.95, Math.min(2.05, H / 620));
 
   ctx.save();
   // Ground shadow
@@ -1384,16 +1488,24 @@ function drawCartAndPusher() {
   ctx.fillStyle = '#e7b892';
   ctx.beginPath(); ctx.arc(-40, 2, 6, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(40, 2, 6, 0, Math.PI * 2); ctx.fill();
+  // Defined outline on the hands so they read clearly on the handle bar.
+  ctx.strokeStyle = '#92400e'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(-40, 2, 6, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(40, 2, 6, 0, Math.PI * 2); ctx.stroke();
 
-  // Cozy cardigan torso (seen from behind)
-  ctx.fillStyle = '#64748b';
+  // Cozy cardigan torso (seen from behind) — a soft vertical gradient plus a
+  // darker, higher-contrast outline so it reads clearly against the aisle.
+  const cardiganGrad = ctx.createLinearGradient(0, 6, 0, 90);
+  cardiganGrad.addColorStop(0, '#8291a8');
+  cardiganGrad.addColorStop(1, '#5b6b82');
+  ctx.fillStyle = cardiganGrad;
   ctx.beginPath();
   ctx.moveTo(-30, 90); ctx.quadraticCurveTo(-34, 30, -20, 6);
   ctx.lineTo(20, 6); ctx.quadraticCurveTo(34, 30, 30, 90);
   ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = '#475569'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 2.5; ctx.stroke();
   // Knit / ribbing texture accents
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
   ctx.lineWidth = 1.5;
   [-14, -2, 10].forEach(lx => {
     ctx.beginPath(); ctx.moveTo(lx, 20); ctx.lineTo(lx * 1.15, 82); ctx.stroke();
@@ -1403,13 +1515,19 @@ function drawCartAndPusher() {
   ctx.fillStyle = '#e7b892';
   ctx.beginPath(); ctx.ellipse(0, 8, 20, 11, 0, 0, Math.PI * 2); ctx.fill();
 
-  // Head with white/grey hair from behind, neat with a small bald spot on top
+  // Head with crisp white/grey hair from behind, neat with a small bald spot
+  // on top — a light-to-white gradient plus a clean outline stroke so the
+  // hair reads clearly rather than blending into the background.
   ctx.fillStyle = '#e7b892';
   ctx.beginPath(); ctx.arc(0, -10, 16, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#e2e8f0';
-  ctx.beginPath(); ctx.arc(0, -12, 16.5, Math.PI * 0.85, Math.PI * 2.15); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(-15, -10); ctx.quadraticCurveTo(-19, 6, -11, 16); ctx.quadraticCurveTo(-16, 0, -15, -10); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(15, -10); ctx.quadraticCurveTo(19, 6, 11, 16); ctx.quadraticCurveTo(16, 0, 15, -10); ctx.fill();
+  const hairGrad = ctx.createLinearGradient(0, -28, 0, 16);
+  hairGrad.addColorStop(0, '#f8fafc');
+  hairGrad.addColorStop(1, '#cbd5e1');
+  ctx.fillStyle = hairGrad;
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.arc(0, -12, 16.5, Math.PI * 0.85, Math.PI * 2.15); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-15, -10); ctx.quadraticCurveTo(-19, 6, -11, 16); ctx.quadraticCurveTo(-16, 0, -15, -10); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(15, -10); ctx.quadraticCurveTo(19, 6, 11, 16); ctx.quadraticCurveTo(16, 0, 15, -10); ctx.fill(); ctx.stroke();
   // Small bald spot at the crown
   ctx.fillStyle = '#e7b892';
   ctx.beginPath(); ctx.ellipse(0, -19, 6, 4, 0, 0, Math.PI * 2); ctx.fill();
