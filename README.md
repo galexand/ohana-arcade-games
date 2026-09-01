@@ -22,7 +22,7 @@ drop a new `.html` file in the folder and add one entry to the `GAMES` array in 
 | **Super Jumper** | `super-jumper.html` | 12-world platform adventure with friends, experiments and a golden medal |
 | **Super Rings** | `super-rings.html` | 20-level behind-the-ball 3D platformer: roll and jump a ball across floating platforms, through rings and over checkpoints, unlock ball skins |
 | **Super Roll** | `super-roll.html` | 20-level rolling-ball platformer: steer Stitch-the-ball with your finger, jump through the rings, reach the goal |
-| **Supermarket Dash** | `supermarket-dash.html` | Isometric 2.5D supermarket shopping adventure (Lidl & Kaufland quest): push your cart down aisles of 3D shelves, grab products into the cart, scan items at the checkout across 10 progressive levels |
+| **Shopping with Coco** | `shopping-with-coco.html` | Isometric 2.5D supermarket shopping adventure (Lidl & Kaufland quest): push your cart down aisles of 3D shelves, grab products into the cart, scan items at the checkout across 10 progressive levels |
 | **Whack Hämsterviel** | `whack-hamsterviel.html` | Whack-a-mole: bonk Hämsterviel with your finger, spare the friends, beat the clock |
 
 ---
