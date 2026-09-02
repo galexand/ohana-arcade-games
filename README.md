@@ -12,6 +12,7 @@ drop a new `.html` file in the folder and add one entry to the `GAMES` array in 
 
 | Game | File | What it is |
 |---|---|---|
+| **Goals** | `goals.html` | Beach stadium penalty shootout: drag from the ball to aim and shoot, curve it around the defensive wall, and score past the diving keeper across 12 rising-difficulty levels |
 | **Heroes of Ohana & Magic** | `heroes-of-might-and-magic.html` | Turn-based fantasy strategy RPG inspired by HOMM2: overworld map exploration, resource mines, castle building, army recruitment, tactical turn-based hex battles |
 | **Jazz Jackrabbit** | `jazz-jackrabbit.html` | Fast 2-player arcade platform shooter: P1 (Arrows), P2 (WASD), dash, jump, shoot blasters, 5 themed levels, boss battle |
 | **Ohana Karts** | `ohana-karts.html` | Beach kart race across five selectable tracks: play Lilo or Stitch, dodge the villains, beat your rival to the finish |
