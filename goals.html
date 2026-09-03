@@ -837,7 +837,16 @@ function drawGoal(ripple) {
 function drawKeeper(nx, diving, diveProg) {
   const cx = goalCenterX() + nx * goalHalfW();
   const cy = goalGroundY() - goalHalfW() * 0.55;
-  const s = goalHalfW() * 0.028;
+  // Purely a visual scale for the keeper sprite (body/limbs/ears/dive-pose all
+  // drawn in "s" units below) — ~2.5x smaller than the original so the keeper
+  // reads as clearly small relative to the goal frame, leaving most of the
+  // goal mouth (including the top corners) visibly open. This does NOT touch
+  // any gameplay value: keeperReach/saveRadius/dive RNG/levelConfig are
+  // untouched, so the fairness proof and difficulty are unaffected — the dive
+  // pose's arm-spread reach is defined in the same local "s" units, so it
+  // shrinks in matching proportion and still visually reads as covering
+  // roughly where saves happen, just at the smaller body scale.
+  const s = goalHalfW() * 0.028 / 2.5;
   ctx.save();
   ctx.translate(cx, cy);
   const lean = diving ? Math.max(-1, Math.min(1, nx)) * Math.min(1, diveProg * 1.6) : 0;
