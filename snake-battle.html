@@ -46,10 +46,29 @@
   }
   .langToggle button.active { background: #2ecc71; color: #fff; }
 
+  /* Centered controls in the top bar: pause (in-play) and leaderboard (title screen) */
+  .topCenterControls {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    display: flex; align-items: center; gap: 8px; z-index: 26;
+  }
+  .topIconBtn {
+    border: 1px solid rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.12);
+    color: #fff; font-weight: 800; cursor: pointer; transition: transform 0.1s ease;
+    display: none; align-items: center; justify-content: center;
+  }
+  .topIconBtn:active { transform: scale(0.94); }
+  #pauseBtn { width: 34px; height: 34px; border-radius: 999px; font-size: 15px; }
+  #titleLbBtn {
+    height: 34px; padding: 0 14px; border-radius: 999px; font-size: 13px; white-space: nowrap;
+    background: rgba(251, 191, 36, 0.22); border-color: rgba(251, 191, 36, 0.5);
+  }
+
   @media (orientation: landscape) and (max-height: 500px) {
     .top-control-bar { height: calc(36px + env(safe-area-inset-top)); padding: 0 10px; padding-top: env(safe-area-inset-top); }
     #homeLink { font-size: 12px; padding: 4px 10px; }
     .langToggle button { font-size: 11px; padding: 4px 9px; }
+    #pauseBtn { width: 28px; height: 28px; font-size: 13px; }
+    #titleLbBtn { height: 28px; padding: 0 11px; font-size: 11px; }
   }
 
   /* Boost button */
@@ -84,6 +103,9 @@
   }
   .panel-btn:active { transform: scale(0.96); }
   .btn-green { background: linear-gradient(180deg, #22c55e, #16a34a); color: #fff; }
+  .btn-blue { background: linear-gradient(180deg, #38bdf8, #0284c7); color: #fff; }
+  .btn-orange { background: linear-gradient(180deg, #fb923c, #ea580c); color: #fff; }
+  .btn-gray { background: linear-gradient(180deg, #94a3b8, #475569); color: #fff; }
 
   .leaderboard-list { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; }
   .lb-row {
@@ -108,6 +130,10 @@
 <!-- Top Control Header Bar -->
 <div class="top-control-bar">
   <a id="homeLink" href="index.html">← Games</a>
+  <div class="topCenterControls" id="topCenterControls">
+    <button type="button" id="pauseBtn" class="topIconBtn" aria-label="Pause">⏸</button>
+    <button type="button" id="titleLbBtn" class="topIconBtn topTextBtn">🏆 LEADERBOARD</button>
+  </div>
   <div class="langToggle" id="langToggle">
     <button type="button" data-lang="en">🇬🇧 EN</button>
     <button type="button" data-lang="ro">🇷🇴 RO</button>
@@ -123,6 +149,17 @@
     <div class="panel-title" id="lbTitle">🏆 TOP SNAKES</div>
     <div class="leaderboard-list" id="lbList"></div>
     <button type="button" class="panel-btn btn-green" id="lbCloseBtn">CLOSE</button>
+  </div>
+</div>
+
+<!-- Pause Modal -->
+<div class="overlay-panel" id="pauseModal">
+  <div class="panel-card">
+    <div class="panel-title" id="pauseTitle">PAUSED</div>
+    <button type="button" class="panel-btn btn-green" id="resumeBtn">RESUME</button>
+    <button type="button" class="panel-btn btn-blue" id="pauseLbBtn">🏆 LEADERBOARD</button>
+    <button type="button" class="panel-btn btn-orange" id="restartBtn">RESTART</button>
+    <button type="button" class="panel-btn btn-gray" id="mainMenuBtn">MAIN MENU</button>
   </div>
 </div>
 
@@ -179,6 +216,11 @@ const TEXT = {
     killedByRobot: 'A robot snake got you!',
     killedByWall: 'You hit the arena wall!',
     getReady: 'Get ready! 🛡️',
+    paused: 'PAUSED',
+    resume: 'RESUME',
+    restart: 'RESTART',
+    mainMenu: 'MAIN MENU',
+    leaderboard: '🏆 LEADERBOARD',
   },
   ro: {
     title1: 'LUPTA', title2: 'ȘERPILOR 🐍',
@@ -210,6 +252,11 @@ const TEXT = {
     killedByRobot: 'Un șarpe robot te-a prins!',
     killedByWall: 'Ai lovit peretele arenei!',
     getReady: 'Pregătește-te! 🛡️',
+    paused: 'PAUZĂ',
+    resume: 'CONTINUĂ',
+    restart: 'RESTART',
+    mainMenu: 'MENIU PRINCIPAL',
+    leaderboard: '🏆 CLASAMENT',
   },
 };
 const t = key => (TEXT[LANG] && TEXT[LANG][key]) ? TEXT[LANG][key] : TEXT['en'][key];
@@ -225,8 +272,25 @@ document.getElementById('langToggle').addEventListener('click', e => {
   LANG = btn.dataset.lang;
   try { localStorage.setItem('ohanaLang', LANG); } catch (err) {}
   updateLangToggleUI();
+  refreshDynamicUIText();
 });
 updateLangToggleUI();
+
+function refreshDynamicUIText() {
+  const titleLbBtn = document.getElementById('titleLbBtn');
+  if (titleLbBtn) titleLbBtn.textContent = t('leaderboard');
+  const pauseLbBtn = document.getElementById('pauseLbBtn');
+  if (pauseLbBtn) pauseLbBtn.textContent = t('leaderboard');
+  const pauseTitle = document.getElementById('pauseTitle');
+  if (pauseTitle) pauseTitle.textContent = t('paused');
+  const resumeBtn = document.getElementById('resumeBtn');
+  if (resumeBtn) resumeBtn.textContent = t('resume');
+  const restartBtn = document.getElementById('restartBtn');
+  if (restartBtn) restartBtn.textContent = t('restart');
+  const mainMenuBtn = document.getElementById('mainMenuBtn');
+  if (mainMenuBtn) mainMenuBtn.textContent = t('mainMenu');
+}
+refreshDynamicUIText();
 
 // ============ WEBAUDIO SFX ============
 let audioCtx = null;
@@ -473,6 +537,7 @@ function startGame() {
   state.mode = 'play';
   input.steerAngle = 0;
   input.boosting = false;
+  updateChromeVisibility();
   sfx.start();
 }
 
@@ -549,9 +614,12 @@ function onPointerDown(px, py, isTouch) {
     if (game_overLockT > 0) return;
     // the "SAVE SCORE" label opens the name-entry modal instead of starting a new run
     if (saveScoreY && py > saveScoreY - 22 && py < saveScoreY + 22) { openNamePromptModal(); return; }
+    // the "LEADERBOARD" label opens the leaderboard modal instead of starting a new run
+    if (gameOverLbY && py > gameOverLbY - 22 && py < gameOverLbY + 22) { openLeaderboardModal(); return; }
     startGame();
     return;
   }
+  if (state.mode === 'paused') return; // input is handled by the pause overlay's DOM buttons
   if (state.mode !== 'play') return;
   input.usingTouch = !!isTouch;
   updateSteerFromPointer(px, py);
@@ -588,20 +656,85 @@ boostBtn.addEventListener('mousedown', e => { e.preventDefault(); initAudio(); i
 boostBtn.addEventListener('mouseup', () => { input.boosting = false; });
 boostBtn.addEventListener('mouseleave', () => { input.boosting = false; });
 
-// keyboard: arrows/WASD steer relative to current heading, Space boosts
+// keyboard: arrows/WASD steer toward an absolute direction (up/down/left/right,
+// with diagonals when two are held), Space boosts, P/Escape toggles pause
 const keys = {};
 window.addEventListener('keydown', e => {
   initAudio();
   if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) e.preventDefault();
   keys[e.code] = true;
-  if (e.code === 'Space') input.boosting = true;
+
   if (state.mode === 'title' && (e.code === 'Space' || e.code === 'Enter')) { startGame(); return; }
   if (state.mode === 'gameover' && (e.code === 'Space' || e.code === 'Enter') && game_overLockT <= 0) { startGame(); return; }
+
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    if (state.mode === 'play') { pauseGame(); return; }
+    if (state.mode === 'paused') { resumeGame(); return; }
+  }
+  if (state.mode === 'paused' && e.code === 'Space') { resumeGame(); return; }
+
+  if (e.code === 'Space' && state.mode === 'play') input.boosting = true;
 });
 window.addEventListener('keyup', e => {
   keys[e.code] = false;
   if (e.code === 'Space') input.boosting = false;
 });
+
+// Holding an arrow/WASD key steers toward that absolute compass direction;
+// two held keys give a diagonal. Returns null when no directional key is held,
+// so pointer/mouse-hover steering can take back over.
+function keyboardSteerAngle() {
+  let dx = 0, dy = 0;
+  if (keys['ArrowUp'] || keys['KeyW']) dy -= 1;
+  if (keys['ArrowDown'] || keys['KeyS']) dy += 1;
+  if (keys['ArrowLeft'] || keys['KeyA']) dx -= 1;
+  if (keys['ArrowRight'] || keys['KeyD']) dx += 1;
+  if (dx === 0 && dy === 0) return null;
+  return Math.atan2(dy, dx);
+}
+
+// ============ PAUSE ============
+function updateChromeVisibility() {
+  const pauseBtn = document.getElementById('pauseBtn');
+  const titleLbBtn = document.getElementById('titleLbBtn');
+  if (pauseBtn) pauseBtn.style.display = (state.mode === 'play') ? 'flex' : 'none';
+  if (titleLbBtn) titleLbBtn.style.display = (state.mode === 'title') ? 'flex' : 'none';
+}
+function showPauseModal() {
+  refreshDynamicUIText();
+  document.getElementById('pauseModal').style.display = 'flex';
+}
+function hidePauseModal() {
+  document.getElementById('pauseModal').style.display = 'none';
+}
+function pauseGame() {
+  if (state.mode !== 'play') return;
+  state.mode = 'paused';
+  input.boosting = false;
+  for (const k in keys) keys[k] = false;
+  updateChromeVisibility();
+  showPauseModal();
+}
+function resumeGame() {
+  if (state.mode !== 'paused') return;
+  state.mode = 'play';
+  hidePauseModal();
+  updateChromeVisibility();
+}
+function goToMainMenu() {
+  state.mode = 'title';
+  hidePauseModal();
+  updateChromeVisibility();
+}
+document.getElementById('pauseBtn').addEventListener('click', () => { initAudio(); pauseGame(); });
+document.getElementById('resumeBtn').addEventListener('click', () => resumeGame());
+document.getElementById('restartBtn').addEventListener('click', () => { hidePauseModal(); startGame(); });
+document.getElementById('mainMenuBtn').addEventListener('click', () => goToMainMenu());
+document.getElementById('pauseLbBtn').addEventListener('click', () => openLeaderboardModal());
+document.getElementById('titleLbBtn').addEventListener('click', () => { initAudio(); openLeaderboardModal(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
+window.addEventListener('blur', () => pauseGame());
+updateChromeVisibility();
 
 // ============ STEERING (shared helper: player uses input, AI uses computed target) ============
 function turnToward(s, targetAngle, dt, rate) {
@@ -863,6 +996,7 @@ let gameOverStats = null;
 function triggerGameOver(reason) {
   if (state.mode === 'gameover') return;
   state.mode = 'gameover';
+  updateChromeVisibility();
   game_overLockT = 60;
   gameOverReason = reason;
   const player = snakes[0];
@@ -875,6 +1009,7 @@ function triggerGameOver(reason) {
 
 // ============ UPDATE ============
 function update(dt) {
+  if (state.mode === 'paused') return; // fully halt: no movement, AI, timers, spawn grace, or candy respawn
   bgAnim += dt;
   for (let i = popups.length - 1; i >= 0; i--) { const p = popups[i]; p.t++; if (p.t >= p.life) popups.splice(i, 1); }
   for (let i = particles.length - 1; i >= 0; i--) { const p = particles[i]; p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.t++; if (p.t >= p.life) particles.splice(i, 1); }
@@ -887,12 +1022,13 @@ function update(dt) {
   runTime += dt;
   const player = snakes[0];
 
-  // player steering: pointer-based (touch/mouse) always active; keyboard nudges relative angle
+  // player steering: pointer-based (touch/mouse) hover steering is the default;
+  // holding an arrow/WASD key takes priority and steers toward that absolute
+  // direction (with diagonals), releasing the keys hands control back to the pointer
   if (player && player.alive) {
     let desired = input.steerAngle;
-    if (keys['ArrowLeft'] || keys['KeyA']) desired = player.angle - 0.9;
-    if (keys['ArrowRight'] || keys['KeyD']) desired = player.angle + 0.9;
-    if (keys['ArrowUp'] || keys['KeyW']) desired = player.angle;
+    const kbAngle = keyboardSteerAngle();
+    if (kbAngle !== null) desired = kbAngle;
     if (player.spawnGraceT > 0) {
       // spawn grace: gently steer the head away from the wall instead of
       // letting it die, so a not-yet-steering player is never punished
@@ -1387,18 +1523,22 @@ function drawGameOver() {
     }
   }
 
-  ctx.fillStyle = '#fff';
-  ctx.font = Math.min(17, W * 0.032) + 'px -apple-system, sans-serif';
-  saveScoreY = H * 0.76;
+  saveScoreY = H * 0.74;
   ctx.fillStyle = '#4ade80';
   ctx.font = 'bold ' + Math.min(19, W * 0.036) + 'px -apple-system, sans-serif';
   ctx.fillText(t('saveScore'), W / 2, saveScoreY);
 
+  gameOverLbY = H * 0.80;
+  ctx.fillStyle = '#38bdf8';
+  ctx.font = 'bold ' + Math.min(19, W * 0.036) + 'px -apple-system, sans-serif';
+  ctx.fillText(t('leaderboard'), W / 2, gameOverLbY);
+
   ctx.fillStyle = '#cbd5e1';
   ctx.font = Math.min(16, W * 0.03) + 'px -apple-system, sans-serif';
-  ctx.fillText(t('tapPlayAgain'), W / 2, H * 0.85);
+  ctx.fillText(t('tapPlayAgain'), W / 2, H * 0.88);
 }
 let saveScoreY = 0;
+let gameOverLbY = 0;
 
 // ============ MAIN DRAW ============
 function draw() {
