@@ -403,6 +403,7 @@ function saveLeaderboard(board) {
 const ARENA_W = 3600, ARENA_H = 3600;
 const SEG_SPACING = 9;         // distance between stored path samples
 const HEAD_TURN_RATE = 3.2;    // rad/sec max turn rate (smooth steering)
+const KEY_TURN_RATE = HEAD_TURN_RATE * 2.0; // snappier turn rate while a steering key is held
 const BASE_SPEED = 108;        // px/sec normal cruising speed
 const BOOST_MULT = 1.85;
 const MIN_LEN_TO_BOOST = 8;
@@ -639,9 +640,19 @@ canvas.addEventListener('touchmove', e => {
 canvas.addEventListener('touchend', () => {}, { passive: false });
 
 canvas.addEventListener('mousedown', e => onPointerDown(e.clientX, e.clientY, false));
-window.addEventListener('mousemove', e => { if (state.mode === 'play') onPointerMove(e.clientX, e.clientY); });
+window.addEventListener('mousemove', e => {
+  if (state.mode === 'play') onPointerMove(e.clientX, e.clientY);
+  // safety net: if the mouse button was released outside the window/canvas and we
+  // somehow missed the mouseup (e.g. release happened off-screen), the next mousemove
+  // we do see tells us the true button state — stop a stuck boost immediately.
+  if (input.boosting && e.buttons === 0) input.boosting = false;
+});
 window.addEventListener('mousedown', e => { if (e.target === canvas && state.mode === 'play') input.boosting = true; });
 window.addEventListener('mouseup', () => { input.boosting = false; });
+document.addEventListener('mouseup', () => { input.boosting = false; });
+// the pointer leaving the browser viewport entirely (e.g. dragged off-window while
+// held) doesn't always deliver a mouseup — treat it the same as a release.
+document.addEventListener('mouseleave', () => { input.boosting = false; });
 
 // boost button (touch)
 const boostBtn = document.getElementById('boostBtn');
@@ -1028,7 +1039,8 @@ function update(dt) {
   if (player && player.alive) {
     let desired = input.steerAngle;
     const kbAngle = keyboardSteerAngle();
-    if (kbAngle !== null) desired = kbAngle;
+    const keyHeld = kbAngle !== null;
+    if (keyHeld) desired = kbAngle;
     if (player.spawnGraceT > 0) {
       // spawn grace: gently steer the head away from the wall instead of
       // letting it die, so a not-yet-steering player is never punished
@@ -1038,7 +1050,10 @@ function update(dt) {
         desired = Math.atan2(ARENA_H / 2 - h.y, ARENA_W / 2 - h.x);
       }
     }
-    turnToward(player, desired, dt, HEAD_TURN_RATE);
+    // while a steering key is genuinely held, turn noticeably faster so
+    // keyboard input feels responsive; release keys and it falls back to
+    // the normal (pointer-hover) turn rate
+    turnToward(player, desired, dt, keyHeld ? KEY_TURN_RATE : HEAD_TURN_RATE);
     player.boosting = input.boosting;
     if (player.spawnGraceT > 0) player.spawnGraceT -= dt;
   }
