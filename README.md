@@ -17,6 +17,7 @@ drop a new `.html` file in the folder and add one entry to the `GAMES` array in 
 | **Jazz Jackrabbit** | `jazz-jackrabbit.html` | Fast 2-player arcade platform shooter: P1 (Arrows), P2 (WASD), dash, jump, shoot blasters, 5 themed levels, boss battle |
 | **Ohana Karts** | `ohana-karts.html` | Beach kart race across five selectable tracks: play Lilo or Stitch, dodge the villains, beat your rival to the finish |
 | **Ohana Sumo** | `ohana-sumo.html` | Beach sumo duel: Stitch vs Experiment 625, push your opponent out of the shrinking ring, best of 3 rounds |
+| **Snake Battle** | `snake-battle.html` | Endless multi-snake arena battle: steer your snake, eat candy to grow, and make other snakes crash head-first into your body — every eliminated snake bursts into candy for a chase-the-high-score run |
 | **SpaceShip Racers** | `spaceship-racers.html` | 5-level pseudo-3D space racer: curves, laser guns, Leroy chases you |
 | **Super Batter** | `super-batter.html` | Timing-based batting game: play Experiment 608, swing at the right moment to smash back balls from a pitching machine, across 12 levels |
 | **Super Cooking** | `super-cooking.html` | Cook with Capy: mix, boil and fry 6 recipes for the Ohana, one step at a time |
@@ -449,6 +450,7 @@ any game, without having to choose again.
 | `super-jumper.html` | The platformer — engine, levels, art, sound, UI. Edit levels in the `LEVELS` array (legend in the comments above it). |
 | `ohana-karts.html` | The beach kart racing game (five selectable tracks). |
 | `ohana-sumo.html` | The beach sumo duel game. |
+| `snake-battle.html` | The endless multi-snake arena battle game — no Ohana theme; steering/AI/collision logic in `update()`, the head-vs-body kill → candy-conversion rule in `handleCollisions()`. |
 | `spaceship-racers.html` | The pseudo-3D spaceship racing game. |
 | `super-batter.html` | The batting game — 12 levels tuned in `levelConfig()`, ball physics and swing/hit detection in `update()`. |
 | `super-cooking.html` | The cooking game — recipes in the `RECIPES` array, ingredients drawn in `drawIngredientIcon`. |
