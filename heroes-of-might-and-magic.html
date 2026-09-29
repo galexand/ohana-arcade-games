@@ -1297,6 +1297,7 @@ function endTurn() {
       }
     } else {
       game.screen = 'passDevice';
+      syncScreenModals(); // show the handover modal right now, as part of the event
     }
   }
   saveGame();
@@ -1466,6 +1467,14 @@ function captureCastle(hero, castleObj) {
 // effect (resources/army/objective progress) always applies either way; only the modal
 // (and any interactive choice, like the chest) is skipped for the AI.
 function visitObject(hero, obj) {
+  const hx = hero.x, hy = hero.y;
+  try { visitObjectInner(hero, obj); }
+  finally {
+    // guard: interacting with an object must never relocate the acting hero
+    if (hero.x !== hx || hero.y !== hy) { console.error('visitObject relocated hero', hero.name, hx, hy, '->', hero.x, hero.y); hero.x = hx; hero.y = hy; }
+  }
+}
+function visitObjectInner(hero, obj) {
   const p = game.players[hero.ownerIdx];
   const forHuman = !isAIPlayer(hero.ownerIdx);
   switch (obj.kind) {
@@ -2179,16 +2188,29 @@ function showListModal(title, sub, items, buttons) {
 }
 function hideListModal() { document.getElementById('listModal').style.display = 'none'; }
 
+// Pass-device is shown ONCE, when endTurn() hands over (or when syncScreenModals() finds the
+// modal out of step with game.screen) — never re-applied every frame. Rewriting the text /
+// onclick / display 60x a second while the modal is up made the Ready button a moving target
+// (DOM mutated between pointer-down and pointer-up can swallow the click on some browsers).
 function showPassDeviceScreen() {
   const nextIdx = game.turn.playerIdx;
   document.getElementById('passTitle').textContent = t('passDeviceTitle');
   document.getElementById('passSub').textContent = t('passDeviceSub', { n: nextIdx + 1 });
   const btn = document.getElementById('passBtn');
   btn.textContent = t('passDeviceBtn', { n: nextIdx + 1 });
-  btn.onclick = () => { hidePassDeviceScreen(); game.screen = 'adventure'; };
+  btn.onclick = leavePassDeviceScreen;
+  // listModal sits AFTER passModal in the DOM (same z-index), so a stray open one would cover
+  // the Ready button — the handover screen must be the only thing up
+  hideMessage(); hideListModal();
   document.getElementById('passModal').style.display = 'flex';
 }
 function hidePassDeviceScreen() { document.getElementById('passModal').style.display = 'none'; }
+// "I'm Player N — Ready": always lands on the adventure screen for the incoming player, and
+// hides the modal in the same step so modal visibility and game.screen can't disagree.
+function leavePassDeviceScreen() {
+  hidePassDeviceScreen();
+  if (game.screen === 'passDevice') game.screen = 'adventure';
+}
 
 function showVictoryScreen() {
   document.getElementById('victoryTitle').textContent = t('victoryTitle');
@@ -2204,14 +2226,24 @@ function hideAllModals() {
   hideMessage(); hideListModal(); hidePassDeviceScreen(); hideVictoryScreen();
 }
 // pass-device and victory are screen-exclusive full-screen modals whose visibility is a
-// pure function of game.screen, so it's safe (and necessary) to re-sync them every frame.
+// pure function of game.screen. syncScreenModals() enforces that invariant, but it only
+// touches the DOM when the modal is out of step with game.screen (i.e. on a screen
+// CHANGE), so a modal that is already correctly showing is left completely alone — no
+// per-frame text/onclick/display rewrites while the player is trying to press its button.
 // msgModal/listModal are transient, user-summoned overlays that can sit on TOP of a main
 // screen (e.g. castle/adventure) while game.screen stays the same — hiding them every
 // render() tick (as hideAllModals() does) tore them down ~16ms after they opened, which
 // made every showMessage()/showListModal() call (chest choice, build confirm, spell learn,
 // and — the reported bug — the Recruit count-choice modal) effectively unusable.
-function hideScreenExclusiveModals() {
-  hidePassDeviceScreen(); hideVictoryScreen();
+function syncScreenModals() {
+  const passShown = document.getElementById('passModal').style.display === 'flex';
+  const wantPass = game.screen === 'passDevice';
+  if (wantPass && !passShown) showPassDeviceScreen();
+  else if (!wantPass && passShown) hidePassDeviceScreen();
+  const vicShown = document.getElementById('victoryModal').style.display === 'flex';
+  const wantVic = game.screen === 'victory';
+  if (wantVic && !vicShown) showVictoryScreen();
+  else if (!wantVic && vicShown) hideVictoryScreen();
 }
 
 // ============================================================
@@ -3677,14 +3709,23 @@ function adventurePointerMove(px, py) {
 }
 function adventurePointerUp(px, py) {
   const wasDrag = adv.dragMoved;
+  const hadPress = adv.dragging;
   adv.dragging = false;
   if (wasDrag) return;
+  // a tap is only a tap if its PRESS started on the adventure map. mouseup is wired on
+  // window, so without this a click on a DOM modal button (artifact "OK", spell-shop
+  // "Close") or on a canvas button that switches screens (castle "Back") delivered a
+  // stray mouseup here and walked the selected hero toward whatever tile lay under the
+  // button — the "hero teleports after picking up an artifact / buying a spellbook" bug.
+  if (!hadPress) return;
   const w = screenToWorld(px, py);
   const tx = Math.floor(w.x), ty = Math.floor(w.y);
   if (!inBounds(tx, ty)) return;
   handleAdventureTileTap(tx, ty);
 }
 function handleAdventureTileTap(tx, ty) {
+  // never treat a map tap as a move while a modal is on top of the map
+  if (['msgModal', 'listModal', 'passModal', 'victoryModal'].some(id => document.getElementById(id).style.display === 'flex')) return;
   const p = currentPlayer();
   const known = p.fog[ty][tx] !== 0;
   // selecting/opening a hero or castle icon only makes sense for tiles you've actually
@@ -4101,21 +4142,22 @@ function renderCombatResult() {
 let lastScreenForModals = null;
 function render() {
   clearUIButtons();
+  syncScreenModals();
   switch (game.screen) {
-    case 'modeSelect': hideScreenExclusiveModals(); renderModeSelect(); break;
-    case 'factionPick': hideScreenExclusiveModals(); renderFactionPick(); break;
-    case 'heroPick': hideScreenExclusiveModals(); renderHeroPick(); break;
-    case 'missionSelect': hideScreenExclusiveModals(); renderMissionSelect(); break;
-    case 'missionIntro': hideScreenExclusiveModals(); renderMissionIntro(); break;
-    case 'missionOutro': hideScreenExclusiveModals(); renderMissionOutro(); break;
-    case 'missionDefeat': hideScreenExclusiveModals(); renderMissionDefeat(); break;
-    case 'adventure': hideScreenExclusiveModals(); renderAdventure(); break;
-    case 'castle': hideScreenExclusiveModals(); renderCastle(); break;
-    case 'heroScreen': hideScreenExclusiveModals(); renderHeroScreen(); break;
-    case 'combat': hideScreenExclusiveModals(); renderCombat(); break;
-    case 'combatResult': hideScreenExclusiveModals(); renderCombatResult(); break;
-    case 'passDevice': ctx.fillStyle = '#08131f'; ctx.fillRect(0, 0, W, H); showPassDeviceScreen(); break;
-    case 'victory': ctx.fillStyle = '#08131f'; ctx.fillRect(0, 0, W, H); showVictoryScreen(); break;
+    case 'modeSelect': renderModeSelect(); break;
+    case 'factionPick': renderFactionPick(); break;
+    case 'heroPick': renderHeroPick(); break;
+    case 'missionSelect': renderMissionSelect(); break;
+    case 'missionIntro': renderMissionIntro(); break;
+    case 'missionOutro': renderMissionOutro(); break;
+    case 'missionDefeat': renderMissionDefeat(); break;
+    case 'adventure': renderAdventure(); break;
+    case 'castle': renderCastle(); break;
+    case 'heroScreen': renderHeroScreen(); break;
+    case 'combat': renderCombat(); break;
+    case 'combatResult': renderCombatResult(); break;
+    case 'passDevice': ctx.fillStyle = '#08131f'; ctx.fillRect(0, 0, W, H); break;
+    case 'victory': ctx.fillStyle = '#08131f'; ctx.fillRect(0, 0, W, H); break;
     default: ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
   }
   lastScreenForModals = game.screen;
@@ -4162,9 +4204,10 @@ let lastFrameTime = 0;
 function frame(ts) {
   const dt = lastFrameTime ? Math.min(0.1, (ts - lastFrameTime) / 1000) : 0;
   lastFrameTime = ts;
-  update(dt);
-  render();
+  // schedule the next frame FIRST and guard the body: one exception inside update()/render()
+  // used to skip the requestAnimationFrame call below and freeze the whole game for good
   requestAnimationFrame(frame);
+  try { update(dt); render(); } catch (e) { console.error(e); }
 }
 
 function init() {
