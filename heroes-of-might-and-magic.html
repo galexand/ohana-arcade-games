@@ -6,26 +6,29 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Heroes of Ohana & Magic</title>
+<title>Heroes of Ohana</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
   html, body {
     width: 100%; height: 100%; overflow: hidden;
-    background: #080d1a; color: #fff;
+    background: #1a1408; color: #fff;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    position: fixed;
   }
-  canvas { display: block; width: 100%; height: 100%; }
+  @supports (height: 100dvh) { html, body { height: 100dvh; } }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 
-  /* Top Control Bar */
   .top-control-bar {
     position: fixed; top: 0; left: 0; right: 0; height: 50px; z-index: 25;
-    background: rgba(11, 19, 41, 0.95); border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(31, 20, 8, 0.95); border-bottom: 1px solid rgba(255, 210, 130, 0.25);
     display: flex; align-items: center; justify-content: space-between; padding: 0 14px;
     backdrop-filter: blur(8px);
+    padding-top: env(safe-area-inset-top);
+    height: calc(50px + env(safe-area-inset-top));
   }
   #homeLink {
     color: #fff; text-decoration: none; font-weight: 800; font-size: 14px;
-    background: rgba(255, 255, 255, 0.1); padding: 7px 14px; border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12); padding: 7px 14px; border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.2); transition: transform 0.1s ease;
   }
   #homeLink:active { transform: scale(0.95); }
@@ -35,246 +38,305 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
   .langToggle button {
-    border: none; background: transparent; color: #a9c7eb; font-weight: 800; font-size: 13px;
+    border: none; background: transparent; color: #f0d9a9; font-weight: 800; font-size: 13px;
     padding: 6px 12px; border-radius: 999px; cursor: pointer; transition: background 0.15s ease;
   }
-  .langToggle button.active { background: #2ecc71; color: #fff; }
+  .langToggle button.active { background: #b8860b; color: #fff; }
 
-  /* Touch Controls Overlay */
-  .touch-zone { position: fixed; bottom: 16px; z-index: 15; display: flex; gap: 10px; }
-  #touchDPad { left: 16px; flex-direction: column; align-items: center; }
-  .dpad-row { display: flex; gap: 10px; }
-  #touchAction { right: 16px; flex-direction: column; align-items: flex-end; }
-  .tbtn {
-    width: 58px; height: 58px; border-radius: 50%;
-    background: rgba(17, 26, 46, 0.85); border: 2px solid rgba(255, 255, 255, 0.25);
-    color: #fff; font-size: 22px; font-weight: 900;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.5); backdrop-filter: blur(6px);
+  @media (orientation: landscape) and (max-height: 500px) {
+    .top-control-bar { height: calc(36px + env(safe-area-inset-top)); padding: 0 10px; padding-top: env(safe-area-inset-top); }
+    #homeLink { font-size: 12px; padding: 4px 10px; }
+    .langToggle button { font-size: 11px; padding: 4px 9px; }
   }
-  .tbtn:active, .tbtn.active { transform: scale(0.92); background: rgba(46, 204, 113, 0.85); border-color: #58d68d; }
-  .tbtn.end-turn { width: auto; height: 50px; border-radius: 25px; padding: 0 20px; font-size: 16px; background: linear-gradient(180deg, #f39c12, #d35400); border-color: #f1c40f; }
 
-  /* Modals & Overlay Cards */
   .overlay-panel {
     position: fixed; inset: 0; z-index: 30;
     display: none; align-items: center; justify-content: center;
-    background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.78); backdrop-filter: blur(8px);
+    padding-top: calc(50px + env(safe-area-inset-top));
   }
   .panel-card {
-    background: linear-gradient(135deg, #111a2e, #1a2847);
-    border: 2px solid #3498db; border-radius: 20px; padding: 24px;
+    background: linear-gradient(135deg, #3b2a14, #211708);
+    border: 3px solid #c9a35c; border-radius: 16px; padding: 20px;
     width: min(94vw, 480px); color: #fff;
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
-    display: flex; flex-direction: column; gap: 14px; text-align: center;
+    display: flex; flex-direction: column; gap: 12px; text-align: center;
+    max-height: 86vh; overflow-y: auto;
   }
-  .panel-title { font-size: 26px; font-weight: 900; color: #2ecc71; text-shadow: 0 2px 4px rgba(0,0,0,0.6); }
-  .panel-sub { font-size: 14px; color: #a9c7eb; }
+  .panel-title { font-size: 22px; font-weight: 900; color: #f4c95d; text-shadow: 0 2px 4px rgba(0,0,0,0.6); }
+  .panel-sub { font-size: 14px; color: #ead9b8; line-height: 1.4; }
   .panel-btn {
-    font-size: 17px; font-weight: 800; padding: 12px 20px; border-radius: 12px; border: none;
+    font-size: 15px; font-weight: 800; padding: 12px 18px; border-radius: 10px; border: none;
     cursor: pointer; transition: transform 0.1s ease; outline: none;
   }
   .panel-btn:active { transform: scale(0.96); }
-  .btn-green { background: linear-gradient(180deg, #2ecc71, #27ae60); color: #fff; }
-  .btn-blue { background: linear-gradient(180deg, #3498db, #2980b9); color: #fff; }
-  .btn-gold { background: linear-gradient(180deg, #f39c12, #d35400); color: #fff; }
-
-  /* Leaderboard & Name Inputs */
-  .leaderboard-list { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; padding-right: 4px; }
-  .lb-row {
-    display: flex; align-items: center; justify-content: space-between;
-    background: rgba(255, 255, 255, 0.08); padding: 8px 12px; border-radius: 10px; font-size: 14px; font-weight: 700;
+  .btn-green { background: linear-gradient(180deg, #22c55e, #16a34a); color: #fff; }
+  .btn-blue { background: linear-gradient(180deg, #38bdf8, #0284c7); color: #fff; }
+  .btn-gold { background: linear-gradient(180deg, #fbbf24, #b45309); color: #fff; }
+  .btn-red { background: linear-gradient(180deg, #f87171, #b91c1c); color: #fff; }
+  .btn-gray { background: linear-gradient(180deg, #94a3b8, #475569); color: #fff; }
+  .panel-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .panel-row .panel-btn { flex: 1; min-width: 120px; }
+  .panel-list { display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; }
+  .panel-list-item {
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;
+    padding: 10px 12px; text-align: left; cursor: pointer; font-size: 13px; font-weight: 700;
   }
-  .lb-rank { width: 28px; font-size: 15px; color: #f1c40f; text-align: left; }
-  .lb-name { flex: 1; text-align: left; margin: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
-  .lb-mode { font-size: 11px; background: rgba(52, 152, 219, 0.3); padding: 2px 6px; border-radius: 6px; margin-right: 8px; color: #a9c7eb; }
-  .lb-score { color: #2ecc71; font-weight: 900; font-size: 15px; }
-
-  .name-inputs { display: flex; flex-direction: column; gap: 12px; }
-  .input-group { display: flex; flex-direction: column; gap: 4px; text-align: left; }
-  .input-group label { font-size: 13px; font-weight: 800; color: #a9c7eb; }
-  .input-group input {
-    background: #091222; border: 2px solid #3498db; border-radius: 10px;
-    color: #fff; font-size: 17px; font-weight: 700; padding: 10px 14px; outline: none;
-  }
-  .input-group input:focus { border-color: #2ecc71; box-shadow: 0 0 10px rgba(46, 204, 113, 0.5); }
-
-  /* Castle Building Items */
-  .castle-buildings { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .building-item {
-    background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(52, 152, 219, 0.4);
-    border-radius: 12px; padding: 10px; text-align: left; display: flex; flex-direction: column; gap: 4px;
-  }
-  .building-name { font-size: 14px; font-weight: 800; color: #ffd700; }
-  .building-cost { font-size: 12px; color: #2ecc71; }
-  .building-btn { font-size: 12px; font-weight: 800; padding: 6px 10px; border-radius: 8px; border: none; cursor: pointer; background: #3498db; color: #fff; margin-top: 4px; }
-  .building-btn:disabled { background: #555; cursor: not-allowed; }
+  .panel-list-item:active { transform: scale(0.98); }
+  .panel-list-item.disabled { opacity: 0.45; cursor: default; }
 </style>
 </head>
 <body>
+<div class="top-control-bar">
+  <a id="homeLink" href="index.html">← Games</a>
+  <div class="langToggle" id="langToggle">
+    <button type="button" data-lang="en">🇬🇧 EN</button>
+    <button type="button" data-lang="ro">🇷🇴 RO</button>
+  </div>
+</div>
+
 <canvas id="game"></canvas>
-<a id="homeLink" href="index.html">← Games</a>
-<div class="langToggle" id="langToggle">
-  <button type="button" data-lang="en">🇬🇧 EN</button>
-  <button type="button" data-lang="ro">🇷🇴 RO</button>
-</div>
 
-<!-- Mobile Touch Controls -->
-<div class="touch-zone" id="touchDPad" style="display:none;">
-  <div class="tbtn" id="btnUp">▲</div>
-  <div class="dpad-row">
-    <div class="tbtn" id="btnLeft">◀</div>
-    <div class="tbtn" id="btnRight">▶</div>
-  </div>
-  <div class="tbtn" id="btnDown">▼</div>
-</div>
-<div class="touch-zone" id="touchAction" style="display:none;">
-  <div class="tbtn end-turn" id="btnEndTurn">⏳ End Turn</div>
-  <div class="tbtn" id="btnInteract">⚔️</div>
-</div>
-
-<!-- Leaderboard Modal Overlay -->
-<div class="overlay-panel" id="leaderboardModal">
+<!-- Generic message/confirm modal -->
+<div class="overlay-panel" id="msgModal">
   <div class="panel-card">
-    <div class="panel-title" id="lbTitle">🏆 TOP SCORES</div>
-    <div class="leaderboard-list" id="lbList"></div>
-    <button type="button" class="panel-btn btn-green" id="lbCloseBtn">CLOSE</button>
+    <div class="panel-title" id="msgTitle"></div>
+    <div class="panel-sub" id="msgSub"></div>
+    <div class="panel-row" id="msgButtons"></div>
   </div>
 </div>
 
-<!-- Name Prompt Modal Overlay -->
-<div class="overlay-panel" id="namePromptModal">
+<!-- Pass device modal -->
+<div class="overlay-panel" id="passModal">
   <div class="panel-card">
-    <div class="panel-title" id="nameTitle">🎉 NEW HIGH SCORE!</div>
-    <div class="panel-sub" id="nameSub">ENTER YOUR NAME(S) FOR THE LEADERBOARD:</div>
-    <div class="name-inputs">
-      <div class="input-group" id="p1NameGroup">
-        <label for="p1NameInput" id="p1NameLabel">HERO 1 NAME:</label>
-        <input type="text" id="p1NameInput" maxlength="12" placeholder="Lilo" autocomplete="off">
-      </div>
-      <div class="input-group" id="p2NameGroup" style="display:none;">
-        <label for="p2NameInput" id="p2NameLabel">HERO 2 NAME:</label>
-        <input type="text" id="p2NameInput" maxlength="12" placeholder="Stitch" autocomplete="off">
-      </div>
-    </div>
-    <button type="button" class="panel-btn btn-green" id="saveScoreBtn">SAVE SCORE 🏆</button>
+    <div class="panel-title" id="passTitle"></div>
+    <div class="panel-sub" id="passSub"></div>
+    <button type="button" class="panel-btn btn-gold" id="passBtn"></button>
   </div>
 </div>
 
-<!-- Castle Management Modal Overlay -->
-<div class="overlay-panel" id="castleModal">
-  <div class="panel-card" style="width: min(96vw, 560px);">
-    <div class="panel-title" id="castleTitle">🏰 OHANA KEEP CASTLE</div>
-    <div class="panel-sub" id="castleSub">Construct buildings and recruit your fantasy armies!</div>
-    <div class="castle-buildings" id="castleBuildings"></div>
-    <button type="button" class="panel-btn btn-green" id="castleCloseBtn">EXIT CASTLE</button>
-  </div>
-</div>
-
-<!-- Hero Spellbook Modal Overlay -->
-<div class="overlay-panel" id="spellbookModal">
+<!-- Victory modal -->
+<div class="overlay-panel" id="victoryModal">
   <div class="panel-card">
-    <div class="panel-title" id="spellTitle">📖 HERO SPELLBOOK</div>
-    <div class="panel-sub" id="spellSub">Cast powerful magic in tactical combat!</div>
-    <div class="castle-buildings" id="spellList"></div>
-    <button type="button" class="panel-btn btn-blue" id="spellCloseBtn">CLOSE SPELLBOOK</button>
+    <div class="panel-title" id="victoryTitle"></div>
+    <div class="panel-sub" id="victorySub"></div>
+    <button type="button" class="panel-btn btn-green" id="victoryBtn"></button>
+  </div>
+</div>
+
+<!-- List-choice modal (spell select, recruit, chest reward, etc.) -->
+<div class="overlay-panel" id="listModal">
+  <div class="panel-card">
+    <div class="panel-title" id="listTitle"></div>
+    <div class="panel-sub" id="listSub"></div>
+    <div class="panel-list" id="listItems"></div>
+    <div class="panel-row" id="listButtons"></div>
   </div>
 </div>
 
 <script>
 'use strict';
 
-// ============ I18N SETUP ============
+// ============================================================
+// HEROES OF OHANA — HOMM2-inspired turn based strategy
+// STAGE 1: engine + 2-player hot-seat duel
+// ============================================================
+
+// ============ I18N ============
 let LANG = 'en';
 try { LANG = localStorage.getItem('ohanaLang') === 'ro' ? 'ro' : 'en'; } catch (e) {}
 
 const TEXT = {
   en: {
-    title: 'HEROES OF OHANA & MAGIC',
-    sub: 'FANTASY TURN-BASED STRATEGY RPG inspired by HOMM2',
-    p1Solo: '1 PLAYER (SOLO QUEST)',
-    p2Coop: '2 PLAYERS (HOTSEAT CO-OP)',
-    chooseHero: 'CHOOSE YOUR HERO',
-    lilo: 'KNIGHT LILO (HIGH DEFENSE)',
-    stitch: 'SORCERER STITCH (HIGH MANA)',
-    angel: 'PALADIN ANGEL (HIGH SPEED)',
-    selectQuest: 'SELECT QUEST REALM',
-    realm1: 'Carrotus Kingdom',
-    realm2: 'Crystal Archipelago',
-    realm3: 'Devastator Citadel',
-    endTurn: '⏳ END TURN',
-    day: 'DAY',
-    gold: 'GOLD',
-    wood: 'WOOD',
-    ore: 'ORE',
-    crystals: 'CRYSTALS',
-    mana: 'MANA',
-    moves: 'MOVES',
-    castle: '🏰 CASTLE',
-    spellbook: '📖 SPELLS',
-    topScores: '🏆 TOP SCORES',
-    paused: 'GAME PAUSED ⏸',
-    pausedHint: 'Press P, ESC, tap ⏸ or click Resume to continue',
-    resume: 'RESUME',
-    restart: 'RESTART',
-    menu: 'MAIN MENU',
-    gameOver: 'DEFEAT! YOUR HERO FELL 💀',
-    victory: 'VICTORY! REALM CONQUERED! 🏆',
-    newHighScore: '🎉 NEW HIGH SCORE!',
-    enterNames: 'ENTER YOUR NAME(S) FOR THE LEADERBOARD:',
-    p1NameLabel: 'PLAYER 1 NAME:',
-    p2NameLabel: 'PLAYER 2 NAME:',
-    saveScore: 'SAVE SCORE 🏆',
+    gameTitle: 'HEROES OF OHANA',
+    modeSelectTitle: 'CHOOSE YOUR ADVENTURE',
+    modeDuel: 'DUEL (2 Players)',
+    modeDuelSub: 'Hot-seat battle for two heroes on one island',
+    modeCampaign: 'CAMPAIGN',
+    modeCampaignSub: 'Coming in the next update!',
+    pickFaction: 'Player {n}: Choose a House',
+    pickHero: 'Choose your Hero',
+    startDuel: 'BEGIN DUEL',
+    back: 'BACK',
     close: 'CLOSE',
-    noScoresYet: 'No high scores yet — be the first!',
-    back: '← BACK',
-    recruit: 'RECRUIT',
-    built: 'BUILT',
+    ok: 'OK',
+    cancel: 'CANCEL',
+    confirm: 'CONFIRM',
+    yourTurn: "Player {n}'s Turn",
+    passDeviceTitle: 'PASS THE DEVICE',
+    passDeviceSub: "Hand the device to Player {n}. Don't peek!",
+    passDeviceBtn: "I'm Player {n} — Ready",
+    endTurn: 'END TURN',
+    day: 'Day',
+    week: 'Week',
+    gold: 'Gold', wood: 'Wood', ore: 'Ore', crystal: 'Crystal', plasma: 'Plasma',
+    movePts: 'Move', spellPts: 'Spell Pts',
+    attack: 'Attack', defense: 'Defense', spellPower: 'Spell Power', knowledge: 'Knowledge',
+    level: 'Level', xp: 'XP',
+    hero: 'Hero', castle: 'Castle', heroes: 'Heroes', castles: 'Castles',
+    army: 'Army', skills: 'Skills', spellbook: 'Spellbook',
+    buildings: 'Buildings', recruit: 'Recruit', build: 'Build', built: 'BUILT',
+    cannotAfford: 'Not enough resources',
+    alreadyBuiltThisTurn: 'Only one building per castle per turn',
+    needsPrereq: 'Requires a lower dwelling first',
+    recruitTitle: 'Recruit Creatures',
+    recruitHowMany: 'How many?',
+    recruitToGarrison: 'No hero is at the castle — new troops join the garrison.',
+    recruitFailed: 'Could not recruit — not enough resources or no free army slot.',
+    max: 'MAX',
+    perWeek: '/week',
+    chestTitle: 'A Traveler\'s Chest!',
+    chestGoldOrXp: 'Choose your reward:',
+    chestGold: 'Take Gold',
+    chestXp: 'Take Experience',
+    artifactFound: 'Artifact Found!',
+    mineChosen: 'Mine Captured!',
+    resourceFound: 'Resources Found!',
+    dwellingTitle: 'Creature Dwelling',
+    dwellingJoinFree: 'These creatures will join you for free!',
+    monsterEncounter: 'A wild stack blocks your path!',
+    fightPrompt: 'Attack them?',
+    fight: 'FIGHT',
+    flee: 'FLEE',
+    surrender: 'SURRENDER',
+    defend: 'DEFEND',
+    wait: 'WAIT',
+    castSpell: 'CAST SPELL',
+    noSpells: 'No spells known',
+    notEnoughSP: 'Not enough spell points',
+    alreadyCastThisRound: 'Already cast a spell this round',
+    combatVictory: 'Victory!',
+    combatDefeat: 'Defeat...',
+    combatFled: 'Retreated safely.',
+    combatSurrendered: 'Surrendered — army lost, hero survives.',
+    continueBtn: 'CONTINUE',
+    victoryTitle: 'VICTORY!',
+    victorySub: 'Player {n} has conquered the island!',
+    playAgain: 'PLAY AGAIN',
+    levelUp: 'Level Up!',
+    levelUpAttrChoice: 'Choose an attribute to increase:',
+    skillChoice: 'Choose a new skill:',
+    mapObjMine: 'Mine', mapObjChest: 'Chest', mapObjArtifact: 'Artifact',
+    mapObjDwelling: 'Dwelling', mapObjMonster: 'Monster Lair', mapObjCastle: 'Castle',
+    mapObjResource: 'Resource Pile',
+    splitStack: 'Split Stack', mergeStack: 'Merge Stacks',
+    moveHero: 'Move', selectHero: 'Select a hero', endMove: 'Out of movement',
+    savedGame: 'Game restored from save.',
+    newGame: 'NEW GAME',
+    resumeGame: 'RESUME SAVED DUEL',
+    howToTitle: 'How to Play',
+    howToBody: 'Drag to pan the map. Tap a hero, then tap a tile to move. Visit mines, chests, dwellings, and enemy castles. End your turn when done. Defeat all enemy heroes or capture all castles to win!',
+    tapToDismiss: 'Tap anywhere to continue',
+    basic: 'Basic', advanced: 'Advanced', expert: 'Expert',
+    weeklyGrowth: 'Weekly creature growth!',
+    incomeReport: 'Income',
+    combatRound: 'Round',
+    stackTurn: "{name}'s turn",
+    noAmmo: 'Out of ammo — fighting in melee',
+    moraleGood: 'High morale! Extra action!',
+    moraleBad: 'Low morale — frozen!',
+    luckGood: 'Lucky strike!',
+    heroTab: 'Hero', castleTab: 'Castle',
+    tapHeroToOpen: 'Tap your hero again to open the hero screen. Tap a castle you own to open it.',
   },
   ro: {
-    title: 'HEROES OF OHANA & MAGIC',
-    sub: 'STRATEGIE TURN-BASED FANTASY inspirat de HOMM2',
-    p1Solo: '1 JUCĂTOR (MISIUNE SOLO)',
-    p2Coop: '2 JUCĂTORI (HOTSEAT CO-OP)',
-    chooseHero: 'ALEGE-ȚI EROUL',
-    lilo: 'CAVALERUL LILO (APĂRARE)',
-    stitch: 'VRĂJITORUL STITCH (MANĂ)',
-    angel: 'PALADINUL ANGEL (VITEZĂ)',
-    selectQuest: 'ALEGE REGATUL',
-    realm1: 'Regatul Carrotus',
-    realm2: 'Arhipelagul de Cristal',
-    realm3: 'Citadela Devastator',
-    endTurn: '⏳ SFÂRȘIT TURA',
-    day: 'ZIUA',
-    gold: 'AUR',
-    wood: 'LEMN',
-    ore: 'MINEREU',
-    crystals: 'CRISTALE',
-    mana: 'MANĂ',
-    moves: 'MUTĂRI',
-    castle: '🏰 CASTEL',
-    spellbook: '📖 VRĂJI',
-    topScores: '🏆 CELE MAI BUNE SCORURI',
-    paused: 'JOC PAUZAT ⏸',
-    pausedHint: 'Apasă P, Esc, atinge ⏸ sau apăsă Continuă',
-    resume: 'CONTINUĂ',
-    restart: 'RESTART',
-    menu: 'MENIU PRINCIPAL',
-    gameOver: 'INFRÂNGERE! EROUL A CĂZUT 💀',
-    victory: 'VICTORIE! REGAT CUCERIT! 🏆',
-    newHighScore: '🎉 NOU RECORD DE SCOR!',
-    enterNames: 'INTRODUCEȚI NUMELE JUCĂTORILOR:',
-    p1NameLabel: 'NUME JUCĂTOR 1:',
-    p2NameLabel: 'NUME JUCĂTOR 2:',
-    saveScore: 'SALVEAZĂ SCORUL 🏆',
+    gameTitle: 'EROII DIN OHANA',
+    modeSelectTitle: 'ALEGE AVENTURA',
+    modeDuel: 'DUEL (2 Jucători)',
+    modeDuelSub: 'Luptă pe rând pentru doi eroi pe o insulă',
+    modeCampaign: 'CAMPANIE',
+    modeCampaignSub: 'Vine în actualizarea următoare!',
+    pickFaction: 'Jucătorul {n}: Alege o Casă',
+    pickHero: 'Alege-ți eroul',
+    startDuel: 'ÎNCEPE DUELUL',
+    back: 'ÎNAPOI',
     close: 'ÎNCHIDE',
-    noScoresYet: 'Niciun scor încă — fii primul!',
-    back: '← ÎNAPOI',
-    recruit: 'RECRUTEAZĂ',
-    built: 'CONSTRUIT',
-  }
+    ok: 'OK',
+    cancel: 'ANULEAZĂ',
+    confirm: 'CONFIRMĂ',
+    yourTurn: 'Rândul Jucătorului {n}',
+    passDeviceTitle: 'PREDĂ DISPOZITIVUL',
+    passDeviceSub: 'Predă dispozitivul Jucătorului {n}. Nu trage cu ochiul!',
+    passDeviceBtn: 'Sunt Jucătorul {n} — Pregătit',
+    endTurn: 'TERMINĂ RÂNDUL',
+    day: 'Ziua', week: 'Săptămâna',
+    gold: 'Aur', wood: 'Lemn', ore: 'Minereu', crystal: 'Cristal', plasma: 'Plasmă',
+    movePts: 'Mișcare', spellPts: 'Puncte Magie',
+    attack: 'Atac', defense: 'Apărare', spellPower: 'Putere Magică', knowledge: 'Cunoaștere',
+    level: 'Nivel', xp: 'XP',
+    hero: 'Erou', castle: 'Castel', heroes: 'Eroi', castles: 'Castele',
+    army: 'Armată', skills: 'Abilități', spellbook: 'Carte de Vrăji',
+    buildings: 'Clădiri', recruit: 'Recrutează', build: 'Construiește', built: 'CONSTRUIT',
+    cannotAfford: 'Resurse insuficiente',
+    alreadyBuiltThisTurn: 'O singură clădire pe castel pe rând',
+    needsPrereq: 'Necesită întâi o locuință inferioară',
+    recruitTitle: 'Recrutează Creaturi',
+    recruitHowMany: 'Câte?',
+    recruitToGarrison: 'Niciun erou nu e la castel — trupele noi se alătură garnizoanei.',
+    recruitFailed: 'Recrutare eșuată — resurse insuficiente sau nu mai e loc în armată.',
+    max: 'MAX',
+    perWeek: '/săptămână',
+    chestTitle: 'Un Cufăr de Călător!',
+    chestGoldOrXp: 'Alege-ți răsplata:',
+    chestGold: 'Ia Aur',
+    chestXp: 'Ia Experiență',
+    artifactFound: 'Artefact Găsit!',
+    mineChosen: 'Mină Capturată!',
+    resourceFound: 'Resurse Găsite!',
+    dwellingTitle: 'Locuință de Creaturi',
+    dwellingJoinFree: 'Aceste creaturi se vor alătura gratuit!',
+    monsterEncounter: 'O trupă sălbatică îți blochează drumul!',
+    fightPrompt: 'Îi ataci?',
+    fight: 'LUPTĂ',
+    flee: 'FUGI',
+    surrender: 'PREDĂ-TE',
+    defend: 'APĂRĂ',
+    wait: 'AȘTEAPTĂ',
+    castSpell: 'ARUNCĂ VRAJA',
+    noSpells: 'Nicio vrajă cunoscută',
+    notEnoughSP: 'Puncte de magie insuficiente',
+    alreadyCastThisRound: 'Ai aruncat deja o vrajă în această rundă',
+    combatVictory: 'Victorie!',
+    combatDefeat: 'Înfrângere...',
+    combatFled: 'Retragere reușită.',
+    combatSurrendered: 'Predare — armata e pierdută, eroul supraviețuiește.',
+    continueBtn: 'CONTINUĂ',
+    victoryTitle: 'VICTORIE!',
+    victorySub: 'Jucătorul {n} a cucerit insula!',
+    playAgain: 'JOACĂ DIN NOU',
+    levelUp: 'Nivel Nou!',
+    levelUpAttrChoice: 'Alege un atribut de crescut:',
+    skillChoice: 'Alege o abilitate nouă:',
+    mapObjMine: 'Mină', mapObjChest: 'Cufăr', mapObjArtifact: 'Artefact',
+    mapObjDwelling: 'Locuință', mapObjMonster: 'Bârlog de Monștri', mapObjCastle: 'Castel',
+    mapObjResource: 'Grămadă de Resurse',
+    splitStack: 'Împarte Trupa', mergeStack: 'Unește Trupele',
+    moveHero: 'Mișcă', selectHero: 'Selectează un erou', endMove: 'Fără mișcare',
+    savedGame: 'Jocul a fost restaurat din salvare.',
+    newGame: 'JOC NOU',
+    resumeGame: 'CONTINUĂ DUELUL SALVAT',
+    howToTitle: 'Cum se joacă',
+    howToBody: 'Trage pentru a mișca harta. Apasă un erou, apoi o căsuță pentru a te mișca. Vizitează mine, cufere, locuințe și castele inamice. Termină rândul când ai terminat. Învinge toți eroii inamici sau cucerește toate castelele pentru a câștiga!',
+    tapToDismiss: 'Apasă oriunde pentru a continua',
+    basic: 'De bază', advanced: 'Avansat', expert: 'Expert',
+    weeklyGrowth: 'Creștere săptămânală a creaturilor!',
+    incomeReport: 'Venit',
+    combatRound: 'Runda',
+    stackTurn: 'Rândul lui {name}',
+    noAmmo: 'Fără muniție — luptă corp la corp',
+    moraleGood: 'Moral ridicat! Acțiune extra!',
+    moraleBad: 'Moral scăzut — îngheață!',
+    luckGood: 'Lovitură norocoasă!',
+    heroTab: 'Erou', castleTab: 'Castel',
+    tapHeroToOpen: 'Apasă din nou eroul pentru a-i vedea ecranul. Apasă un castel al tău pentru a-l deschide.',
+  },
 };
-const t = key => (TEXT[LANG] && TEXT[LANG][key]) ? TEXT[LANG][key] : TEXT['en'][key];
+function t(key, vars) {
+  let s = (TEXT[LANG] && TEXT[LANG][key] !== undefined) ? TEXT[LANG][key] : TEXT.en[key];
+  if (s === undefined) return key;
+  if (vars) for (const k in vars) s = s.split('{' + k + '}').join(vars[k]);
+  return s;
+}
 
 function updateLangToggleUI() {
   document.querySelectorAll('#langToggle button').forEach(btn => {
@@ -290,850 +352,3014 @@ document.getElementById('langToggle').addEventListener('click', e => {
 });
 updateLangToggleUI();
 
-// ============ SOUND SYNTHESIZER (WebAudio) ============
+// ============ WEBAUDIO SFX ============
 let audioCtx = null;
 function initAudio() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-}
-
-function playSfx(type) {
-  if (!audioCtx) return;
   try {
-    const now = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    if (type === 'step') {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(140, now);
-      osc.frequency.exponentialRampToValueAtTime(40, now + 0.08);
-      gain.gain.setValueAtTime(0.08, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-      osc.start(now); osc.stop(now + 0.08);
-    } else if (type === 'coin') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(987.77, now); // B5
-      osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
-      gain.gain.setValueAtTime(0.12, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-      osc.start(now); osc.stop(now + 0.2);
-    } else if (type === 'sword') {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(400, now);
-      osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
-      gain.gain.setValueAtTime(0.15, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-      osc.start(now); osc.stop(now + 0.15);
-    } else if (type === 'spell') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, now);
-      osc.frequency.exponentialRampToValueAtTime(880, now + 0.3);
-      gain.gain.setValueAtTime(0.18, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-      osc.start(now); osc.stop(now + 0.3);
-    } else if (type === 'fanfare') {
-      const notes = [523.25, 659.25, 783.99, 1046.50];
-      notes.forEach((freq, idx) => {
-        const o = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        o.type = 'triangle';
-        o.frequency.value = freq;
-        o.connect(g); g.connect(audioCtx.destination);
-        const startTime = now + idx * 0.1;
-        g.gain.setValueAtTime(0.14, startTime);
-        g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.28);
-        o.start(startTime); o.stop(startTime + 0.28);
-      });
-    }
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
   } catch (e) {}
 }
+function beep(freq, dur, type, vol, slide) {
+  if (!audioCtx) return;
+  try {
+    type = type || 'square'; vol = vol || 0.07; slide = slide || 0;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), audioCtx.currentTime + dur);
+    g.gain.setValueAtTime(vol, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + dur);
+  } catch (e) {}
+}
+function noiseBurst(dur, vol) {
+  if (!audioCtx) return;
+  try {
+    const bufSize = Math.floor(audioCtx.sampleRate * dur);
+    const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufSize);
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(vol || 0.08, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    src.connect(g); g.connect(audioCtx.destination);
+    src.start();
+  } catch (e) {}
+}
+const sfx = {
+  click() { beep(520, 0.05, 'square', 0.05, 100); },
+  coin() { beep(880, 0.06, 'sine', 0.05, 300); setTimeout(() => beep(1100, 0.07, 'sine', 0.04, 200), 50); },
+  move() { beep(300, 0.04, 'triangle', 0.03, -40); },
+  build() { [440, 550, 660].forEach((f, i) => setTimeout(() => beep(f, 0.1, 'square', 0.05), i * 70)); },
+  recruit() { beep(500, 0.08, 'sawtooth', 0.05, 150); },
+  chest() { [600, 800, 1000, 1300].forEach((f, i) => setTimeout(() => beep(f, 0.09, 'sine', 0.05), i * 55)); },
+  hit() { noiseBurst(0.09, 0.09); beep(150, 0.08, 'sawtooth', 0.06, -80); },
+  hitRanged() { beep(700, 0.05, 'sine', 0.05, -200); },
+  death() { beep(180, 0.2, 'sawtooth', 0.07, -140); noiseBurst(0.2, 0.06); },
+  spell() { [700, 900, 1200].forEach((f, i) => setTimeout(() => beep(f, 0.12, 'sine', 0.06, 100), i * 60)); },
+  victory() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 0.18, 'square', 0.06), i * 130)); },
+  defeatSting() { [400, 340, 260, 180].forEach((f, i) => setTimeout(() => beep(f, 0.22, 'sawtooth', 0.06, -30), i * 130)); },
+  turnEnd() { beep(360, 0.08, 'triangle', 0.05, 120); setTimeout(() => beep(480, 0.1, 'triangle', 0.05, 120), 90); },
+  levelUp() { [440, 554, 659, 880].forEach((f, i) => setTimeout(() => beep(f, 0.14, 'square', 0.06), i * 80)); },
+};
 
 // ============ CANVAS SETUP ============
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 let W = 0, H = 0;
 
+function chromeMetrics() {
+  const compact = H < 480;
+  return { topBar: compact ? 36 : 50 };
+}
+
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  W = window.innerWidth;
-  H = window.innerHeight;
-  canvas.width = W * dpr;
-  canvas.height = H * dpr;
+  const vv = window.visualViewport;
+  W = vv ? Math.round(vv.width) : window.innerWidth;
+  H = vv ? Math.round(vv.height) : window.innerHeight;
+  canvas.width = Math.max(1, Math.round(W * dpr));
+  canvas.height = Math.max(1, Math.round(H * dpr));
   canvas.style.width = W + 'px';
   canvas.style.height = H + 'px';
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 100));
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', resize);
+  window.visualViewport.addEventListener('scroll', resize);
+}
 resize();
 
-const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 1024);
-function updateTouchVisibility() {
-  const showTouch = isTouchDevice && (gameState === 'OVERWORLD' || gameState === 'COMBAT');
-  document.getElementById('touchDPad').style.display = showTouch ? 'flex' : 'none';
-  document.getElementById('touchAction').style.display = showTouch ? 'flex' : 'none';
+// ============ PERSISTENCE ============
+const SAVE_KEY = 'heroesOhanaSave';
+function saveGame() {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(serializeGame()));
+  } catch (e) {}
+}
+function loadSavedGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) { return null; }
+}
+function clearSavedGame() {
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
 }
 
-// ============ UNIT DEFINITIONS ============
-const UNIT_TYPES = [
-  { id: 'puka', name: 'Puka Capy', tier: 1, hp: 12, atk: 3, def: 2, minDmg: 2, maxDmg: 4, speed: 4, ranged: false, color: '#e67e22', icon: '🐹' },
-  { id: 'archer', name: 'Archer Duck', tier: 2, hp: 15, atk: 5, def: 3, minDmg: 3, maxDmg: 5, speed: 5, ranged: true, color: '#f1c40f', icon: '🦆' },
-  { id: 'griffin', name: 'Griffin Experiment', tier: 3, hp: 28, atk: 8, def: 6, minDmg: 6, maxDmg: 9, speed: 7, ranged: false, color: '#9b59b6', icon: '🦅' },
-  { id: 'knight', name: 'Swordsman Knight', tier: 4, hp: 40, atk: 11, def: 9, minDmg: 9, maxDmg: 14, speed: 5, ranged: false, color: '#3498db', icon: '🗡️' },
-  { id: 'sorcerer', name: 'Mage Sorcerer', tier: 5, hp: 50, atk: 14, def: 10, minDmg: 12, maxDmg: 18, speed: 6, ranged: true, color: '#1abc9c', icon: '🔮' },
-  { id: 'dragon', name: 'Dragon Stitch', tier: 6, hp: 120, atk: 22, def: 18, minDmg: 25, maxDmg: 38, speed: 8, ranged: false, color: '#e74c3c', icon: '🐲' }
+// ============================================================
+// DATA TABLES
+// ============================================================
+
+// ---- Terrain ----
+// cost: movement points per tile (Infinity = impassable)
+const TERRAIN = {
+  water:  { cost: Infinity, color: '#2f7fc7', color2: '#3a92dd' },
+  beach:  { cost: 1,   color: '#e8d29a', color2: '#f0dcae' },
+  grass:  { cost: 1,   color: '#5fa84a', color2: '#6cb856' },
+  jungle: { cost: 2,   color: '#2f7a3a', color2: '#378843' },
+  rock:   { cost: Infinity, color: '#7a6a5c', color2: '#8a7a6c' },
+  lava:   { cost: Infinity, color: '#c0432b', color2: '#d4522f' },
+};
+
+// ---- Resources ----
+const RESOURCE_KEYS = ['gold', 'wood', 'ore', 'crystal', 'plasma'];
+const RESOURCE_ICON = { gold: '🪙', wood: '🪵', ore: '⛏️', crystal: '💎', plasma: '☄️' };
+
+// ---- Factions & creatures ----
+// Each creature: tier(1-5), name, upgrade (name or null), atk, def, dmg[min,max],
+// hp, speed, growth (per week from base dwelling), ranged(bool), ammo,
+// cost {resources}, shape (drawing key), color
+const FACTIONS = [
+  {
+    id: 'ohana', name: 'Ohana', align: 'good', primary: '#2fae60', secondary: '#ffd54f',
+    heroes: [
+      { name: 'Lilo', portrait: 'lilo', attack: 2, defense: 2, spellPower: 4, knowledge: 3, skill: { id: 'leadership', level: 1 } },
+      { name: 'Nani', portrait: 'nani', attack: 4, defense: 4, spellPower: 1, knowledge: 2, skill: { id: 'logistics', level: 1 } },
+      { name: 'David', portrait: 'david', attack: 5, defense: 3, spellPower: 1, knowledge: 1, skill: { id: 'archery', level: 1 } },
+    ],
+    creatures: [
+      { tier: 1, name: 'Sandy Scout', upgrade: 'Reef Scout', atk: 2, def: 1, dmg: [1, 2], hp: 5, speed: 5, growth: 14, ranged: false, ammo: 0, cost: { gold: 40 }, shape: 'scout', color: '#f0dcae' },
+      { tier: 2, name: 'Hula Dancer', upgrade: 'Fire Dancer', atk: 4, def: 3, dmg: [2, 3], hp: 10, speed: 6, growth: 9, ranged: false, ammo: 0, cost: { gold: 90, wood: 1 }, shape: 'dancer', color: '#ff8fb1' },
+      { tier: 3, name: 'Wave Rider', upgrade: 'Big-Wave Rider', atk: 6, def: 5, dmg: [3, 5], hp: 18, speed: 7, growth: 6, ranged: false, ammo: 0, cost: { gold: 150, wood: 2 }, shape: 'surfer', color: '#4fc3f7' },
+      { tier: 4, name: 'Coconut Shaman', upgrade: 'Elder Shaman', atk: 7, def: 7, dmg: [3, 6], hp: 22, speed: 5, growth: 4, ranged: true, ammo: 8, cost: { gold: 250, crystal: 1 }, shape: 'shaman', color: '#a3e635' },
+      { tier: 5, name: 'Ohana Guardian', upgrade: "Nani's Guardian", atk: 11, def: 10, dmg: [6, 10], hp: 40, speed: 6, growth: 2, ranged: false, ammo: 0, cost: { gold: 400, ore: 2, crystal: 1 }, shape: 'guardian', color: '#f4c95d' },
+    ],
+  },
+  {
+    id: 'federation', name: 'Galactic Federation', align: 'good', primary: '#3b82f6', secondary: '#e5e7eb',
+    heroes: [
+      { name: 'Grand Councilwoman', portrait: 'councilwoman', attack: 1, defense: 2, spellPower: 3, knowledge: 5, skill: { id: 'wisdom', level: 2 } },
+      { name: 'Pleakley', portrait: 'pleakley', attack: 2, defense: 1, spellPower: 3, knowledge: 3, skill: { id: 'wisdom', level: 1 } },
+      { name: 'Gantu', portrait: 'gantu', attack: 6, defense: 6, spellPower: 1, knowledge: 1, skill: { id: 'leadership', level: 1 } },
+    ],
+    creatures: [
+      { tier: 1, name: 'Cadet Trooper', upgrade: 'Shock Trooper', atk: 2, def: 2, dmg: [1, 2], hp: 6, speed: 4, growth: 14, ranged: true, ammo: 12, cost: { gold: 50 }, shape: 'trooper', color: '#93c5fd' },
+      { tier: 2, name: 'Blaster Trooper', upgrade: 'Plasma Trooper', atk: 4, def: 3, dmg: [2, 4], hp: 9, speed: 5, growth: 9, ranged: true, ammo: 10, cost: { gold: 100, ore: 1 }, shape: 'trooper', color: '#60a5fa' },
+      { tier: 3, name: 'Recon Droid', upgrade: 'War Droid', atk: 6, def: 6, dmg: [3, 4], hp: 20, speed: 6, growth: 6, ranged: false, ammo: 0, cost: { gold: 160, ore: 2 }, shape: 'droid', color: '#cbd5e1' },
+      { tier: 4, name: 'Federation Officer', upgrade: 'Federation Captain', atk: 8, def: 6, dmg: [4, 6], hp: 24, speed: 7, growth: 4, ranged: false, ammo: 0, cost: { gold: 260, crystal: 1 }, shape: 'officer', color: '#1d4ed8' },
+      { tier: 5, name: 'Gantu Enforcer', upgrade: "Gantu's Elite Enforcer", atk: 12, def: 11, dmg: [7, 11], hp: 45, speed: 5, growth: 2, ranged: false, ammo: 0, cost: { gold: 420, ore: 2, plasma: 1 }, shape: 'gantu', color: '#334155' },
+    ],
+  },
+  {
+    id: 'experiments', name: "Jumba's Experiments", align: 'evil', primary: '#7c3aed', secondary: '#fb923c',
+    heroes: [
+      { name: 'Jumba', portrait: 'jumba', attack: 1, defense: 1, spellPower: 5, knowledge: 5, skill: { id: 'wisdom', level: 2 } },
+      { name: 'Stitch (626)', portrait: 'stitch626', attack: 6, defense: 4, spellPower: 2, knowledge: 2, skill: { id: 'logistics', level: 1 } },
+      { name: 'Angel', portrait: 'angel', attack: 3, defense: 2, spellPower: 4, knowledge: 3, skill: { id: 'luck', level: 1 } },
+    ],
+    creatures: [
+      { tier: 1, name: 'Sparky Larva', upgrade: 'Volt Larva', atk: 2, def: 1, dmg: [1, 3], hp: 4, speed: 6, growth: 16, ranged: false, ammo: 0, cost: { gold: 35 }, shape: 'larva', color: '#fde047' },
+      { tier: 2, name: 'Mutant Crawler', upgrade: 'Alpha Crawler', atk: 3, def: 3, dmg: [2, 3], hp: 11, speed: 5, growth: 9, ranged: false, ammo: 0, cost: { gold: 85, wood: 1 }, shape: 'crawler', color: '#86198f' },
+      { tier: 3, name: 'Reuben Clone', upgrade: 'Elite Clone', atk: 5, def: 5, dmg: [3, 5], hp: 17, speed: 5, growth: 6, ranged: false, ammo: 0, cost: { gold: 140, ore: 2 }, shape: 'clone', color: '#f97316' },
+      { tier: 4, name: 'Angel Songstress', upgrade: 'Siren Songstress', atk: 6, def: 6, dmg: [2, 5], hp: 21, speed: 7, growth: 4, ranged: true, ammo: 8, cost: { gold: 230, crystal: 1 }, shape: 'songstress', color: '#f472b6' },
+      { tier: 5, name: 'Experiment 626', upgrade: 'Alpha Experiment', atk: 13, def: 9, dmg: [7, 12], hp: 38, speed: 8, growth: 2, ranged: false, ammo: 0, cost: { gold: 400, ore: 1, plasma: 1 }, shape: 'exp626', color: '#1e3a8a' },
+    ],
+  },
+  {
+    id: 'hamsterviel', name: "Hämsterviel's Legion", align: 'evil', primary: '#dc2626', secondary: '#4b5563',
+    heroes: [
+      { name: 'Dr. Hämsterviel', portrait: 'hamsterviel', attack: 1, defense: 1, spellPower: 6, knowledge: 4, skill: { id: 'wisdom', level: 1 } },
+      { name: 'Leroy', portrait: 'leroy', attack: 6, defense: 5, spellPower: 1, knowledge: 1, skill: { id: 'archery', level: 1 } },
+      { name: 'Reuben', portrait: 'reuben', attack: 4, defense: 3, spellPower: 2, knowledge: 2, skill: { id: 'luck', level: 1 } },
+    ],
+    creatures: [
+      { tier: 1, name: 'Hamster Drone', upgrade: 'War Drone', atk: 2, def: 2, dmg: [1, 2], hp: 6, speed: 4, growth: 14, ranged: false, ammo: 0, cost: { gold: 40 }, shape: 'drone', color: '#a8a29e' },
+      { tier: 2, name: 'Leroy Clone', upgrade: 'Elite Leroy Clone', atk: 4, def: 4, dmg: [2, 3], hp: 10, speed: 5, growth: 9, ranged: false, ammo: 0, cost: { gold: 90, ore: 1 }, shape: 'leroy', color: '#2563eb' },
+      { tier: 3, name: 'Legion Robot', upgrade: 'Legion Heavy Robot', atk: 6, def: 6, dmg: [3, 5], hp: 19, speed: 4, growth: 6, ranged: true, ammo: 10, cost: { gold: 150, ore: 2 }, shape: 'robot', color: '#71717a' },
+      { tier: 4, name: 'Siege Walker', upgrade: 'Heavy Siege Walker', atk: 8, def: 9, dmg: [4, 7], hp: 26, speed: 4, growth: 4, ranged: false, ammo: 0, cost: { gold: 260, ore: 2 }, shape: 'walker', color: '#7f1d1d' },
+      { tier: 5, name: 'Hämsterviel Warbot', upgrade: 'Hämsterviel Overlord', atk: 12, def: 12, dmg: [7, 10], hp: 48, speed: 5, growth: 2, ranged: false, ammo: 0, cost: { gold: 420, ore: 3 }, shape: 'warbot', color: '#111827' },
+    ],
+  },
+];
+function factionById(id) { return FACTIONS.find(f => f.id === id); }
+
+// ---- Buildings ----
+// dwelling buildings map to creature tier; upgrade buildings unlock the tier-4/5 upgrade
+const BUILDING_DEFS = [
+  { id: 'townHall', name: 'Town Hall', maxLevel: 3, cost: [{ gold: 0 }, { gold: 1000, wood: 5 }, { gold: 2000, ore: 5, crystal: 2 }], incomePerLevel: [250, 500, 1000] },
+  { id: 'tavern', name: 'Tavern', maxLevel: 1, cost: [{ gold: 500, wood: 5 }] },
+  { id: 'mageGuild', name: 'Mage Guild', maxLevel: 5, cost: [
+    { gold: 2000, wood: 5, ore: 5 },
+    { gold: 1000, ore: 5, crystal: 5 },
+    { gold: 1500, crystal: 5, plasma: 2 },
+    { gold: 2000, crystal: 5, plasma: 5 },
+    { gold: 3000, plasma: 10 },
+  ]},
+  { id: 'cityWalls', name: 'City Walls', maxLevel: 1, cost: [{ gold: 1500, ore: 10 }] },
+  { id: 'statue', name: 'Statue', maxLevel: 1, cost: [{ gold: 800, ore: 5 }] },
+  { id: 'dwelling1', name: 'Tier 1 Dwelling', maxLevel: 1, tier: 1, cost: [{ gold: 300, wood: 2 }] },
+  { id: 'dwelling2', name: 'Tier 2 Dwelling', maxLevel: 1, tier: 2, cost: [{ gold: 500, wood: 3 }] },
+  { id: 'dwelling3', name: 'Tier 3 Dwelling', maxLevel: 1, tier: 3, cost: [{ gold: 800, ore: 4 }] },
+  { id: 'dwelling4', name: 'Tier 4 Dwelling', maxLevel: 1, tier: 4, cost: [{ gold: 1200, ore: 5, crystal: 2 }] },
+  { id: 'dwelling5', name: 'Tier 5 Dwelling', maxLevel: 1, tier: 5, cost: [{ gold: 2000, ore: 8, crystal: 4 }] },
+  { id: 'dwelling4up', name: 'Tier 4 Upgrade', maxLevel: 1, tier: 4, upgrade: true, requires: 'dwelling4', cost: [{ gold: 1500, crystal: 3 }] },
+  { id: 'dwelling5up', name: 'Tier 5 Upgrade', maxLevel: 1, tier: 5, upgrade: true, requires: 'dwelling5', cost: [{ gold: 2500, crystal: 5, plasma: 2 }] },
+];
+function buildingDef(id) { return BUILDING_DEFS.find(b => b.id === id); }
+
+// ---- Secondary skills ----
+// levels: 1=Basic, 2=Advanced, 3=Expert
+const SKILL_DEFS = {
+  logistics: { name: 'Logistics', effect: [0.15, 0.3, 0.5] },       // + move points %
+  wisdom:    { name: 'Wisdom', effect: [3, 4, 5] },                  // max spell level accessible
+  luck:      { name: 'Luck', effect: [1, 2, 3] },                    // + luck value
+  leadership:{ name: 'Leadership', effect: [1, 2, 3] },              // + morale value
+  archery:   { name: 'Archery', effect: [0.25, 0.5, 1.0] },          // + ranged dmg %
+};
+const SKILL_IDS = Object.keys(SKILL_DEFS);
+
+// ---- Spells ----
+// level gates which Mage Guild level + Wisdom is required to learn/cast
+const SPELL_DEFS = [
+  { id: 'fireball', name: 'Fireball', level: 2, cost: 8, kind: 'damage', aoe: true, base: 10, school: 'combat' },
+  { id: 'lightning', name: 'Lightning Bolt', level: 3, cost: 10, kind: 'damage', aoe: false, base: 16, school: 'combat' },
+  { id: 'bless', name: 'Bless', level: 1, cost: 4, kind: 'buff', stat: 'dmgUp', amount: 0.5, school: 'combat' },
+  { id: 'haste', name: 'Haste', level: 1, cost: 4, kind: 'buff', stat: 'speedUp', amount: 3, school: 'combat' },
+  { id: 'curse', name: 'Curse', level: 1, cost: 4, kind: 'debuff', stat: 'dmgDown', amount: 0.5, school: 'combat' },
+  { id: 'slow', name: 'Slow', level: 2, cost: 6, kind: 'debuff', stat: 'speedDown', amount: 3, school: 'combat' },
+  { id: 'heal', name: 'Heal', level: 2, cost: 8, kind: 'heal', base: 20, school: 'combat' },
+  { id: 'townPortal', name: 'Town Portal', level: 4, cost: 15, kind: 'adventure', school: 'adventure' },
+];
+function spellDef(id) { return SPELL_DEFS.find(s => s.id === id); }
+
+// ---- Map object kinds ----
+const OBJ = {
+  MINE: 'mine', RESOURCE: 'resource', CHEST: 'chest', ARTIFACT: 'artifact',
+  DWELLING: 'dwelling', MONSTER: 'monster', CASTLE: 'castle',
+};
+
+// ---- Artifacts (simple attribute bonuses) ----
+const ARTIFACT_DEFS = [
+  { id: 'sunHelm', name: "Sun Helm of Nani", attr: 'attack', amount: 2 },
+  { id: 'coralShield', name: 'Coral Shield', attr: 'defense', amount: 2 },
+  { id: 'starCrystal', name: 'Star Crystal', attr: 'spellPower', amount: 2 },
+  { id: 'ancientTome', name: 'Ancient Tome', attr: 'knowledge', amount: 2 },
 ];
 
-// ============ GAME DATA & STATE ============
-let gameState = 'MODE_SELECT'; // MODE_SELECT, CHAR_SELECT, OVERWORLD, CASTLE_VIEW, COMBAT, PAUSED, GAME_OVER, VICTORY
-let gameMode = '1P'; // '1P' or '2P'
-let activePlayerIdx = 0; // 0 = Player 1, 1 = Player 2
-let dayCount = 1;
-let stateCooldown = 0;
-let pendingState = null;
+// ============================================================
+// ADVENTURE MAP MODEL
+// ============================================================
+const MAP_SIZE = 36;
 
-const GRID_COLS = 16;
-const GRID_ROWS = 12;
+function inBounds(x, y) { return x >= 0 && y >= 0 && x < MAP_SIZE && y < MAP_SIZE; }
 
-class PlayerState {
-  constructor(id, name, color, heroType) {
-    this.id = id;
-    this.name = name;
-    this.color = color;
-    this.heroType = heroType;
-    this.x = id === 1 ? 2 : 13;
-    this.y = id === 1 ? 2 : 9;
-    this.maxMoves = 12;
-    this.movesLeft = 12;
-    this.gold = 1500;
-    this.wood = 10;
-    this.ore = 10;
-    this.crystals = 5;
-    this.mana = 30;
-    this.maxMana = 30;
-    this.atkBonus = 0;
-    this.defBonus = 0;
-    this.army = [
-      { unitId: 'puka', count: 18 },
-      { unitId: 'archer', count: 10 }
-    ];
-  }
+function makeRNG(seed) {
+  let s = seed >>> 0;
+  return function rng() {
+    s = (s * 1103515245 + 12345) >>> 0;
+    return (s & 0x7fffffff) / 0x7fffffff;
+  };
 }
 
-let players = [];
-let overworldMap = [];
-let activeCombat = null;
-let menuClick = null;
-let lastPointerTime = 0;
-
-// ============ OVERWORLD GENERATION ============
-function initOverworldMap() {
-  overworldMap = [];
-  for (let r = 0; r < GRID_ROWS; r++) {
+// ---- Map generation: island shaped landmass, symmetric-ish for fairness ----
+function generateMap(seed) {
+  const rng = makeRNG(seed || 12345);
+  const terrain = [];
+  for (let y = 0; y < MAP_SIZE; y++) {
     const row = [];
-    for (let c = 0; c < GRID_COLS; c++) {
-      let type = 'grass';
-      let structure = null;
+    for (let x = 0; x < MAP_SIZE; x++) row.push('water');
+    terrain.push(row);
+  }
+  const cx = MAP_SIZE / 2, cy = MAP_SIZE / 2;
+  const maxR = MAP_SIZE * 0.46;
+  for (let y = 0; y < MAP_SIZE; y++) {
+    for (let x = 0; x < MAP_SIZE; x++) {
+      const dx = x - cx, dy = y - cy;
+      const d = Math.sqrt(dx * dx + dy * dy) + (rng() - 0.5) * 3.2;
+      if (d > maxR) { terrain[y][x] = 'water'; continue; }
+      if (d > maxR - 3) { terrain[y][x] = 'beach'; continue; }
+      const n = rng();
+      if (n < 0.08) terrain[y][x] = 'rock';
+      else if (n < 0.12) terrain[y][x] = 'lava';
+      else if (n < 0.42) terrain[y][x] = 'jungle';
+      else terrain[y][x] = 'grass';
+    }
+  }
+  // carve two small lava lakes for flavor (impassable clusters), avoid center path
+  return terrain;
+}
 
-      if (r === 0 || r === GRID_ROWS - 1 || c === 0 || c === GRID_COLS - 1) {
-        type = 'mountain';
-      } else if ((r === 2 && c === 2)) {
-        structure = { kind: 'castle', owner: 1, name: 'Red Fortress' };
-      } else if ((r === 9 && c === 13)) {
-        structure = { kind: 'castle', owner: 2, name: 'Blue Keep' };
-      } else if ((r === 4 && c === 3) || (r === 7 && c === 12)) {
-        structure = { kind: 'mine', res: 'gold', name: 'Gold Mine' };
-      } else if ((r === 3 && c === 8) || (r === 8 && c === 5)) {
-        structure = { kind: 'mine', res: 'wood', name: 'Wood Mill' };
-      } else if ((r === 5 && c === 10) || (r === 6 && c === 4)) {
-        structure = { kind: 'mine', res: 'crystals', name: 'Crystal Mine' };
-      } else if ((c % 4 === 0 && r % 3 === 0) && !(r === 2 && c === 2) && !(r === 9 && c === 13)) {
-        structure = { kind: 'chest', gold: 600 };
-      } else if ((r === 5 && c === 7) || (r === 7 && c === 9)) {
-        structure = { kind: 'monster', unitId: 'griffin', count: 8 };
-      } else if (Math.random() < 0.15) {
-        type = 'forest';
+function terrainInBounds(terrain, x, y) { return x >= 0 && y >= 0 && y < terrain.length && x < terrain[0].length; }
+function movementCost(terrain, x, y) {
+  if (!terrainInBounds(terrain, x, y)) return Infinity;
+  return TERRAIN[terrain[y][x]].cost;
+}
+
+// ============ A* PATHFINDING ============
+// Returns array of {x,y} steps from start to goal (inclusive of goal, excluding start),
+// or null if unreachable. Costs come from the terrain movement cost of the tile entered.
+// Works on any rectangular terrain grid passed in (not just the live MAP_SIZE board),
+// which keeps it independently testable.
+function astar(terrain, start, goal, opts) {
+  opts = opts || {};
+  const blocked = opts.blocked || null; // Set of "x,y" strings that are impassable regardless of terrain (e.g. occupied by another hero)
+  if (!terrainInBounds(terrain, goal.x, goal.y)) return null;
+  if (movementCost(terrain, goal.x, goal.y) === Infinity) return null;
+  const key = (x, y) => x + ',' + y;
+  const open = new Map();
+  const cameFrom = new Map();
+  const gScore = new Map();
+  const startKey = key(start.x, start.y);
+  gScore.set(startKey, 0);
+  open.set(startKey, { x: start.x, y: start.y, f: heuristic(start, goal) });
+
+  function heuristic(a, b) { return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)); }
+
+  const closed = new Set();
+  let iterations = 0;
+  while (open.size > 0 && iterations < 6000) {
+    iterations++;
+    // pick lowest f
+    let curKey = null, cur = null, bestF = Infinity;
+    for (const [k, v] of open) { if (v.f < bestF) { bestF = v.f; curKey = k; cur = v; } }
+    open.delete(curKey);
+    if (cur.x === goal.x && cur.y === goal.y) {
+      // reconstruct
+      const path = [];
+      let ck = curKey;
+      while (ck !== startKey) {
+        const [px, py] = ck.split(',').map(Number);
+        path.push({ x: px, y: py });
+        ck = cameFrom.get(ck);
       }
-
-      row.push({ type, structure });
+      path.reverse();
+      return path;
     }
-    overworldMap.push(row);
+    closed.add(curKey);
+    const neighbors = [
+      { x: cur.x + 1, y: cur.y }, { x: cur.x - 1, y: cur.y },
+      { x: cur.x, y: cur.y + 1 }, { x: cur.x, y: cur.y - 1 },
+      { x: cur.x + 1, y: cur.y + 1 }, { x: cur.x - 1, y: cur.y - 1 },
+      { x: cur.x + 1, y: cur.y - 1 }, { x: cur.x - 1, y: cur.y + 1 },
+    ];
+    for (const n of neighbors) {
+      if (!terrainInBounds(terrain, n.x, n.y)) continue;
+      const nk = key(n.x, n.y);
+      if (closed.has(nk)) continue;
+      const cost = movementCost(terrain, n.x, n.y);
+      if (cost === Infinity) continue;
+      if (blocked && blocked.has(nk) && !(n.x === goal.x && n.y === goal.y)) continue;
+      const tentativeG = gScore.get(curKey) + cost;
+      if (!gScore.has(nk) || tentativeG < gScore.get(nk)) {
+        gScore.set(nk, tentativeG);
+        cameFrom.set(nk, curKey);
+        open.set(nk, { x: n.x, y: n.y, f: tentativeG + heuristic(n, goal) });
+      }
+    }
   }
+  return null; // unreachable
 }
 
-function startNewGame() {
-  dayCount = 1;
-  activePlayerIdx = 0;
-  initOverworldMap();
+// ============================================================
+// MODEL CONSTRUCTORS
+// ============================================================
+let nextId = 1;
+function genId() { return nextId++; }
 
-  players = [
-    new PlayerState(1, 'Lilo', '#e74c3c', 'lilo'),
-    new PlayerState(2, gameMode === '2P' ? 'Stitch' : 'Lord Leroy', '#3498db', 'stitch')
+function makeCreatureStack(factionId, tier, count, upgraded) {
+  const fac = factionById(factionId);
+  const cdef = fac.creatures[tier - 1];
+  return { factionId, tier, count, upgraded: !!upgraded, id: genId() };
+}
+
+function creatureRef(stack) {
+  const fac = factionById(stack.factionId);
+  return fac.creatures[stack.tier - 1];
+}
+function creatureDisplayName(stack) {
+  const cd = creatureRef(stack);
+  return stack.upgraded ? cd.upgrade : cd.name;
+}
+function creatureAtk(stack) { return creatureRef(stack).atk; }
+function creatureDef(stack) { return creatureRef(stack).def; }
+function creatureHp(stack) { return creatureRef(stack).hp; }
+function creatureSpeed(stack) { return creatureRef(stack).speed; }
+function creatureDmg(stack) { return creatureRef(stack).dmg; }
+function creatureRanged(stack) { return creatureRef(stack).ranged; }
+function creatureAmmoMax(stack) { return creatureRef(stack).ammo; }
+
+function emptyResources() { return { gold: 0, wood: 0, ore: 0, crystal: 0, plasma: 0 }; }
+// HOMM2-style starting stockpile: enough to build a tier-1 dwelling and recruit on day 1
+function startingResources() { return { gold: 6000, wood: 18, ore: 18, crystal: 8, plasma: 8 }; }
+
+function makeHero(factionId, heroDef, x, y, ownerIdx) {
+  return {
+    id: genId(), name: heroDef.name, portrait: heroDef.portrait, factionId, ownerIdx,
+    x, y, px: x, py: y,
+    level: 1, xp: 0,
+    attack: heroDef.attack, defense: heroDef.defense, spellPower: heroDef.spellPower, knowledge: heroDef.knowledge,
+    skills: heroDef.skill ? [{ id: heroDef.skill.id, level: heroDef.skill.level || 1 }] : [], // {id, level(1-3)}
+    spells: [], // spell ids known
+    army: [null, null, null, null, null], // up to 5 stacks
+    movePtsMax: 20, movePts: 20,
+    spellPtsMax: 10, spellPts: 10,
+    artifacts: [],
+    path: null, // queued path of {x,y}
+  };
+}
+
+function heroMaxSpellLevel(hero) {
+  const wis = hero.skills.find(s => s.id === 'wisdom');
+  return wis ? SKILL_DEFS.wisdom.effect[wis.level - 1] : 2;
+}
+function heroMovePtsMax(hero) {
+  const log = hero.skills.find(s => s.id === 'logistics');
+  const bonus = log ? SKILL_DEFS.logistics.effect[log.level - 1] : 0;
+  return Math.round(20 * (1 + bonus));
+}
+function heroSpellPtsMax(hero) { return hero.knowledge * 10; }
+function heroLuck(hero) {
+  const l = hero.skills.find(s => s.id === 'luck');
+  return l ? SKILL_DEFS.luck.effect[l.level - 1] : 0;
+}
+function heroMorale(hero) {
+  const l = hero.skills.find(s => s.id === 'leadership');
+  return l ? SKILL_DEFS.leadership.effect[l.level - 1] : 0;
+}
+function heroArcheryBonus(hero) {
+  const a = hero.skills.find(s => s.id === 'archery');
+  return a ? SKILL_DEFS.archery.effect[a.level - 1] : 0;
+}
+function heroArmyCount(hero) { return hero.army.filter(s => s).length; }
+
+function xpForLevel(level) {
+  // simple curve: 1000 * level roughly
+  return Math.round(500 * level * (level + 1) / 2);
+}
+
+function makeCastle(factionId, name, x, y, ownerIdx) {
+  const buildings = {};
+  for (const b of BUILDING_DEFS) buildings[b.id] = 0;
+  buildings.townHall = 1;
+  return {
+    id: genId(), name, factionId, x, y, ownerIdx,
+    buildings,
+    builtThisTurn: false,
+    garrison: [null, null, null, null, null],
+    dwellingCounts: {}, // tier -> available count to recruit this week
+  };
+}
+
+function makePlayer(idx, factionId) {
+  return {
+    idx, factionId,
+    resources: startingResources(),
+    heroes: [],
+    castles: [],
+    fog: null, // Uint8Array-like 2D array: 0 unseen, 1 explored, 2 visible
+  };
+}
+
+function makeFogGrid() {
+  const g = [];
+  for (let y = 0; y < MAP_SIZE; y++) { const row = []; for (let x = 0; x < MAP_SIZE; x++) row.push(0); g.push(row); }
+  return g;
+}
+
+// ============================================================
+// GAME STATE
+// ============================================================
+const game = {
+  screen: 'modeSelect', // modeSelect, factionPick, adventure, castle, heroScreen, combat, passDevice, victory
+  terrain: null,
+  objects: [], // map objects: {id, kind, x, y, ...}
+  players: [], // 2 players for duel
+  turn: { playerIdx: 0, day: 1, week: 1 },
+  selectedHeroId: null,
+  camera: { x: MAP_SIZE / 2, y: MAP_SIZE / 2 }, // in tile coords, per-player camera restored on pass
+  cameraByPlayer: [{ x: 0, y: 0 }, { x: 0, y: 0 }],
+  combat: null,
+  pendingSetup: { numPlayers: 2, picks: [] }, // during faction/hero pick flow
+  victor: null,
+  uiButtons: [], // hit-test rects populated each render() call: {x,y,w,h,onClick}
+  modalStack: [],
+};
+
+function currentPlayer() { return game.players[game.turn.playerIdx]; }
+function otherPlayerIdx() { return game.turn.playerIdx === 0 ? 1 : 0; }
+function findHeroById(id) {
+  for (const p of game.players) { const h = p.heroes.find(h => h.id === id); if (h) return h; }
+  return null;
+}
+function findCastleAt(x, y) { return game.objects.find(o => o.kind === OBJ.CASTLE && o.x === x && o.y === y); }
+function objectAt(x, y) { return game.objects.find(o => o.x === x && o.y === y && o.kind !== OBJ.CASTLE) || findCastleAt(x, y); }
+function heroAt(x, y, excludeId) {
+  for (const p of game.players) {
+    for (const h of p.heroes) {
+      if (h.id === excludeId) continue;
+      if (h.x === x && h.y === y) return h;
+    }
+  }
+  return null;
+}
+
+// ============ NEW GAME SETUP ============
+function startNewDuel(factionIds, heroIdxs) {
+  nextId = 1;
+  game.terrain = generateMap(Date.now() % 100000);
+  game.objects = [];
+  game.players = [makePlayer(0, factionIds[0]), makePlayer(1, factionIds[1])];
+  game.players[0].fog = makeFogGrid();
+  game.players[1].fog = makeFogGrid();
+  game.turn = { playerIdx: 0, day: 1, week: 1 };
+  game.victor = null;
+  game.combat = null;
+
+  // find two landmass spots far apart for starting castles: opposite corners of island
+  const spots = findStartSpots();
+  for (let i = 0; i < 2; i++) {
+    const s = spots[i];
+    const castle = makeCastle(factionIds[i], (i === 0 ? 'P1' : 'P2') + ' Castle', s.x, s.y, i);
+    game.objects.push(Object.assign({ kind: OBJ.CASTLE }, castle));
+    game.players[i].castles.push(castle.id);
+    // spawn the hero on a free passable tile next to the castle, not on top of it,
+    // so the castle stays visible and tappable
+    const heroSpot = findAdjacentFreeTile(s.x, s.y) || { x: s.x, y: s.y };
+    const heroDef = factionById(factionIds[i]).heroes[heroIdxs[i]];
+    const hero = makeHero(factionIds[i], heroDef, heroSpot.x, heroSpot.y, i);
+    // starting army: a few tier1/tier2 stacks
+    hero.army[0] = makeCreatureStack(factionIds[i], 1, 8);
+    hero.army[1] = makeCreatureStack(factionIds[i], 2, 3);
+    hero.movePtsMax = heroMovePtsMax(hero); hero.movePts = hero.movePtsMax;
+    hero.spellPtsMax = heroSpellPtsMax(hero); hero.spellPts = hero.spellPtsMax;
+    game.players[i].heroes.push(hero);
+    game.cameraByPlayer[i] = { x: s.x, y: s.y };
+  }
+  placeMapObjects();
+  for (let i = 0; i < 2; i++) recomputeFog(i);
+  game.screen = 'adventure';
+  // camera opens centered on player 1's own castle
+  centerCameraOnCastle(0);
+  saveGame();
+}
+
+// find a passable, non-castle tile adjacent (or nearby) to (cx,cy) — used to place a
+// starting hero next to its castle instead of directly on top of it
+function findAdjacentFreeTile(cx, cy) {
+  const ring1 = [
+    { x: cx + 1, y: cy }, { x: cx - 1, y: cy }, { x: cx, y: cy + 1 }, { x: cx, y: cy - 1 },
+    { x: cx + 1, y: cy + 1 }, { x: cx - 1, y: cy - 1 }, { x: cx + 1, y: cy - 1 }, { x: cx - 1, y: cy + 1 },
   ];
-
-  setGameState('OVERWORLD');
-}
-
-function endCurrentTurn() {
-  playSfx('fanfare');
-  activePlayerIdx = (activePlayerIdx + 1) % (gameMode === '2P' ? 2 : 2);
-  if (activePlayerIdx === 0) {
-    dayCount++;
+  for (const n of ring1) {
+    if (!inBounds(n.x, n.y)) continue;
+    if (movementCost(game.terrain, n.x, n.y) === Infinity) continue;
+    if (findCastleAt(n.x, n.y)) continue;
+    return n;
   }
-
-  // Daily income & movement points refill
-  players.forEach(p => {
-    p.movesLeft = p.maxMoves;
-    p.gold += 300;
-    p.mana = Math.min(p.maxMana, p.mana + 5);
-  });
-
-  // AI Turn in 1P mode
-  if (gameMode === '1P' && activePlayerIdx === 1) {
-    simulateAiTurn();
-    activePlayerIdx = 0;
-    dayCount++;
-    players[0].movesLeft = players[0].maxMoves;
-  }
-
-  showWarningMessage(`DAY ${dayCount} — ${players[activePlayerIdx].name}'S TURN!`);
-}
-
-function simulateAiTurn() {
-  const ai = players[1];
-  ai.gold += 500;
-  ai.movesLeft = ai.maxMoves;
-}
-
-// ============ TACTICAL BATTLEGROUND ENGINE ============
-class CombatBattle {
-  constructor(attacker, defenderStack) {
-    this.attacker = attacker;
-    this.defenderStack = defenderStack;
-    this.gridCols = 8;
-    this.gridRows = 6;
-    this.turnIndex = 0;
-    this.floaters = [];
-
-    // Initialize units on battleground grid
-    this.units = [];
-
-    // Attacker Stacks (Left)
-    attacker.army.forEach((stack, idx) => {
-      const type = UNIT_TYPES.find(u => u.id === stack.unitId);
-      this.units.push({
-        side: 'attacker',
-        type,
-        count: stack.count,
-        maxHp: type.hp,
-        currentTopHp: type.hp,
-        x: 1,
-        y: 1 + idx * 2,
-        active: true
-      });
-    });
-
-    // Defender Stacks (Right)
-    if (Array.isArray(defenderStack)) {
-      defenderStack.forEach((stack, idx) => {
-        const type = UNIT_TYPES.find(u => u.id === stack.unitId);
-        this.units.push({
-          side: 'defender',
-          type,
-          count: stack.count,
-          maxHp: type.hp,
-          currentTopHp: type.hp,
-          x: 6,
-          y: 1 + idx * 2,
-          active: true
-        });
-      });
-    } else {
-      const type = UNIT_TYPES.find(u => u.id === defenderStack.unitId);
-      this.units.push({
-        side: 'defender',
-        type,
-        count: defenderStack.count,
-        maxHp: type.hp,
-        currentTopHp: type.hp,
-        x: 6,
-        y: 2,
-        active: true
-      });
-    }
-
-    this.activeUnitIdx = 0;
-    this.sortTurnQueue();
-  }
-
-  sortTurnQueue() {
-    this.units.sort((a, b) => b.type.speed - a.type.speed);
-  }
-
-  getActiveUnit() {
-    return this.units[this.activeUnitIdx];
-  }
-
-  attackTarget(attackerUnit, defenderUnit) {
-    const totalMaxDamage = attackerUnit.count * attackerUnit.type.maxDmg;
-    const damage = Math.floor(totalMaxDamage * (1 + (this.attacker.atkBonus * 0.05)));
-    
-    let kills = Math.floor(damage / defenderUnit.type.hp);
-    kills = Math.min(defenderUnit.count, kills);
-
-    defenderUnit.count -= kills;
-    playSfx(attackerUnit.type.ranged ? 'spell' : 'sword');
-
-    this.floaters.push({
-      x: defenderUnit.x, y: defenderUnit.y,
-      text: `-${damage} 💥 (${kills} Slain)`,
-      color: '#e74c3c', life: 1.2
-    });
-
-    if (defenderUnit.count <= 0) {
-      defenderUnit.active = false;
-    }
-
-    this.nextTurn();
-  }
-
-  nextTurn() {
-    do {
-      this.activeUnitIdx = (this.activeUnitIdx + 1) % this.units.length;
-    } while (!this.units[this.activeUnitIdx].active && this.units.some(u => u.active));
-
-    // Check Victory / Defeat
-    const attackersAlive = this.units.some(u => u.side === 'attacker' && u.active);
-    const defendersAlive = this.units.some(u => u.side === 'defender' && u.active);
-
-    if (!defendersAlive) {
-      playSfx('fanfare');
-      setGameState('OVERWORLD');
-      showWarningMessage('VICTORY! MONSTER STACK DEFEATED! 🏆');
-    } else if (!attackersAlive) {
-      setGameState('GAME_OVER');
+  for (let r = 2; r <= 5; r++) {
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const x = cx + dx, y = cy + dy;
+        if (!inBounds(x, y)) continue;
+        if (movementCost(game.terrain, x, y) === Infinity) continue;
+        if (findCastleAt(x, y)) continue;
+        return { x, y };
+      }
     }
   }
+  return null;
 }
 
-// ============ UI & CANVAS RENDER ENGINE ============
-let warningTimer = 0;
-let warningMsg = '';
-
-function showWarningMessage(msg) {
-  warningMsg = msg;
-  warningTimer = 2.5;
-}
-
-function setGameState(newState) {
-  pendingState = newState;
-  stateCooldown = 0.35;
-  menuClick = null;
-}
-
-function render() {
-  ctx.clearRect(0, 0, W, H);
-  updateTouchVisibility();
-
-  if (gameState === 'MODE_SELECT') {
-    renderModeSelect();
-  } else if (gameState === 'CHAR_SELECT') {
-    renderCharSelect();
-  } else if (gameState === 'OVERWORLD') {
-    renderOverworld();
-  } else if (gameState === 'COMBAT') {
-    renderCombat();
-  } else if (gameState === 'PAUSED') {
-    renderOverworld();
-    drawModalCard(t('paused'), t('pausedHint'), [
-      { label: t('resume'), action: () => setGameState('OVERWORLD') },
-      { label: t('restart'), action: () => startNewGame() },
-      { label: t('menu'), action: () => setGameState('MODE_SELECT') }
-    ]);
-  } else if (gameState === 'GAME_OVER') {
-    renderOverworld();
-    drawModalCard(t('gameOver'), 'Your army was defeated in battle!', [
-      { label: t('restart'), action: () => startNewGame() },
-      { label: t('menu'), action: () => setGameState('MODE_SELECT') }
-    ]);
+function findStartSpots() {
+  // scan for two grass/beach tiles far from each other near opposite edges of the landmass
+  const land = [];
+  for (let y = 0; y < MAP_SIZE; y++) for (let x = 0; x < MAP_SIZE; x++) {
+    const terr = game.terrain[y][x];
+    if (terr === 'grass' || terr === 'beach') land.push({ x, y });
   }
+  if (land.length < 2) return [{ x: 4, y: 4 }, { x: MAP_SIZE - 5, y: MAP_SIZE - 5 }];
+  let best = null, bestD = -1;
+  for (let tries = 0; tries < 400; tries++) {
+    const a = land[Math.floor(Math.random() * land.length)];
+    const b = land[Math.floor(Math.random() * land.length)];
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (d > bestD) { bestD = d; best = [a, b]; }
+  }
+  return best;
+}
 
-  if (warningTimer > 0 && warningMsg) {
-    ctx.save();
-    ctx.font = 'bold 15px -apple-system, sans-serif';
-    const mw = ctx.measureText(warningMsg).width;
-    ctx.fillStyle = 'rgba(192, 57, 43, 0.9)';
-    ctx.strokeStyle = '#f1c40f';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(W / 2 - mw / 2 - 16, 78, mw + 32, 32, 16);
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(warningMsg, W / 2, 94);
-    ctx.restore();
+function placeMapObjects() {
+  const rng = Math.random;
+  const usedTiles = new Set(game.objects.map(o => o.x + ',' + o.y));
+  function freeSpot() {
+    for (let tries = 0; tries < 500; tries++) {
+      const x = Math.floor(rng() * MAP_SIZE), y = Math.floor(rng() * MAP_SIZE);
+      const terr = game.terrain[y][x];
+      if (terr === 'water' || terr === 'rock' || terr === 'lava') continue;
+      const k = x + ',' + y;
+      if (usedTiles.has(k)) continue;
+      // keep some distance from castles
+      let tooClose = false;
+      for (const o of game.objects) { if (o.kind === OBJ.CASTLE && Math.hypot(o.x - x, o.y - y) < 3) { tooClose = true; break; } }
+      if (tooClose) continue;
+      usedTiles.add(k);
+      return { x, y };
+    }
+    return null;
+  }
+  const mineTypes = ['wood', 'ore', 'crystal', 'plasma', 'gold'];
+  for (let i = 0; i < 10; i++) {
+    const s = freeSpot(); if (!s) continue;
+    game.objects.push({ id: genId(), kind: OBJ.MINE, x: s.x, y: s.y, resType: mineTypes[i % mineTypes.length], owner: -1 });
+  }
+  for (let i = 0; i < 10; i++) {
+    const s = freeSpot(); if (!s) continue;
+    const rk = RESOURCE_KEYS[Math.floor(rng() * RESOURCE_KEYS.length)];
+    game.objects.push({ id: genId(), kind: OBJ.RESOURCE, x: s.x, y: s.y, resType: rk, amount: 3 + Math.floor(rng() * 6) });
+  }
+  for (let i = 0; i < 8; i++) {
+    const s = freeSpot(); if (!s) continue;
+    game.objects.push({ id: genId(), kind: OBJ.CHEST, x: s.x, y: s.y });
+  }
+  for (let i = 0; i < 4; i++) {
+    const s = freeSpot(); if (!s) continue;
+    const art = ARTIFACT_DEFS[i % ARTIFACT_DEFS.length];
+    game.objects.push({ id: genId(), kind: OBJ.ARTIFACT, x: s.x, y: s.y, artifactId: art.id });
+  }
+  for (let i = 0; i < 8; i++) {
+    const s = freeSpot(); if (!s) continue;
+    const fac = FACTIONS[Math.floor(rng() * FACTIONS.length)];
+    const tier = 1 + Math.floor(rng() * 5);
+    game.objects.push({ id: genId(), kind: OBJ.DWELLING, x: s.x, y: s.y, factionId: fac.id, tier, joinCount: 2 + Math.floor(rng() * (8 - tier * 1.2)) });
+  }
+  for (let i = 0; i < 14; i++) {
+    const s = freeSpot(); if (!s) continue;
+    const fac = FACTIONS[Math.floor(rng() * FACTIONS.length)];
+    const tier = 1 + Math.floor(rng() * 5);
+    const count = Math.max(2, Math.round((8 - tier) * (0.6 + rng())));
+    game.objects.push({ id: genId(), kind: OBJ.MONSTER, x: s.x, y: s.y, stack: makeCreatureStack(fac.id, tier, count) });
   }
 }
 
-function renderModeSelect() {
-  ctx.fillStyle = '#080d1a';
-  ctx.fillRect(0, 0, W, H);
-
-  ctx.save();
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#2ecc71';
-  ctx.font = 'bold 36px -apple-system, sans-serif';
-  ctx.fillText(t('title'), W / 2, 90);
-
-  ctx.fillStyle = '#a9c7eb';
-  ctx.font = 'bold 15px -apple-system, sans-serif';
-  ctx.fillText(t('sub'), W / 2, 130);
-
-  drawMenuBtn(W / 2, 210, Math.min(W * 0.85, 320), 52, t('p1Solo'), () => {
-    gameMode = '1P';
-    setGameState('CHAR_SELECT');
-  });
-
-  drawMenuBtn(W / 2, 280, Math.min(W * 0.85, 320), 52, t('p2Coop'), () => {
-    gameMode = '2P';
-    setGameState('CHAR_SELECT');
-  });
-
-  drawMenuBtn(W / 2, 350, Math.min(W * 0.85, 320), 46, t('topScores'), () => {
-    openLeaderboardModal();
-  });
-
-  ctx.restore();
+// ============ FOG OF WAR ============
+const SCOUT_RADIUS = 4;
+const CASTLE_SCOUT_RADIUS = 5;
+function recomputeFog(playerIdx) {
+  const p = game.players[playerIdx];
+  const fog = p.fog;
+  // downgrade visible->explored (keep explored as explored)
+  for (let y = 0; y < MAP_SIZE; y++) for (let x = 0; x < MAP_SIZE; x++) if (fog[y][x] === 2) fog[y][x] = 1;
+  function reveal(cx, cy, r) {
+    for (let y = Math.max(0, cy - r); y <= Math.min(MAP_SIZE - 1, cy + r); y++) {
+      for (let x = Math.max(0, cx - r); x <= Math.min(MAP_SIZE - 1, cx + r); x++) {
+        if (Math.hypot(x - cx, y - cy) <= r) fog[y][x] = 2;
+      }
+    }
+  }
+  for (const h of p.heroes) reveal(h.x, h.y, SCOUT_RADIUS);
+  for (const cid of p.castles) {
+    const c = game.objects.find(o => o.id === cid);
+    if (c) reveal(c.x, c.y, CASTLE_SCOUT_RADIUS);
+  }
 }
 
-function renderCharSelect() {
-  ctx.fillStyle = '#080d1a';
-  ctx.fillRect(0, 0, W, H);
-
-  ctx.save();
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#2ecc71';
-  ctx.font = 'bold 32px -apple-system, sans-serif';
-  ctx.fillText(t('chooseHero'), W / 2, 85);
-
-  drawMenuBtn(W / 2, 160, Math.min(W * 0.85, 320), 48, t('lilo'), () => {
-    startNewGame();
-  });
-
-  drawMenuBtn(W / 2, 225, Math.min(W * 0.85, 320), 48, t('stitch'), () => {
-    startNewGame();
-  });
-
-  drawMenuBtn(W / 2, 290, Math.min(W * 0.85, 320), 48, t('angel'), () => {
-    startNewGame();
-  });
-
-  drawMenuBtn(W / 2, 370, 180, 44, t('back'), () => {
-    setGameState('MODE_SELECT');
-  });
-
-  ctx.restore();
+// ============ TURN ENGINE ============
+function collectIncome(playerIdx) {
+  const p = game.players[playerIdx];
+  const income = emptyResources();
+  for (const cid of p.castles) {
+    const c = game.objects.find(o => o.id === cid);
+    if (!c) continue;
+    const lvl = c.buildings.townHall || 0;
+    income.gold += lvl > 0 ? BUILDING_DEFS[0].incomePerLevel[lvl - 1] : 0;
+    if (c.buildings.statue) income.gold += 250;
+  }
+  for (const o of game.objects) {
+    if (o.kind === OBJ.MINE && o.owner === playerIdx) income[o.resType] += (o.resType === 'gold' ? 1000 : 2);
+  }
+  for (const k of RESOURCE_KEYS) p.resources[k] += income[k];
+  return income;
 }
 
-function renderOverworld() {
-  const p = players[activePlayerIdx];
-  const tileSize = Math.min((W - 32) / GRID_COLS, (H - 160) / GRID_ROWS);
-  const offsetX = (W - GRID_COLS * tileSize) / 2;
-  const offsetY = 96;
-
-  // Render Overworld Map Tiles
-  for (let r = 0; r < GRID_ROWS; r++) {
-    for (let c = 0; c < GRID_COLS; c++) {
-      const tile = overworldMap[r][c];
-      const tx = offsetX + c * tileSize;
-      const ty = offsetY + r * tileSize;
-
-      // Base Terrain Colors
-      if (tile.type === 'grass') ctx.fillStyle = '#27ae60';
-      else if (tile.type === 'forest') ctx.fillStyle = '#1e8449';
-      else if (tile.type === 'mountain') ctx.fillStyle = '#7f8c8d';
-      else ctx.fillStyle = '#2980b9';
-
-      ctx.fillRect(tx, ty, tileSize, tileSize);
-      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
-      ctx.strokeRect(tx, ty, tileSize, tileSize);
-
-      // Render Structures & Objects
-      if (tile.structure) {
-        const s = tile.structure;
-        ctx.font = `${tileSize * 0.6}px sans-serif`;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-
-        if (s.kind === 'castle') {
-          ctx.fillStyle = s.owner === 1 ? '#e74c3c' : '#3498db';
-          ctx.fillRect(tx + 4, ty + 4, tileSize - 8, tileSize - 8);
-          ctx.fillText('🏰', tx + tileSize / 2, ty + tileSize / 2);
-        } else if (s.kind === 'mine') {
-          ctx.fillText(s.res === 'gold' ? '🪙' : (s.res === 'wood' ? '🪵' : '💎'), tx + tileSize / 2, ty + tileSize / 2);
-        } else if (s.kind === 'chest') {
-          ctx.fillText('🎁', tx + tileSize / 2, ty + tileSize / 2);
-        } else if (s.kind === 'monster') {
-          ctx.fillText('🦅', tx + tileSize / 2, ty + tileSize / 2);
+function weeklyGrowth() {
+  for (const o of game.objects) {
+    if (o.kind === OBJ.CASTLE) {
+      for (let tier = 1; tier <= 5; tier++) {
+        if (o.buildings['dwelling' + tier]) {
+          const fac = factionById(o.factionId);
+          const cdef = fac.creatures[tier - 1];
+          o.dwellingCounts[tier] = (o.dwellingCounts[tier] || 0) + cdef.growth;
         }
       }
     }
   }
+}
 
-  // Render Heroes
-  players.forEach(hero => {
-    const hx = offsetX + hero.x * tileSize + tileSize / 2;
-    const hy = offsetY + hero.y * tileSize + tileSize / 2;
+function resetCastleBuildFlags(playerIdx) {
+  for (const o of game.objects) if (o.kind === OBJ.CASTLE && o.ownerIdx === playerIdx) o.builtThisTurn = false;
+}
 
-    ctx.fillStyle = hero.color;
-    ctx.beginPath();
-    ctx.arc(hx, hy, tileSize * 0.38, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+function refreshHeroesForTurn(playerIdx) {
+  const p = game.players[playerIdx];
+  for (const h of p.heroes) {
+    h.movePtsMax = heroMovePtsMax(h);
+    h.movePts = h.movePtsMax;
+    h.spellPtsMax = heroSpellPtsMax(h);
+    h.spellPts = Math.min(h.spellPtsMax, h.spellPts + Math.round(h.spellPtsMax * 0.5));
+  }
+}
 
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 12px sans-serif';
+function endTurn() {
+  const finishedIdx = game.turn.playerIdx;
+  game.cameraByPlayer[finishedIdx] = { x: game.camera.x, y: game.camera.y };
+  collectIncome(finishedIdx);
+  const nextIdx = otherPlayerIdx();
+  game.turn.playerIdx = nextIdx;
+  if (nextIdx === 0) {
+    // full day cycle completed
+    game.turn.day++;
+    if ((game.turn.day - 1) % 7 === 0) {
+      game.turn.week++;
+      weeklyGrowth();
+    }
+  }
+  resetCastleBuildFlags(nextIdx);
+  refreshHeroesForTurn(nextIdx);
+  recomputeFog(nextIdx);
+  // each player's turn opens centered on their own castle
+  centerCameraOnCastle(nextIdx);
+  game.selectedHeroId = null;
+  checkVictory();
+  if (game.screen !== 'victory') {
+    game.screen = 'passDevice';
+  }
+  saveGame();
+}
+
+function checkVictory() {
+  const aliveCastleOwners = new Set(game.objects.filter(o => o.kind === OBJ.CASTLE).map(o => o.ownerIdx));
+  const aliveHeroOwners = new Set();
+  for (const p of game.players) if (p.heroes.length > 0) aliveHeroOwners.add(p.idx);
+  for (let i = 0; i < game.players.length; i++) {
+    const otherIdx = i === 0 ? 1 : 0;
+    const otherHasCastle = aliveCastleOwners.has(otherIdx);
+    const otherHasHero = aliveHeroOwners.has(otherIdx);
+    if (!otherHasCastle && !otherHasHero) {
+      game.victor = i;
+      game.screen = 'victory';
+      clearSavedGame();
+      return true;
+    }
+  }
+  return false;
+}
+
+// ============================================================
+// HERO MOVEMENT & MAP OBJECT INTERACTION
+// ============================================================
+function tryMoveHeroTo(hero, tx, ty) {
+  if (!inBounds(tx, ty)) return false;
+  if (hero.movePts <= 0) return false;
+  const blocked = new Set();
+  for (const p of game.players) {
+    for (const h of p.heroes) {
+      if (h.id === hero.id) continue;
+      if (h.ownerIdx === hero.ownerIdx) blocked.add(h.x + ',' + h.y); // can't stack own heroes
+    }
+  }
+  const path = astar(game.terrain, { x: hero.x, y: hero.y }, { x: tx, y: ty }, { blocked });
+  if (!path) return false;
+  hero.path = path;
+  stepHeroAlongPath(hero);
+  return true;
+}
+
+// movement-point-budgeted Dijkstra over the terrain from the hero's current tile —
+// used to find "as close as legally possible" when the clicked tile itself can't be
+// reached (e.g. it's open water, or beyond this turn's remaining movement)
+function heroReachableTiles(hero) {
+  const blocked = new Set();
+  for (const p of game.players) {
+    for (const h of p.heroes) {
+      if (h.id === hero.id) continue;
+      if (h.ownerIdx === hero.ownerIdx) blocked.add(h.x + ',' + h.y);
+    }
+  }
+  const dist = new Map();
+  const startKey = hero.x + ',' + hero.y;
+  dist.set(startKey, 0);
+  const frontier = [{ x: hero.x, y: hero.y, d: 0 }];
+  while (frontier.length) {
+    frontier.sort((a, b) => a.d - b.d);
+    const cur = frontier.shift();
+    const curKey = cur.x + ',' + cur.y;
+    if (cur.d > dist.get(curKey)) continue; // stale queue entry
+    const neighbors = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+    for (const [dx, dy] of neighbors) {
+      const nx = cur.x + dx, ny = cur.y + dy;
+      if (!inBounds(nx, ny)) continue;
+      const nk = nx + ',' + ny;
+      if (blocked.has(nk)) continue;
+      const cost = movementCost(game.terrain, nx, ny);
+      if (cost === Infinity) continue;
+      const nd = cur.d + cost;
+      if (nd > hero.movePts) continue;
+      if (!dist.has(nk) || nd < dist.get(nk)) {
+        dist.set(nk, nd);
+        frontier.push({ x: nx, y: ny, d: nd });
+      }
+    }
+  }
+  return dist; // Map "x,y" -> movement cost from the hero's current tile
+}
+
+// tries the exact clicked tile first (matching prior behaviour); if that tile is
+// impassable/unreachable this turn, walks the hero to the closest tile it CAN legally
+// reach toward the click instead — mirrors the "march as close as possible" UX already
+// used for combat-stack movement (see moveStackNearTarget)
+function tryMoveHeroToward(hero, tx, ty) {
+  if (tryMoveHeroTo(hero, tx, ty)) return true;
+  if (hero.movePts <= 0) return false;
+  const reach = heroReachableTiles(hero);
+  let best = null, bestDist = Infinity;
+  for (const k of reach.keys()) {
+    if (k === hero.x + ',' + hero.y) continue;
+    const [x, y] = k.split(',').map(Number);
+    const d = Math.hypot(x - tx, y - ty);
+    if (d < bestDist) { bestDist = d; best = { x, y }; }
+  }
+  if (!best) return false;
+  return tryMoveHeroTo(hero, best.x, best.y);
+}
+
+function stepHeroAlongPath(hero) {
+  while (hero.path && hero.path.length > 0 && hero.movePts > 0) {
+    const next = hero.path[0];
+    const cost = movementCost(game.terrain, next.x, next.y);
+    if (cost === Infinity) { hero.path = null; break; }
+    // check for occupying object/hero before stepping in
+    const enemyHero = heroAt(next.x, next.y, hero.id);
+    if (enemyHero && enemyHero.ownerIdx !== hero.ownerIdx) {
+      hero.path = null;
+      startCombat(hero, enemyHero, 'hero');
+      return;
+    }
+    const obj = objectAt(next.x, next.y);
+    if (obj && obj.kind === OBJ.MONSTER) {
+      hero.path = null;
+      startCombat(hero, obj, 'monster');
+      return;
+    }
+    if (obj && obj.kind === OBJ.CASTLE && obj.ownerIdx !== hero.ownerIdx) {
+      const enemyGarrisonHero = null; // simplification: castle without a hero defends with garrison only
+      if (garrisonHasTroops(obj)) {
+        hero.path = null;
+        startCombat(hero, obj, 'castle');
+        return;
+      } else {
+        captureCastle(hero, obj);
+      }
+    }
+    hero.movePts = Math.max(0, hero.movePts - cost);
+    hero.x = next.x; hero.y = next.y;
+    hero.path.shift();
+    recomputeFog(hero.ownerIdx);
+    if (obj) visitObject(hero, obj);
+    if (hero.movePts <= 0) break;
+  }
+  if (hero.path && hero.path.length === 0) hero.path = null;
+}
+
+function garrisonHasTroops(castle) { return castle.garrison.some(s => s); }
+
+function captureCastle(hero, castleObj) {
+  const prevOwner = castleObj.ownerIdx;
+  if (prevOwner >= 0 && prevOwner !== hero.ownerIdx) {
+    const prevP = game.players[prevOwner];
+    prevP.castles = prevP.castles.filter(id => id !== castleObj.id);
+  }
+  castleObj.ownerIdx = hero.ownerIdx;
+  const p = game.players[hero.ownerIdx];
+  if (!p.castles.includes(castleObj.id)) p.castles.push(castleObj.id);
+  sfx.build();
+  checkVictory();
+}
+
+function visitObject(hero, obj) {
+  const p = game.players[hero.ownerIdx];
+  switch (obj.kind) {
+    case OBJ.MINE: {
+      obj.owner = hero.ownerIdx;
+      sfx.coin();
+      showMessage(t('mineChosen'), '', [{ label: t('ok') }]);
+      break;
+    }
+    case OBJ.RESOURCE: {
+      p.resources[obj.resType] += obj.amount;
+      removeObject(obj);
+      sfx.coin();
+      showMessage(t('resourceFound'), RESOURCE_ICON[obj.resType] + ' +' + obj.amount, [{ label: t('ok') }]);
+      break;
+    }
+    case OBJ.CHEST: {
+      openChest(hero, obj);
+      break;
+    }
+    case OBJ.ARTIFACT: {
+      const art = ARTIFACT_DEFS.find(a => a.id === obj.artifactId);
+      hero.artifacts.push(art.id);
+      hero[art.attr] += art.amount;
+      removeObject(obj);
+      sfx.chest();
+      showMessage(t('artifactFound'), art.name, [{ label: t('ok') }]);
+      break;
+    }
+    case OBJ.DWELLING: {
+      const fac = factionById(obj.factionId);
+      const cdef = fac.creatures[obj.tier - 1];
+      addToArmy(hero, obj.factionId, obj.tier, obj.joinCount, false);
+      sfx.recruit();
+      showMessage(t('dwellingTitle'), obj.joinCount + 'x ' + cdef.name + ' — ' + t('dwellingJoinFree'), [{ label: t('ok') }]);
+      removeObject(obj);
+      break;
+    }
+    default: break;
+  }
+}
+
+function removeObject(obj) { game.objects = game.objects.filter(o => o.id !== obj.id); }
+
+function openChest(hero, obj) {
+  showListModal(t('chestTitle'), t('chestGoldOrXp'), [], [
+    { label: t('chestGold'), onClick: () => { game.players[hero.ownerIdx].resources.gold += 500; removeObject(obj); hideListModal(); sfx.coin(); } },
+    { label: t('chestXp'), onClick: () => { grantXp(hero, 300); removeObject(obj); hideListModal(); sfx.chest(); } },
+  ]);
+}
+
+// ---- Army management ----
+function addToArmy(hero, factionId, tier, count, upgraded) {
+  // merge into existing same-tier same-upgrade stack first
+  for (const s of hero.army) {
+    if (s && s.factionId === factionId && s.tier === tier && s.upgraded === !!upgraded) { s.count += count; return true; }
+  }
+  for (let i = 0; i < hero.army.length; i++) {
+    if (!hero.army[i]) { hero.army[i] = makeCreatureStack(factionId, tier, count, upgraded); return true; }
+  }
+  return false; // army full (5 stacks), caller should handle
+}
+function armyFreeSlot(hero) { return hero.army.some(s => !s); }
+
+function grantXp(hero, amount) {
+  hero.xp += amount;
+  let leveled = false;
+  while (hero.xp >= xpForLevel(hero.level)) {
+    hero.level++;
+    leveled = true;
+    levelUpHero(hero);
+  }
+  if (leveled) sfx.levelUp();
+}
+
+function levelUpHero(hero) {
+  // choose attribute to increase: weighted random pick presented to player via modal in real flow;
+  // for simplicity in Stage 1 we auto-apply a small deterministic bump and let players see it in the hero screen.
+  const attrs = ['attack', 'defense', 'spellPower', 'knowledge'];
+  const pick = attrs[Math.floor(Math.random() * attrs.length)];
+  hero[pick] += 1;
+  // 40% chance to also gain/upgrade a secondary skill
+  if (Math.random() < 0.5 && hero.skills.length < 8) {
+    const known = hero.skills.map(s => s.id);
+    const upgradeable = hero.skills.filter(s => s.level < 3);
+    if (upgradeable.length && Math.random() < 0.5) {
+      const s = upgradeable[Math.floor(Math.random() * upgradeable.length)];
+      s.level = Math.min(3, s.level + 1);
+    } else {
+      const avail = SKILL_IDS.filter(id => !known.includes(id));
+      if (avail.length) hero.skills.push({ id: avail[Math.floor(Math.random() * avail.length)], level: 1 });
+    }
+  }
+  // learn a spell automatically if a Mage Guild is available at hero's castle and level allows
+  hero.movePtsMax = heroMovePtsMax(hero);
+  hero.spellPtsMax = heroSpellPtsMax(hero);
+}
+
+// ---- Building ----
+function canBuild(castle, buildingId) {
+  const def = buildingDef(buildingId);
+  if (!def) return { ok: false, reason: t('cannotAfford') };
+  if (castle.builtThisTurn) return { ok: false, reason: t('alreadyBuiltThisTurn') };
+  const curLevel = castle.buildings[buildingId] || 0;
+  if (curLevel >= def.maxLevel) return { ok: false, reason: t('built') };
+  if (def.requires && !castle.buildings[def.requires]) return { ok: false, reason: t('needsPrereq') };
+  const cost = def.cost[curLevel];
+  const p = game.players[castle.ownerIdx];
+  for (const k in cost) if ((p.resources[k] || 0) < cost[k]) return { ok: false, reason: t('cannotAfford') };
+  return { ok: true, cost };
+}
+
+function buildInCastle(castle, buildingId) {
+  const check = canBuild(castle, buildingId);
+  if (!check.ok) return false;
+  const p = game.players[castle.ownerIdx];
+  for (const k in check.cost) p.resources[k] -= check.cost[k];
+  castle.buildings[buildingId] = (castle.buildings[buildingId] || 0) + 1;
+  castle.builtThisTurn = true;
+  // a freshly built dwelling comes pre-stocked with its first week of growth so the
+  // player can recruit from it immediately (matches HOMM2 build-then-recruit flow)
+  const builtDef = buildingDef(buildingId);
+  if (builtDef.tier && !builtDef.upgrade) {
+    const fac = factionById(castle.factionId);
+    const cdef = fac.creatures[builtDef.tier - 1];
+    castle.dwellingCounts[builtDef.tier] = (castle.dwellingCounts[builtDef.tier] || 0) + cdef.growth;
+  }
+  sfx.build();
+  saveGame();
+  return true;
+}
+
+function castleAvailableToRecruit(castle, tier) {
+  return castle.dwellingCounts[tier] || 0;
+}
+
+// shared by recruitFromCastle (targets a hero standing in the castle) and
+// recruitIntoGarrison (targets the castle's own garrison when no hero is present) —
+// both a hero and the garrison expose the same 5-slot `.army`/`.garrison` shape
+function recruitToArmyHolder(castle, armyHolder, tier, count) {
+  const upgraded = !!castle.buildings['dwelling' + tier + 'up'];
+  const avail = castleAvailableToRecruit(castle, tier);
+  count = Math.min(count, avail);
+  if (count <= 0) return false;
+  const fac = factionById(castle.factionId);
+  const cdef = fac.creatures[tier - 1];
+  const cost = cdef.cost;
+  const p = game.players[castle.ownerIdx];
+  for (const k in cost) if ((p.resources[k] || 0) < cost[k] * count) return false;
+  if (!armyFreeSlot(armyHolder) && !armyHolder.army.some(s => s && s.factionId === castle.factionId && s.tier === tier && s.upgraded === upgraded)) return false;
+  for (const k in cost) p.resources[k] -= cost[k] * count;
+  addToArmy(armyHolder, castle.factionId, tier, count, upgraded);
+  castle.dwellingCounts[tier] -= count;
+  sfx.recruit();
+  saveGame();
+  return true;
+}
+function recruitFromCastle(castle, hero, tier, count) {
+  return recruitToArmyHolder(castle, hero, tier, count);
+}
+// no hero is standing in the castle: recruit straight into its garrison instead of
+// silently doing nothing (garrison defends the castle and can be picked up by any
+// visiting friendly hero later)
+function recruitIntoGarrison(castle, tier, count) {
+  return recruitToArmyHolder(castle, { army: castle.garrison }, tier, count);
+}
+// "at/near" the castle: on its tile, or on any of the 8 tiles around it (this is where a
+// freshly-spawned hero stands, since heroes now spawn adjacent to their castle rather than
+// on top of it — see findAdjacentFreeTile)
+function heroAtCastle(castle) {
+  const heroes = game.players[castle.ownerIdx].heroes;
+  return heroes.find(h => h.x === castle.x && h.y === castle.y) ||
+    heroes.find(h => Math.max(Math.abs(h.x - castle.x), Math.abs(h.y - castle.y)) <= 1) || null;
+}
+
+// ============================================================
+// TACTICAL COMBAT ENGINE
+// ============================================================
+const COMBAT_W = 12, COMBAT_H = 10;
+
+function combatStackFromArmySlot(armySlot, side, ownerIdx) {
+  const cdef = creatureRef(armySlot);
+  return {
+    id: genId(), side, ownerIdx, armySlotRef: armySlot,
+    factionId: armySlot.factionId, tier: armySlot.tier, upgraded: armySlot.upgraded,
+    hpEach: cdef.hp, hp: cdef.hp * armySlot.count, hpMax: cdef.hp * armySlot.count, count: armySlot.count,
+    ammo: cdef.ammo, alive: true, x: 0, y: 0, retaliated: false, defending: false,
+    buffs: {}, frozenThisTurn: false, extraActionUsed: false,
+  };
+}
+
+function startCombat(attackerHero, target, kind) {
+  const attackerStacks = attackerHero.army.filter(s => s).map(s => combatStackFromArmySlot(s, 'attacker', attackerHero.ownerIdx));
+  let defenderStacks = [], defenderHero = null, defenderOwnerIdx = -1, siege = false, monsterObjId = null, castleObjId = null;
+  if (kind === 'monster') {
+    defenderStacks = [combatStackFromArmySlot(target.stack, 'defender', -1)];
+    defenderOwnerIdx = -1;
+    monsterObjId = target.id;
+  } else if (kind === 'hero') {
+    defenderHero = target;
+    defenderStacks = target.army.filter(s => s).map(s => combatStackFromArmySlot(s, 'defender', target.ownerIdx));
+    defenderOwnerIdx = target.ownerIdx;
+  } else if (kind === 'castle') {
+    defenderStacks = target.garrison.filter(s => s).map(s => combatStackFromArmySlot(s, 'defender', target.ownerIdx));
+    defenderOwnerIdx = target.ownerIdx;
+    siege = !!target.buildings.cityWalls;
+    castleObjId = target.id;
+  }
+  // place on grid: attacker at x=1 column, defender at x=COMBAT_W-2 column, spread across rows by slot index
+  const rowsFor = (n) => { const rows = []; const spacing = Math.floor(COMBAT_H / (n + 1)); for (let i = 0; i < n; i++) rows.push(spacing * (i + 1)); return rows; };
+  const aRows = rowsFor(attackerStacks.length);
+  attackerStacks.forEach((s, i) => { s.x = 1; s.y = aRows[i]; });
+  const dRows = rowsFor(defenderStacks.length);
+  defenderStacks.forEach((s, i) => { s.x = COMBAT_W - 2; s.y = dRows[i]; });
+
+  game.combat = {
+    attackerHeroId: attackerHero.id, defenderHeroId: defenderHero ? defenderHero.id : null,
+    defenderOwnerIdx, siege, monsterObjId, castleObjId, kind,
+    stacks: attackerStacks.concat(defenderStacks),
+    round: 0, order: [], orderIndex: 0,
+    sideCast: { attacker: false, defender: false },
+    log: [], result: null, floaters: [],
+    attackerFromX: attackerHero.x, attackerFromY: attackerHero.y,
+  };
+  game.screen = 'combat';
+  beginCombatRound();
+}
+
+function combatAliveStacks() { return game.combat.stacks.filter(s => s.alive); }
+function combatAttackerHero() { return findHeroById(game.combat.attackerHeroId); }
+function combatDefenderHero() { return game.combat.defenderHeroId ? findHeroById(game.combat.defenderHeroId) : null; }
+function combatSideIsAI(side) {
+  const c = game.combat;
+  if (side === 'attacker') return false;
+  if (c.kind === 'hero') return false;
+  return true; // monster or unmanned castle garrison
+}
+function effSpeed(stack) {
+  let sp = creatureRef(stack).speed;
+  if (stack.buffs.speedUp) sp += stack.buffs.speedUp;
+  if (stack.buffs.speedDown) sp -= stack.buffs.speedDown;
+  return Math.max(1, sp);
+}
+
+function beginCombatRound() {
+  const c = game.combat;
+  c.round++;
+  c.order = combatAliveStacks().slice().sort((a, b) => effSpeed(b) - effSpeed(a) || a.id - b.id).map(s => s.id);
+  c.orderIndex = 0;
+  c.sideCast = { attacker: false, defender: false };
+  for (const s of c.stacks) { s.retaliated = false; s.defending = false; s.extraActionUsed = false; }
+  processCurrentActor();
+}
+
+function currentActorStack() {
+  const c = game.combat;
+  if (!c || c.result) return null;
+  while (c.orderIndex < c.order.length) {
+    const s = c.stacks.find(st => st.id === c.order[c.orderIndex]);
+    if (s && s.alive) return s;
+    c.orderIndex++;
+  }
+  return null;
+}
+
+function processCurrentActor() {
+  const c = game.combat;
+  if (checkCombatEnd()) return;
+  let stack = currentActorStack();
+  if (!stack) { beginCombatRound(); return; }
+  // morale roll
+  const hero = stack.side === 'attacker' ? combatAttackerHero() : combatDefenderHero();
+  const moraleVal = hero ? heroMorale(hero) : 0;
+  const badChance = Math.max(0, 0.06 - moraleVal * 0.02);
+  const goodChance = moraleVal * 0.08;
+  const roll = Math.random();
+  if (roll < badChance) {
+    combatLog(t('moraleBad'));
+    endActorTurn();
+    return;
+  }
+  const goodMorale = roll < badChance + goodChance;
+  if (goodMorale) combatLog(t('moraleGood'));
+  if (combatSideIsAI(stack.side)) {
+    aiActStack(stack);
+    if (goodMorale && !stack.extraActionUsed && stack.alive) { stack.extraActionUsed = true; aiActStack(stack); }
+    endActorTurn();
+  }
+  // human stacks: wait for UI input; render loop shows highlight for stack.id
+  stack.pendingGoodMorale = goodMorale;
+}
+
+function endActorTurn() {
+  const c = game.combat;
+  c.orderIndex++;
+  processCurrentActor();
+}
+
+function combatLog(msg) {
+  game.combat.log.push(msg);
+  if (game.combat.log.length > 40) game.combat.log.shift();
+}
+
+// ---- movement on the battlefield ----
+function combatReachable(stack) {
+  const c = game.combat;
+  const occupied = new Set(combatAliveStacks().filter(s => s.id !== stack.id).map(s => s.x + ',' + s.y));
+  const maxSteps = effSpeed(stack);
+  const visited = new Map();
+  const startKey = stack.x + ',' + stack.y;
+  visited.set(startKey, 0);
+  const queue = [{ x: stack.x, y: stack.y, d: 0 }];
+  while (queue.length) {
+    const cur = queue.shift();
+    if (cur.d >= maxSteps) continue;
+    const neighbors = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+    for (const [dx, dy] of neighbors) {
+      const nx = cur.x + dx, ny = cur.y + dy;
+      if (nx < 0 || ny < 0 || nx >= COMBAT_W || ny >= COMBAT_H) continue;
+      const k = nx + ',' + ny;
+      if (occupied.has(k)) continue;
+      if (visited.has(k) && visited.get(k) <= cur.d + 1) continue;
+      visited.set(k, cur.d + 1);
+      queue.push({ x: nx, y: ny, d: cur.d + 1 });
+    }
+  }
+  visited.delete(startKey);
+  return visited; // Map "x,y" -> steps
+}
+
+function chebyshev(a, b) { return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)); }
+
+function moveStackTo(stack, tx, ty) {
+  const reach = combatReachable(stack);
+  const k = tx + ',' + ty;
+  if (!reach.has(k)) return false;
+  stack.x = tx; stack.y = ty;
+  return true;
+}
+
+function moveStackNearTarget(stack, target) {
+  // move to the reachable tile adjacent to target that is closest to current pos; returns true if ends adjacent
+  const reach = combatReachable(stack);
+  let best = null, bestD = Infinity;
+  for (const [k, steps] of reach) {
+    const [x, y] = k.split(',').map(Number);
+    if (chebyshev({ x, y }, target) <= 1) {
+      if (steps < bestD) { bestD = steps; best = { x, y }; }
+    }
+  }
+  if (best) { stack.x = best.x; stack.y = best.y; return true; }
+  // else move as close as possible
+  let bestTile = null, bestDist = chebyshev(stack, target);
+  for (const [k] of reach) {
+    const [x, y] = k.split(',').map(Number);
+    const d = chebyshev({ x, y }, target);
+    if (d < bestDist) { bestDist = d; bestTile = { x, y }; }
+  }
+  if (bestTile) { stack.x = bestTile.x; stack.y = bestTile.y; }
+  return chebyshev(stack, target) <= 1;
+}
+
+// ---- damage / attack ----
+function computeDamage(attacker, defender, ranged) {
+  const cdef = creatureRef(attacker);
+  const dmgMin = cdef.dmg[0], dmgMax = cdef.dmg[1];
+  let base = 0;
+  for (let i = 0; i < attacker.count; i++) base += dmgMin + Math.random() * (dmgMax - dmgMin);
+  let atk = creatureAtk(attacker);
+  let def = creatureDef(defender);
+  const hero = attacker.side === 'attacker' ? combatAttackerHero() : combatDefenderHero();
+  const dHero = defender.side === 'attacker' ? combatAttackerHero() : combatDefenderHero();
+  if (game.combat.siege && defender.side === 'defender') def += 3;
+  let mult = 1 + Math.max(-0.7, Math.min(3.0, (atk - def) * 0.05));
+  if (attacker.buffs.dmgUp) mult *= (1 + attacker.buffs.dmgUp);
+  if (attacker.buffs.dmgDown) mult *= Math.max(0.1, 1 - attacker.buffs.dmgDown);
+  const adjacent = chebyshev(attacker, defender) <= 1;
+  if (ranged && adjacent) mult *= 0.5; // HOMM2 ranged-in-melee penalty
+  if (ranged && hero) mult *= (1 + heroArcheryBonus(hero));
+  let luckTriggered = false;
+  if (hero) {
+    const luckChance = Math.min(0.4, heroLuck(hero) * 0.08);
+    if (Math.random() < luckChance) { luckTriggered = true; base *= 2; }
+  }
+  return { dmg: Math.max(1, Math.round(base * mult)), luckTriggered };
+}
+
+function applyDamageToStack(stack, dmg) {
+  stack.hp = Math.max(0, stack.hp - dmg);
+  if (stack.hp <= 0) { stack.alive = false; stack.count = 0; }
+  else stack.count = Math.max(1, Math.ceil(stack.hp / stack.hpEach));
+}
+
+function performAttack(attacker, defender, ranged) {
+  if (!attacker.alive || !defender.alive) return;
+  const { dmg, luckTriggered } = computeDamage(attacker, defender, ranged);
+  applyDamageToStack(defender, dmg);
+  addFloater(defender.x, defender.y, '-' + dmg);
+  if (ranged) { attacker.ammo = Math.max(0, attacker.ammo - 1); sfx.hitRanged(); }
+  else sfx.hit();
+  combatLog(creatureDisplayName(attacker) + ' → ' + creatureDisplayName(defender) + ': -' + dmg + (luckTriggered ? ' ' + t('luckGood') : ''));
+  if (!defender.alive) { sfx.death(); combatLog(creatureDisplayName(defender) + ' destroyed!'); }
+  else if (!ranged && !defender.retaliated && defender.alive) {
+    defender.retaliated = true;
+    const retD = computeDamage(defender, attacker, false);
+    applyDamageToStack(attacker, retD.dmg);
+    addFloater(attacker.x, attacker.y, '-' + retD.dmg);
+    sfx.hit();
+    combatLog(creatureDisplayName(defender) + ' retaliates → ' + creatureDisplayName(attacker) + ': -' + retD.dmg);
+    if (!attacker.alive) { sfx.death(); combatLog(creatureDisplayName(attacker) + ' destroyed!'); }
+  }
+}
+
+function addFloater(x, y, text) {
+  game.combat.floaters.push({ x, y, text, t: 0 });
+}
+
+// ---- AI for neutral / unmanned garrison stacks ----
+function aiActStack(stack) {
+  const enemies = combatAliveStacks().filter(s => s.side !== stack.side);
+  if (!enemies.length) return;
+  let target = enemies[0], bestD = chebyshev(stack, target);
+  for (const e of enemies) { const d = chebyshev(stack, e); if (d < bestD) { bestD = d; target = e; } }
+  const ranged = creatureRanged(stack) && stack.ammo > 0;
+  if (ranged) { performAttack(stack, target, true); return; }
+  if (chebyshev(stack, target) <= 1) { performAttack(stack, target, false); return; }
+  const gotAdjacent = moveStackNearTarget(stack, target);
+  if (gotAdjacent) performAttack(stack, target, false);
+}
+
+// ---- human action entry points (called from input handlers) ----
+function humanActOnTile(tx, ty) {
+  const c = game.combat;
+  const stack = currentActorStack();
+  if (!stack || combatSideIsAI(stack.side)) return false;
+  const targetStack = combatAliveStacks().find(s => s.x === tx && s.y === ty);
+  if (targetStack && targetStack.side !== stack.side) {
+    const ranged = creatureRanged(stack) && stack.ammo > 0;
+    if (ranged) { performAttack(stack, targetStack, true); finishHumanAction(stack); return true; }
+    if (chebyshev(stack, targetStack) <= 1) { performAttack(stack, targetStack, false); finishHumanAction(stack); return true; }
+    // too far to reach this turn: march as close as possible instead of doing nothing
+    // (mirrors HOMM2 UX — clicking a distant enemy walks the stack toward it)
+    const gotAdjacent = moveStackNearTarget(stack, targetStack);
+    if (gotAdjacent) performAttack(stack, targetStack, false);
+    else sfx.move();
+    finishHumanAction(stack);
+    return true;
+  }
+  if (!targetStack) {
+    const moved = moveStackTo(stack, tx, ty);
+    if (moved) { sfx.move(); finishHumanAction(stack); return true; }
+  }
+  return false;
+}
+function finishHumanAction(stack) {
+  if (stack.pendingGoodMorale && !stack.extraActionUsed && stack.alive) {
+    stack.extraActionUsed = true;
+    stack.pendingGoodMorale = false;
+    return; // let them act again; UI stays on this stack
+  }
+  endActorTurn();
+}
+function humanDefend() {
+  const stack = currentActorStack();
+  if (!stack || combatSideIsAI(stack.side)) return;
+  stack.defending = true;
+  finishHumanAction(stack);
+}
+function humanWait() {
+  const stack = currentActorStack();
+  if (!stack || combatSideIsAI(stack.side)) return;
+  finishHumanAction(stack);
+}
+
+// ---- spells in combat ----
+function combatCastSpell(side, spellId, targetStackId) {
+  const c = game.combat;
+  if (c.sideCast[side]) return false;
+  const hero = side === 'attacker' ? combatAttackerHero() : combatDefenderHero();
+  if (!hero || !hero.spells.includes(spellId)) return false;
+  const def = spellDef(spellId);
+  if (!def || hero.spellPts < def.cost) return false;
+  hero.spellPts -= def.cost;
+  c.sideCast[side] = true;
+  const power = hero.spellPower;
+  if (def.kind === 'damage') {
+    const targets = def.aoe ? combatAliveStacks().filter(s => s.side !== side) : [c.stacks.find(s => s.id === targetStackId)].filter(Boolean);
+    for (const tgt of targets) {
+      const dmg = Math.round(def.base + power * 2);
+      applyDamageToStack(tgt, dmg);
+      addFloater(tgt.x, tgt.y, '-' + dmg);
+      combatLog('🔥 ' + def.name + ' → ' + creatureDisplayName(tgt) + ': -' + dmg);
+    }
+  } else if (def.kind === 'heal') {
+    const tgt = c.stacks.find(s => s.id === targetStackId);
+    if (tgt) {
+      tgt.hp = Math.min(tgt.count * tgt.hpEach + (def.base + power * 2), tgt.hp + def.base + power * 2);
+      tgt.count = Math.max(tgt.count, Math.ceil(tgt.hp / tgt.hpEach));
+      combatLog('✨ ' + def.name + ' → ' + creatureDisplayName(tgt));
+    }
+  } else if (def.kind === 'buff' || def.kind === 'debuff') {
+    const targets = def.kind === 'buff' ? combatAliveStacks().filter(s => s.side === side) : combatAliveStacks().filter(s => s.side !== side);
+    for (const tgt of targets) tgt.buffs[def.stat] = def.amount;
+    combatLog('✨ ' + def.name);
+  }
+  sfx.spell();
+  checkCombatEnd();
+  return true;
+}
+
+// ---- end conditions ----
+function checkCombatEnd() {
+  const c = game.combat;
+  if (!c || c.result) return true;
+  const atkAlive = c.stacks.some(s => s.side === 'attacker' && s.alive);
+  const defAlive = c.stacks.some(s => s.side === 'defender' && s.alive);
+  if (!defAlive) { c.result = 'attackerWin'; resolveCombat(); return true; }
+  if (!atkAlive) { c.result = 'defenderWin'; resolveCombat(); return true; }
+  return false;
+}
+
+function combatFlee(side) {
+  const c = game.combat;
+  if (c.result) return;
+  c.result = side === 'attacker' ? 'attackerFled' : 'defenderFled';
+  resolveCombat();
+}
+function combatSurrender(side) {
+  const c = game.combat;
+  if (c.result) return;
+  c.result = side === 'attacker' ? 'attackerSurrendered' : 'defenderSurrendered';
+  resolveCombat();
+}
+
+function syncStacksBackToArmy(stacks, side) {
+  return stacks.filter(s => s.side === side && s.alive).map(s => makeCreatureStack(s.factionId, s.tier, s.count, s.upgraded));
+}
+function fillArmyArray(list) {
+  const arr = [null, null, null, null, null];
+  for (let i = 0; i < Math.min(5, list.length); i++) arr[i] = list[i];
+  return arr;
+}
+
+function resolveCombat() {
+  const c = game.combat;
+  const attackerHero = combatAttackerHero();
+  const defenderHero = combatDefenderHero();
+  const survivorsAtk = syncStacksBackToArmy(c.stacks, 'attacker');
+  const survivorsDef = syncStacksBackToArmy(c.stacks, 'defender');
+
+  if (c.result === 'attackerWin') {
+    if (attackerHero) attackerHero.army = fillArmyArray(survivorsAtk);
+    let xp = 0;
+    for (const s of c.stacks) if (s.side === 'defender') xp += (s.count === 0 ? 1 : 0) * 0 + creatureRef(s).tier * 15 * (s.count === 0 ? (s.hpEach ? 1 : 1) : 0);
+    // simpler xp calc: based on defeated defender original strength
+    xp = c.stacks.filter(s => s.side === 'defender').reduce((sum, s) => sum + creatureRef(s).tier * 20, 0);
+    if (attackerHero) grantXp(attackerHero, xp);
+    if (c.kind === 'monster') { game.objects = game.objects.filter(o => o.id !== c.monsterObjId); }
+    if (c.kind === 'castle') {
+      const castleObj = game.objects.find(o => o.id === c.castleObjId);
+      if (castleObj) { castleObj.garrison = [null,null,null,null,null]; captureCastle(attackerHero, castleObj); }
+    }
+    if (c.kind === 'hero' && defenderHero) {
+      const p = game.players[defenderHero.ownerIdx];
+      p.heroes = p.heroes.filter(h => h.id !== defenderHero.id);
+    }
+    sfx.victory();
+  } else if (c.result === 'defenderWin') {
+    if (defenderHero) defenderHero.army = fillArmyArray(survivorsDef);
+    if (c.kind === 'castle') {
+      const castleObj = game.objects.find(o => o.id === c.castleObjId);
+      if (castleObj) castleObj.garrison = fillArmyArray(survivorsDef);
+    }
+    if (attackerHero) {
+      const p = game.players[attackerHero.ownerIdx];
+      p.heroes = p.heroes.filter(h => h.id !== attackerHero.id);
+    }
+    sfx.defeatSting();
+  } else if (c.result === 'attackerFled' || c.result === 'attackerSurrendered') {
+    if (attackerHero) { attackerHero.army = [null,null,null,null,null]; attackerHero.x = c.attackerFromX; attackerHero.y = c.attackerFromY; }
+    if (defenderHero) defenderHero.army = fillArmyArray(survivorsDef);
+    if (c.kind === 'castle') {
+      const castleObj = game.objects.find(o => o.id === c.castleObjId);
+      if (castleObj) castleObj.garrison = fillArmyArray(survivorsDef);
+    }
+  } else if (c.result === 'defenderFled' || c.result === 'defenderSurrendered') {
+    if (defenderHero) { defenderHero.army = [null,null,null,null,null]; }
+    if (attackerHero) attackerHero.army = fillArmyArray(survivorsAtk);
+  }
+  checkVictory();
+  if (game.screen !== 'victory') game.screen = 'combatResult';
+  saveGame();
+}
+
+// ============================================================
+// SERIALIZATION
+// ============================================================
+function serializeGame() {
+  return {
+    v: 1,
+    screen: (game.screen === 'combat' || game.screen === 'combatResult' || game.screen === 'passDevice' || game.screen === 'victory') ? 'adventure' : game.screen,
+    terrain: game.terrain,
+    objects: game.objects,
+    players: game.players.map(p => ({ idx: p.idx, factionId: p.factionId, resources: p.resources, heroes: p.heroes, castles: p.castles, fog: p.fog })),
+    turn: game.turn,
+    cameraByPlayer: game.cameraByPlayer,
+    nextId,
+  };
+}
+function deserializeGame(data) {
+  if (!data || !data.terrain) return false;
+  game.terrain = data.terrain;
+  game.objects = data.objects || [];
+  game.players = (data.players || []).map(p => Object.assign(makePlayer(p.idx, p.factionId), p));
+  game.turn = data.turn || { playerIdx: 0, day: 1, week: 1 };
+  game.cameraByPlayer = data.cameraByPlayer || [{ x: 0, y: 0 }, { x: 0, y: 0 }];
+  game.camera = { x: game.cameraByPlayer[game.turn.playerIdx].x, y: game.cameraByPlayer[game.turn.playerIdx].y };
+  nextId = data.nextId || 1000;
+  game.victor = null;
+  game.combat = null;
+  game.selectedHeroId = null;
+  game.screen = 'adventure';
+  return true;
+}
+
+// ============================================================
+// GENERIC DOM MODAL HELPERS
+// ============================================================
+function showMessage(title, sub, buttons) {
+  document.getElementById('msgTitle').textContent = title;
+  document.getElementById('msgSub').textContent = sub || '';
+  const row = document.getElementById('msgButtons');
+  row.innerHTML = '';
+  (buttons || [{ label: t('ok') }]).forEach(b => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'panel-btn ' + (b.cls || 'btn-gold');
+    btn.textContent = b.label;
+    btn.addEventListener('click', () => { hideMessage(); if (b.onClick) b.onClick(); });
+    row.appendChild(btn);
+  });
+  document.getElementById('msgModal').style.display = 'flex';
+}
+function hideMessage() { document.getElementById('msgModal').style.display = 'none'; }
+
+function showListModal(title, sub, items, buttons) {
+  document.getElementById('listTitle').textContent = title;
+  document.getElementById('listSub').textContent = sub || '';
+  const listEl = document.getElementById('listItems');
+  listEl.innerHTML = '';
+  (items || []).forEach(it => {
+    const div = document.createElement('div');
+    div.className = 'panel-list-item' + (it.disabled ? ' disabled' : '');
+    div.textContent = it.label;
+    if (!it.disabled && it.onClick) div.addEventListener('click', it.onClick);
+    listEl.appendChild(div);
+  });
+  const row = document.getElementById('listButtons');
+  row.innerHTML = '';
+  (buttons || [{ label: t('close'), onClick: hideListModal }]).forEach(b => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'panel-btn ' + (b.cls || 'btn-gray');
+    btn.textContent = b.label;
+    btn.addEventListener('click', b.onClick || hideListModal);
+    row.appendChild(btn);
+  });
+  document.getElementById('listModal').style.display = 'flex';
+}
+function hideListModal() { document.getElementById('listModal').style.display = 'none'; }
+
+function showPassDeviceScreen() {
+  const nextIdx = game.turn.playerIdx;
+  document.getElementById('passTitle').textContent = t('passDeviceTitle');
+  document.getElementById('passSub').textContent = t('passDeviceSub', { n: nextIdx + 1 });
+  const btn = document.getElementById('passBtn');
+  btn.textContent = t('passDeviceBtn', { n: nextIdx + 1 });
+  btn.onclick = () => { hidePassDeviceScreen(); game.screen = 'adventure'; };
+  document.getElementById('passModal').style.display = 'flex';
+}
+function hidePassDeviceScreen() { document.getElementById('passModal').style.display = 'none'; }
+
+function showVictoryScreen() {
+  document.getElementById('victoryTitle').textContent = t('victoryTitle');
+  document.getElementById('victorySub').textContent = t('victorySub', { n: game.victor + 1 });
+  const btn = document.getElementById('victoryBtn');
+  btn.textContent = t('playAgain');
+  btn.onclick = () => { hideVictoryScreen(); game.screen = 'modeSelect'; };
+  document.getElementById('victoryModal').style.display = 'flex';
+}
+function hideVictoryScreen() { document.getElementById('victoryModal').style.display = 'none'; }
+
+function hideAllModals() {
+  hideMessage(); hideListModal(); hidePassDeviceScreen(); hideVictoryScreen();
+}
+// pass-device and victory are screen-exclusive full-screen modals whose visibility is a
+// pure function of game.screen, so it's safe (and necessary) to re-sync them every frame.
+// msgModal/listModal are transient, user-summoned overlays that can sit on TOP of a main
+// screen (e.g. castle/adventure) while game.screen stays the same — hiding them every
+// render() tick (as hideAllModals() does) tore them down ~16ms after they opened, which
+// made every showMessage()/showListModal() call (chest choice, build confirm, spell learn,
+// and — the reported bug — the Recruit count-choice modal) effectively unusable.
+function hideScreenExclusiveModals() {
+  hidePassDeviceScreen(); hideVictoryScreen();
+}
+
+// ============================================================
+// RENDERING — shared helpers
+// ============================================================
+function clearUIButtons() { game.uiButtons = []; }
+function addButton(x, y, w, h, onClick) { game.uiButtons.push({ x, y, w, h, onClick }); }
+function hitButton(px, py) {
+  for (let i = game.uiButtons.length - 1; i >= 0; i--) {
+    const b = game.uiButtons[i];
+    if (px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) return b;
+  }
+  return null;
+}
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function drawButton(x, y, w, h, label, colorTop, colorBot, onClick, opts) {
+  opts = opts || {};
+  const grad = ctx.createLinearGradient(x, y, x, y + h);
+  grad.addColorStop(0, colorTop || '#f4c95d');
+  grad.addColorStop(1, colorBot || '#b45309');
+  ctx.fillStyle = opts.disabled ? '#6b6b6b' : grad;
+  roundRect(x, y, w, h, opts.r || 8);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.fillStyle = opts.disabled ? '#ccc' : (opts.textColor || '#2b1a05');
+  ctx.font = (opts.fontWeight || '800') + ' ' + (opts.fontSize || 14) + 'px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, x + w / 2, y + h / 2 + 1);
+  if (!opts.disabled && onClick) addButton(x, y, w, h, onClick);
+}
+function drawPanel(x, y, w, h, opts) {
+  opts = opts || {};
+  ctx.fillStyle = opts.fill || 'rgba(35,24,10,0.92)';
+  roundRect(x, y, w, h, opts.r || 10);
+  ctx.fill();
+  ctx.strokeStyle = opts.stroke || '#c9a35c';
+  ctx.lineWidth = opts.lineWidth || 2;
+  ctx.stroke();
+}
+function creatureColor(stack) { return creatureRef(stack).color; }
+
+// draws a small original code-drawn creature glyph (not tracing any copyrighted art —
+// simple geometric mascot per creature 'shape' key) centered at cx,cy with given radius
+function drawCreatureGlyph(shapeKey, cx, cy, r, color) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.fillStyle = color;
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+  ctx.lineWidth = Math.max(1, r * 0.08);
+  switch (shapeKey) {
+    case 'scout': case 'dancer': case 'surfer': case 'shaman': case 'guardian':
+    case 'songstress': case 'clone': case 'larva': case 'crawler': case 'exp626':
+    case 'trooper': case 'officer': case 'gantu': case 'droid':
+    case 'drone': case 'leroy': case 'robot': case 'walker': case 'warbot': {
+      // body: rounded blob head + simple limb marks, varied by silhouette bias
+      ctx.beginPath(); ctx.ellipse(0, r * 0.15, r * 0.62, r * 0.72, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.5, r * 0.42, r * 0.4, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.beginPath(); ctx.arc(-r * 0.14, -r * 0.52, r * 0.07, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r * 0.14, -r * 0.52, r * 0.07, 0, Math.PI * 2); ctx.fill();
+      break;
+    }
+    default: {
+      ctx.beginPath(); ctx.arc(0, 0, r * 0.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+// draws a small original code-drawn hero AVATAR — head-and-shoulders bust, code-drawn
+// only (no traced or copyrighted art), colour + silhouette cues borrowed from this same
+// arcade's super-jumper.html palettes so both games read as one consistent universe.
+function drawHeroPortrait(key, cx, cy, r) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  // soft vignette disc behind the bust so every avatar reads clearly on its card
+  const vg = ctx.createRadialGradient(0, -r * 0.15, r * 0.1, 0, 0, r);
+  vg.addColorStop(0, 'rgba(255,255,255,0.14)');
+  vg.addColorStop(1, 'rgba(0,0,0,0.4)');
+  ctx.fillStyle = vg;
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+  ctx.lineWidth = Math.max(1, r * 0.055);
+  ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+  // clip the bust itself to the disc so shoulders never overflow the card at any size
+  ctx.save();
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.clip();
+  switch (key) {
+    case 'lilo': {
+      const SKIN = '#d9976a', HAIR = '#1c1b22', DRESS = '#d63a2f';
+      // shoulders: red leaf-pattern dress
+      ctx.fillStyle = DRESS;
+      ctx.beginPath(); ctx.ellipse(0, r * 0.62, r * 0.82, r * 0.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff';
+      for (const [dx, dy, rot] of [[-0.28, 0.5, 0.5], [0.24, 0.62, -0.4], [-0.04, 0.78, 1]]) {
+        ctx.save(); ctx.translate(dx * r, dy * r); ctx.rotate(rot);
+        ctx.beginPath(); ctx.ellipse(0, 0, r * 0.05, r * 0.11, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+      // long straight black hair framing the face
+      ctx.fillStyle = HAIR;
+      ctx.beginPath(); ctx.ellipse(-r * 0.46, r * 0.02, r * 0.2, r * 0.58, -0.12, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(r * 0.46, r * 0.02, r * 0.2, r * 0.58, 0.12, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.32, r * 0.56, r * 0.42, 0, Math.PI, Math.PI * 2); ctx.fill();
+      // round tan cheerful face
+      ctx.fillStyle = SKIN;
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.08, r * 0.42, r * 0.44, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // white flower at one ear
+      ctx.fillStyle = '#fdfdfd';
+      for (let i = 0; i < 5; i++) {
+        const a = i / 5 * Math.PI * 2;
+        ctx.beginPath(); ctx.arc(r * 0.42 + Math.cos(a) * r * 0.07, -r * 0.14 + Math.sin(a) * r * 0.07, r * 0.05, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = '#ffd54d';
+      ctx.beginPath(); ctx.arc(r * 0.42, -r * 0.14, r * 0.04, 0, Math.PI * 2); ctx.fill();
+      // eyes + cheerful smile
+      ctx.fillStyle = '#1a1208';
+      ctx.beginPath(); ctx.arc(-r * 0.16, -r * 0.1, r * 0.055, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r * 0.16, -r * 0.1, r * 0.055, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#8a4b32'; ctx.lineWidth = Math.max(1, r * 0.045);
+      ctx.beginPath(); ctx.arc(0, r * 0.02, r * 0.16, 0.25, Math.PI - 0.25); ctx.stroke();
+      break;
+    }
+    case 'nani': {
+      const SKIN = '#c8875c', HAIR = '#3a2a18', TEAL = '#2f9e94';
+      // shoulders: teal top
+      ctx.fillStyle = TEAL;
+      ctx.beginPath(); ctx.ellipse(0, r * 0.6, r * 0.78, r * 0.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // longer wavy dark-brown hair (layered waves reaching past the shoulders)
+      ctx.fillStyle = HAIR;
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.34, r * 0.54, r * 0.4, 0, Math.PI, Math.PI * 2); ctx.fill();
+      for (const s of [-1, 1]) {
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath();
+          ctx.ellipse(s * (r * 0.42 + i * r * 0.03), r * (0.0 + i * 0.2), r * 0.15, r * 0.32, s * 0.15, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      // slightly longer, more adult face
+      ctx.fillStyle = SKIN;
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.06, r * 0.38, r * 0.48, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // small hoop earrings
+      ctx.strokeStyle = '#e8c34a'; ctx.lineWidth = Math.max(1, r * 0.03);
+      ctx.beginPath(); ctx.arc(-r * 0.36, r * 0.14, r * 0.06, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(r * 0.36, r * 0.14, r * 0.06, 0, Math.PI * 2); ctx.stroke();
+      // confident eyes + level, self-assured mouth
+      ctx.fillStyle = '#1a1208';
+      ctx.beginPath(); ctx.arc(-r * 0.14, -r * 0.08, r * 0.05, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r * 0.14, -r * 0.08, r * 0.05, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#7a4426'; ctx.lineWidth = Math.max(1, r * 0.045);
+      ctx.beginPath(); ctx.moveTo(-r * 0.14, r * 0.1); ctx.lineTo(r * 0.16, r * 0.06); ctx.stroke();
+      break;
+    }
+    case 'david': {
+      const SKIN = '#b5714a', HAIR = '#241d18';
+      // bare warm-toned shoulders
+      ctx.fillStyle = SKIN;
+      ctx.beginPath(); ctx.ellipse(0, r * 0.62, r * 0.76, r * 0.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // flower lei / necklace: ring of small colourful flowers at the collar
+      const leiColors = ['#f4c95d', '#e8579a', '#4fc3f7', '#a3e635', '#f4c95d', '#e8579a'];
+      leiColors.forEach((col, i) => {
+        const a = (i / leiColors.length) * Math.PI - Math.PI / 2;
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(Math.cos(a) * r * 0.5, r * 0.4 + Math.sin(a) * r * 0.14, r * 0.07, 0, Math.PI * 2); ctx.fill();
+      });
+      // face
+      ctx.fillStyle = SKIN;
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.08, r * 0.4, r * 0.46, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // long dark hair pulled back into a topknot + headband
+      ctx.fillStyle = HAIR;
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.46, r * 0.44, r * 0.28, 0, Math.PI, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, -r * 0.62, r * 0.14, 0, Math.PI * 2); ctx.fill(); // topknot
+      ctx.fillStyle = '#e8762e';
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.28, r * 0.44, r * 0.06, 0, 0, Math.PI * 2); ctx.fill(); // headband
+      // eyes + big warm smile with teeth
+      ctx.fillStyle = '#1a1208';
+      ctx.beginPath(); ctx.arc(-r * 0.16, -r * 0.1, r * 0.05, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r * 0.16, -r * 0.1, r * 0.05, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.moveTo(-r * 0.2, r * 0.08); ctx.quadraticCurveTo(0, r * 0.24, r * 0.2, r * 0.08);
+      ctx.quadraticCurveTo(0, r * 0.16, -r * 0.2, r * 0.08); ctx.fill();
+      ctx.strokeStyle = '#7c4630'; ctx.lineWidth = Math.max(1, r * 0.03); ctx.stroke();
+      break;
+    }
+    case 'councilwoman': {
+      const ROBE = '#4a3f7a', ROBE2 = '#5d5296', SKIN = '#cfc4e8';
+      // ornate silver/white high collar and shoulders
+      ctx.fillStyle = ROBE;
+      ctx.beginPath(); ctx.ellipse(0, r * 0.6, r * 0.7, r * 0.48, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#e5e7eb';
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.4, r * 0.3); ctx.lineTo(-r * 0.12, -r * 0.02); ctx.lineTo(0, r * 0.14);
+      ctx.lineTo(r * 0.12, -r * 0.02); ctx.lineTo(r * 0.4, r * 0.3);
+      ctx.lineTo(r * 0.26, r * 0.42); ctx.lineTo(0, r * 0.22); ctx.lineTo(-r * 0.26, r * 0.42); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = ROBE2;
+      ctx.beginPath(); ctx.ellipse(0, r * 0.62, r * 0.14, r * 0.36, 0, 0, Math.PI * 2); ctx.fill();
+      // tall elongated pale-lavender head
+      ctx.fillStyle = SKIN;
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.2, r * 0.32, r * 0.44, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // silver headpiece
+      ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = Math.max(1, r * 0.06);
+      ctx.beginPath(); ctx.arc(0, -r * 0.5, r * 0.28, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+      ctx.fillStyle = '#e5e7eb';
+      ctx.beginPath(); ctx.arc(0, -r * 0.74, r * 0.05, 0, Math.PI * 2); ctx.fill();
+      // big calm elongated eyes
+      ctx.fillStyle = '#2a2440';
+      ctx.beginPath(); ctx.ellipse(-r * 0.13, -r * 0.22, r * 0.05, r * 0.1, -0.2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(r * 0.13, -r * 0.22, r * 0.05, r * 0.1, 0.2, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#8a80b0'; ctx.lineWidth = Math.max(1, r * 0.04);
+      ctx.beginPath(); ctx.arc(0, -r * 0.04, r * 0.1, 0.4, Math.PI - 0.4); ctx.stroke();
+      break;
+    }
+    case 'pleakley': {
+      const GRN = '#b9c467', DGRN = '#7f8a3c';
+      // thin sloped shoulders
+      ctx.fillStyle = GRN;
+      ctx.beginPath(); ctx.ellipse(0, r * 0.66, r * 0.5, r * 0.4, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // noodle-thin neck
+      ctx.fillRect(-r * 0.06, -r * 0.05, r * 0.12, r * 0.4);
+      // small head with a wispy antenna tuft, nervous look
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.22, r * 0.3, r * 0.34, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = GRN; ctx.lineWidth = Math.max(1, r * 0.05);
+      ctx.beginPath(); ctx.moveTo(-r * 0.18, -r * 0.5); ctx.quadraticCurveTo(-r * 0.3, -r * 0.7, -r * 0.16, -r * 0.78); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(r * 0.1, -r * 0.52); ctx.quadraticCurveTo(r * 0.22, -r * 0.7, r * 0.12, -r * 0.8); ctx.stroke();
+      // single large central eye
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(0, -r * 0.2, r * 0.16, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = DGRN; ctx.lineWidth = Math.max(1, r * 0.03); ctx.stroke();
+      ctx.fillStyle = '#111';
+      ctx.beginPath(); ctx.arc(0, -r * 0.2, r * 0.065, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(-r * 0.03, -r * 0.24, r * 0.02, 0, Math.PI * 2); ctx.fill();
+      // nervous wavy mouth
+      ctx.strokeStyle = DGRN; ctx.lineWidth = Math.max(1, r * 0.03);
+      ctx.beginPath(); ctx.moveTo(-r * 0.1, r * 0.0); ctx.quadraticCurveTo(-r * 0.03, r * 0.05, 0, r * 0.0);
+      ctx.quadraticCurveTo(r * 0.03, r * 0.05, r * 0.1, r * 0.0); ctx.stroke();
+      break;
+    }
+    case 'gantu': {
+      const GRAY = '#68809a', DGRAY = '#46596f', UNI = '#2e3c4e';
+      // heavy, wide shoulders
+      ctx.fillStyle = GRAY;
+      ctx.beginPath(); ctx.ellipse(0, r * 0.6, r * 0.86, r * 0.52, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // dark federation uniform high collar
+      ctx.fillStyle = UNI;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.32, r * 0.2); ctx.lineTo(r * 0.32, r * 0.2); ctx.lineTo(r * 0.42, r * 0.7); ctx.lineTo(-r * 0.42, r * 0.7);
+      ctx.closePath(); ctx.fill();
+      // small head sunk into shoulders, heavy jaw
+      ctx.fillStyle = GRAY;
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.16, r * 0.3, r * 0.24, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = DGRAY;
+      ctx.beginPath(); ctx.ellipse(0, r * 0.06, r * 0.32, r * 0.16, 0, 0, Math.PI); ctx.fill();
+      // small eyes, set wide, stern
+      ctx.fillStyle = '#dfe8f0';
+      ctx.beginPath(); ctx.ellipse(-r * 0.14, -r * 0.2, r * 0.06, r * 0.045, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(r * 0.14, -r * 0.2, r * 0.06, r * 0.045, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#1a2430';
+      ctx.beginPath(); ctx.arc(-r * 0.14, -r * 0.2, r * 0.025, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r * 0.14, -r * 0.2, r * 0.025, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#1a2430'; ctx.lineWidth = Math.max(1, r * 0.04);
+      ctx.beginPath(); ctx.moveTo(-r * 0.24, -r * 0.3); ctx.lineTo(-r * 0.06, -r * 0.24);
+      ctx.moveTo(r * 0.24, -r * 0.3); ctx.lineTo(r * 0.06, -r * 0.24); ctx.stroke();
+      break;
+    }
+    case 'jumba': {
+      const PUR = '#8a5cae', DPUR = '#5e3a7e', BELLY = '#b493cf';
+      // white lab coat collar over broad shoulders
+      ctx.fillStyle = PUR;
+      ctx.beginPath(); ctx.ellipse(0, r * 0.6, r * 0.84, r * 0.52, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.34, r * 0.24); ctx.lineTo(0, r * 0.5); ctx.lineTo(r * 0.34, r * 0.24);
+      ctx.lineTo(r * 0.5, r * 0.72); ctx.lineTo(-r * 0.5, r * 0.72); ctx.closePath(); ctx.fill(); ctx.stroke();
+      // large purple-mauve head
+      ctx.fillStyle = PUR;
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.14, r * 0.46, r * 0.42, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = BELLY;
+      ctx.beginPath(); ctx.ellipse(0, r * 0.02, r * 0.24, r * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+      // four eyes: two big + two small
+      ctx.fillStyle = '#fff';
+      [[-0.24, -0.2, 0.09], [-0.06, -0.28, 0.05], [0.06, -0.28, 0.05], [0.24, -0.2, 0.09]].forEach(([dx, dy, rr]) => {
+        ctx.beginPath(); ctx.arc(dx * r, dy * r, rr * r, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.fillStyle = '#111';
+      [[-0.24, -0.2, 0.04], [-0.06, -0.28, 0.022], [0.06, -0.28, 0.022], [0.24, -0.2, 0.04]].forEach(([dx, dy, rr]) => {
+        ctx.beginPath(); ctx.arc(dx * r, dy * r, rr * r, 0, Math.PI * 2); ctx.fill();
+      });
+      // wide toothy grin
+      ctx.strokeStyle = DPUR; ctx.lineWidth = Math.max(1, r * 0.07);
+      ctx.beginPath(); ctx.arc(0, r * 0.06, r * 0.24, 0.15, Math.PI - 0.15); ctx.stroke();
+      break;
+    }
+    case 'stitch626': {
+      const BLUE = '#3d7bc9', DARK = '#26508f', BELLY = '#bfe0f4', EARIN = '#e88db4';
+      // shoulders
+      ctx.fillStyle = BLUE;
+      ctx.beginPath(); ctx.ellipse(0, r * 0.62, r * 0.72, r * 0.48, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // big floppy ears, one with a notch bitten out
+      for (const s of [-1, 1]) {
+        ctx.save(); ctx.translate(s * r * 0.42, -r * 0.44); ctx.rotate(s * 1.05);
+        ctx.fillStyle = BLUE;
+        ctx.beginPath(); ctx.ellipse(0, -r * 0.28, r * 0.16, r * 0.36, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = EARIN;
+        ctx.beginPath(); ctx.ellipse(0, -r * 0.24, r * 0.08, r * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+      // notch cut into the right ear
+      ctx.fillStyle = vg;
+      ctx.beginPath(); ctx.moveTo(r * 0.5, -r * 0.72); ctx.lineTo(r * 0.62, -r * 0.66); ctx.lineTo(r * 0.48, -r * 0.6); ctx.closePath(); ctx.fill();
+      // round head
+      ctx.fillStyle = BLUE;
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.14, r * 0.46, r * 0.44, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = BELLY;
+      ctx.beginPath(); ctx.ellipse(0, r * 0.02, r * 0.26, r * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+      // huge black oval eyes with glints
+      ctx.fillStyle = '#111';
+      for (const s of [-1, 1]) {
+        ctx.save(); ctx.translate(s * r * 0.16, -r * 0.16); ctx.rotate(s * 0.3);
+        ctx.beginPath(); ctx.ellipse(0, 0, r * 0.1, r * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(-r * 0.13, -r * 0.2, r * 0.03, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r * 0.19, -r * 0.2, r * 0.03, 0, Math.PI * 2); ctx.fill();
+      // wide toothy grin
+      ctx.strokeStyle = DARK; ctx.lineWidth = Math.max(1, r * 0.06);
+      ctx.beginPath(); ctx.arc(0, r * 0.02, r * 0.2, 0.2, Math.PI - 0.2); ctx.stroke();
+      break;
+    }
+    case 'angel': {
+      const PINK = '#ef86b8', DPINK = '#c2588c', BELLY = '#fbd6e7';
+      ctx.fillStyle = PINK;
+      ctx.beginPath(); ctx.ellipse(0, r * 0.62, r * 0.7, r * 0.46, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // longer ears with curled tips
+      for (const s of [-1, 1]) {
+        ctx.save(); ctx.translate(s * r * 0.4, -r * 0.44); ctx.rotate(s * 1.15);
+        ctx.fillStyle = PINK;
+        ctx.beginPath(); ctx.ellipse(0, -r * 0.32, r * 0.14, r * 0.4, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, -r * 0.64, r * 0.09, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); // curled tip
+        ctx.restore();
+      }
+      ctx.fillStyle = PINK;
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.12, r * 0.44, r * 0.42, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = BELLY;
+      ctx.beginPath(); ctx.ellipse(0, r * 0.04, r * 0.24, r * 0.18, 0, 0, Math.PI * 2); ctx.fill();
+      // softer eyes with lashes
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.ellipse(-r * 0.16, -r * 0.14, r * 0.1, r * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(r * 0.16, -r * 0.14, r * 0.1, r * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#111';
+      ctx.beginPath(); ctx.arc(-r * 0.16, -r * 0.12, r * 0.045, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r * 0.16, -r * 0.12, r * 0.045, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = DPINK; ctx.lineWidth = Math.max(1, r * 0.04);
+      ctx.beginPath(); ctx.moveTo(-r * 0.26, -r * 0.26); ctx.lineTo(-r * 0.32, -r * 0.32);
+      ctx.moveTo(r * 0.26, -r * 0.26); ctx.lineTo(r * 0.32, -r * 0.32); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, r * 0.02, r * 0.12, 0.3, Math.PI - 0.3); ctx.stroke();
+      break;
+    }
+    case 'hamsterviel': {
+      const FUR = '#f4f4f6', PINK = '#f3aec6', CAPE = '#c62f42';
+      // dark red cape collar
+      ctx.fillStyle = CAPE;
+      ctx.beginPath();
+      ctx.moveTo(0, r * 0.06); ctx.lineTo(-r * 0.6, r * 0.36); ctx.lineTo(-r * 0.38, r * 0.74); ctx.lineTo(r * 0.38, r * 0.74);
+      ctx.lineTo(r * 0.6, r * 0.36); ctx.closePath(); ctx.fill(); ctx.stroke();
+      // small round white body/shoulders
+      ctx.fillStyle = FUR;
+      ctx.beginPath(); ctx.ellipse(0, r * 0.5, r * 0.4, r * 0.32, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // oversized round ears
+      ctx.fillStyle = FUR;
+      ctx.beginPath(); ctx.arc(-r * 0.34, -r * 0.4, r * 0.22, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(r * 0.34, -r * 0.4, r * 0.22, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = PINK;
+      ctx.beginPath(); ctx.arc(-r * 0.34, -r * 0.4, r * 0.12, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r * 0.34, -r * 0.4, r * 0.12, 0, Math.PI * 2); ctx.fill();
+      // small round head
+      ctx.fillStyle = FUR;
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.14, r * 0.32, r * 0.3, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // beady red eyes
+      ctx.fillStyle = '#d8283c';
+      ctx.beginPath(); ctx.arc(-r * 0.13, -r * 0.16, r * 0.05, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r * 0.13, -r * 0.16, r * 0.05, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#4a0810';
+      ctx.beginPath(); ctx.arc(-r * 0.13, -r * 0.16, r * 0.02, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r * 0.13, -r * 0.16, r * 0.02, 0, Math.PI * 2); ctx.fill();
+      // prominent buck teeth
+      ctx.fillStyle = '#fdfdf6';
+      ctx.fillRect(-r * 0.07, r * 0.0, r * 0.06, r * 0.1);
+      ctx.fillRect(r * 0.01, r * 0.0, r * 0.06, r * 0.1);
+      ctx.strokeStyle = '#c9c9cf'; ctx.lineWidth = Math.max(1, r * 0.015);
+      ctx.strokeRect(-r * 0.07, r * 0.0, r * 0.06, r * 0.1);
+      ctx.strokeRect(r * 0.01, r * 0.0, r * 0.06, r * 0.1);
+      // sneering brow
+      ctx.strokeStyle = '#7a7a85'; ctx.lineWidth = Math.max(1, r * 0.04);
+      ctx.beginPath(); ctx.moveTo(-r * 0.22, -r * 0.28); ctx.lineTo(-r * 0.05, -r * 0.22);
+      ctx.moveTo(r * 0.22, -r * 0.3); ctx.lineTo(r * 0.08, -r * 0.2); ctx.stroke();
+      break;
+    }
+    case 'leroy': {
+      const RED = '#c94038', DRED = '#7e241f';
+      ctx.fillStyle = RED;
+      ctx.beginPath(); ctx.ellipse(0, r * 0.62, r * 0.72, r * 0.48, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // angular, sharply swept-back ears (meaner than Stitch/Angel)
+      for (const s of [-1, 1]) {
+        ctx.save(); ctx.translate(s * r * 0.4, -r * 0.4); ctx.rotate(s * 1.5);
+        ctx.fillStyle = RED;
+        ctx.beginPath(); ctx.ellipse(0, -r * 0.3, r * 0.12, r * 0.34, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.restore();
+      }
+      ctx.fillStyle = RED;
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.14, r * 0.42, r * 0.4, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // darker red marking stripe near the eyes
+      ctx.fillStyle = DRED;
+      ctx.beginPath(); ctx.ellipse(-r * 0.22, -r * 0.28, r * 0.14, r * 0.05, -0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(r * 0.22, -r * 0.28, r * 0.14, r * 0.05, 0.3, 0, Math.PI * 2); ctx.fill();
+      // black angular eyes (not white ovals) + heavy brows
+      ctx.fillStyle = '#111';
+      ctx.beginPath(); ctx.ellipse(-r * 0.15, -r * 0.14, r * 0.08, r * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(r * 0.15, -r * 0.14, r * 0.08, r * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = DRED; ctx.lineWidth = Math.max(1, r * 0.05);
+      ctx.beginPath(); ctx.moveTo(-r * 0.28, -r * 0.24); ctx.lineTo(-r * 0.06, -r * 0.16);
+      ctx.moveTo(r * 0.28, -r * 0.24); ctx.lineTo(r * 0.06, -r * 0.16); ctx.stroke();
+      // mean, angular scowl
+      ctx.beginPath(); ctx.moveTo(-r * 0.16, r * 0.06); ctx.lineTo(0, r * 0.0); ctx.lineTo(r * 0.16, r * 0.06); ctx.stroke();
+      break;
+    }
+    case 'reuben': {
+      const GOLD = '#e0b13e', DGOLD = '#a67c20';
+      ctx.fillStyle = GOLD;
+      ctx.beginPath(); ctx.ellipse(0, r * 0.62, r * 0.76, r * 0.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // short, droopy relaxed ears
+      for (const s of [-1, 1]) {
+        ctx.save(); ctx.translate(s * r * 0.38, -r * 0.36); ctx.rotate(s * 0.85);
+        ctx.fillStyle = GOLD;
+        ctx.beginPath(); ctx.ellipse(0, -r * 0.16, r * 0.14, r * 0.22, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.restore();
+      }
+      // chubby face
+      ctx.fillStyle = GOLD;
+      ctx.beginPath(); ctx.ellipse(0, -r * 0.08, r * 0.48, r * 0.42, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // droopy lazy half-lidded eyes
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.ellipse(-r * 0.18, -r * 0.1, r * 0.11, r * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(r * 0.18, -r * 0.1, r * 0.11, r * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = DGOLD;
+      ctx.beginPath(); ctx.ellipse(-r * 0.18, -r * 0.14, r * 0.12, r * 0.06, 0, Math.PI, Math.PI * 2); ctx.fill(); // droopy lid
+      ctx.beginPath(); ctx.ellipse(r * 0.18, -r * 0.14, r * 0.12, r * 0.06, 0, Math.PI, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#2b2013';
+      ctx.beginPath(); ctx.arc(-r * 0.18, -r * 0.08, r * 0.045, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r * 0.18, -r * 0.08, r * 0.045, 0, Math.PI * 2); ctx.fill();
+      // relaxed grin
+      ctx.strokeStyle = DGOLD; ctx.lineWidth = Math.max(1, r * 0.045);
+      ctx.beginPath(); ctx.arc(0, r * 0.06, r * 0.14, 0.3, Math.PI - 0.3); ctx.stroke();
+      // small sandwich motif at the shoulder
+      ctx.fillStyle = '#e8c98a';
+      roundRect(r * 0.44, r * 0.44, r * 0.28, r * 0.14, r * 0.04); ctx.fill();
+      ctx.fillStyle = '#7fae4a';
+      ctx.fillRect(r * 0.46, r * 0.49, r * 0.24, r * 0.04);
+      ctx.strokeStyle = DGOLD; ctx.lineWidth = Math.max(1, r * 0.02);
+      roundRect(r * 0.44, r * 0.44, r * 0.28, r * 0.14, r * 0.04); ctx.stroke();
+      break;
+    }
+    default: {
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath(); ctx.arc(0, 0, r * 0.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+  }
+  ctx.restore();
+  // crisp rim to frame the bust against the card
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctx.lineWidth = Math.max(1, r * 0.05);
+  ctx.beginPath(); ctx.arc(0, 0, r * 0.97, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+}
+
+// draws an original code-drawn faction crest — Heroes-style shield framing with an
+// emblem in the faction's colours (no traced or copyrighted assets)
+function drawShieldPath(r) {
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.86, -r * 0.5);
+  ctx.quadraticCurveTo(-r * 0.86, -r * 1.02, 0, -r * 1.02);
+  ctx.quadraticCurveTo(r * 0.86, -r * 1.02, r * 0.86, -r * 0.5);
+  ctx.quadraticCurveTo(r * 0.86, r * 0.32, 0, r * 1.02);
+  ctx.quadraticCurveTo(-r * 0.86, r * 0.32, -r * 0.86, -r * 0.5);
+  ctx.closePath();
+}
+function drawFactionCrest(fac, cx, cy, r) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  const primary = fac.primary, secondary = fac.secondary;
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  drawShieldPath(r); ctx.fill();
+  ctx.lineWidth = Math.max(1.5, r * 0.09);
+  ctx.strokeStyle = primary;
+  drawShieldPath(r * 0.94); ctx.stroke();
+  ctx.save();
+  drawShieldPath(r * 0.88);
+  ctx.clip();
+  switch (fac.id) {
+    case 'ohana': {
+      // hibiscus flower + surfboard motif
+      ctx.save(); ctx.translate(r * 0.42, 0); ctx.rotate(-0.15);
+      ctx.fillStyle = secondary;
+      ctx.beginPath(); ctx.ellipse(0, 0, r * 0.14, r * 0.62, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = primary; ctx.lineWidth = Math.max(1, r * 0.03);
+      ctx.beginPath(); ctx.moveTo(0, -r * 0.5); ctx.lineTo(0, r * 0.5); ctx.stroke();
+      ctx.restore();
+      ctx.save(); ctx.translate(-r * 0.16, -r * 0.02);
+      ctx.fillStyle = primary;
+      for (let i = 0; i < 5; i++) {
+        const a = i / 5 * Math.PI * 2 - Math.PI / 2;
+        ctx.save(); ctx.rotate(a);
+        ctx.beginPath(); ctx.ellipse(0, -r * 0.32, r * 0.16, r * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+      ctx.fillStyle = secondary;
+      ctx.beginPath(); ctx.arc(0, 0, r * 0.14, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      break;
+    }
+    case 'federation': {
+      // starship insignia: swept delta with a porthole
+      ctx.fillStyle = primary;
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.68); ctx.lineTo(r * 0.58, r * 0.5); ctx.lineTo(0, r * 0.22); ctx.lineTo(-r * 0.58, r * 0.5);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = secondary; ctx.lineWidth = Math.max(1, r * 0.04); ctx.stroke();
+      ctx.fillStyle = secondary;
+      ctx.beginPath(); ctx.arc(0, -r * 0.12, r * 0.22, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = primary;
+      ctx.beginPath(); ctx.arc(0, -r * 0.12, r * 0.13, 0, Math.PI * 2); ctx.fill();
+      break;
+    }
+    case 'experiments': {
+      // DNA helix + experiment pod motif
+      ctx.strokeStyle = primary; ctx.lineWidth = Math.max(1, r * 0.08); ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let i = -5; i <= 5; i++) ctx.lineTo(Math.sin(i * 0.6) * r * 0.3, i * r * 0.11);
+      ctx.stroke();
+      ctx.beginPath();
+      for (let i = -5; i <= 5; i++) ctx.lineTo(-Math.sin(i * 0.6) * r * 0.3, i * r * 0.11);
+      ctx.strokeStyle = secondary; ctx.stroke();
+      ctx.fillStyle = secondary;
+      for (let i = -4; i <= 4; i += 2) {
+        ctx.beginPath(); ctx.arc(Math.sin(i * 0.6) * r * 0.3, i * r * 0.11, r * 0.06, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = primary;
+      for (let i = -4; i <= 4; i += 2) {
+        ctx.beginPath(); ctx.arc(-Math.sin(i * 0.6) * r * 0.3, i * r * 0.11, r * 0.06, 0, Math.PI * 2); ctx.fill();
+      }
+      break;
+    }
+    case 'hamsterviel': {
+      // cog ring around a small snarling hamster-skull face
+      ctx.strokeStyle = secondary; ctx.lineWidth = Math.max(1, r * 0.1);
+      ctx.beginPath(); ctx.arc(0, 0, r * 0.62, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = secondary;
+      for (let i = 0; i < 8; i++) {
+        const a = i / 8 * Math.PI * 2;
+        ctx.save(); ctx.rotate(a);
+        ctx.fillRect(-r * 0.05, -r * 0.78, r * 0.1, r * 0.18);
+        ctx.restore();
+      }
+      ctx.fillStyle = '#f4f4f6';
+      ctx.beginPath(); ctx.ellipse(0, 0, r * 0.36, r * 0.34, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = primary;
+      ctx.beginPath(); ctx.arc(-r * 0.14, -r * 0.06, r * 0.09, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r * 0.14, -r * 0.06, r * 0.09, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fdfdf6';
+      ctx.fillRect(-r * 0.08, r * 0.08, r * 0.07, r * 0.14);
+      ctx.fillRect(r * 0.01, r * 0.08, r * 0.07, r * 0.14);
+      break;
+    }
+  }
+  ctx.restore();
+  ctx.restore();
+}
+
+// ============================================================
+// SCREEN: MODE SELECT
+// ============================================================
+function renderModeSelect() {
+  ctx.fillStyle = '#1a1408';
+  ctx.fillRect(0, 0, W, H);
+  const topBar = chromeMetrics().topBar;
+  drawIslandBackdrop();
+  ctx.fillStyle = '#f4c95d';
+  ctx.font = '900 ' + Math.min(40, W * 0.08) + 'px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 8;
+  ctx.fillText(t('gameTitle'), W / 2, topBar + Math.max(50, H * 0.12));
+  ctx.shadowBlur = 0;
+  ctx.font = '700 16px sans-serif'; ctx.fillStyle = '#ead9b8';
+  ctx.fillText(t('modeSelectTitle'), W / 2, topBar + Math.max(50, H * 0.12) + 34);
+
+  const cardW = Math.min(420, W * 0.86);
+  const cardH = 110;
+  const gap = 20;
+  const startY = topBar + Math.max(50, H * 0.12) + 70;
+  const cx = W / 2 - cardW / 2;
+
+  drawPanel(cx, startY, cardW, cardH, { fill: 'rgba(20,60,30,0.85)', stroke: '#4ade80' });
+  ctx.fillStyle = '#fff'; ctx.font = '900 20px sans-serif';
+  ctx.fillText('🌴 ' + t('modeDuel'), W / 2, startY + 38);
+  ctx.font = '600 12px sans-serif'; ctx.fillStyle = '#d4f5df';
+  wrapText(t('modeDuelSub'), W / 2, startY + 66, cardW - 30, 15);
+  addButton(cx, startY, cardW, cardH, () => { initAudio(); startSetupFlow(); });
+
+  const y2 = startY + cardH + gap;
+  drawPanel(cx, y2, cardW, cardH, { fill: 'rgba(60,50,20,0.6)', stroke: '#a3a3a3' });
+  ctx.fillStyle = '#d4d4d4'; ctx.font = '900 20px sans-serif';
+  ctx.fillText('📜 ' + t('modeCampaign'), W / 2, y2 + 38);
+  ctx.font = '600 12px sans-serif'; ctx.fillStyle = '#bbb';
+  wrapText(t('modeCampaignSub'), W / 2, y2 + 66, cardW - 30, 15);
+
+  const savedExists = !!loadSavedGame();
+  if (savedExists) {
+    const y3 = y2 + cardH + gap;
+    drawButton(cx, y3, cardW, 48, t('resumeGame'), '#38bdf8', '#0284c7', () => {
+      initAudio();
+      const data = loadSavedGame();
+      if (data && deserializeGame(data)) { game.screen = 'adventure'; }
+    });
+  }
+}
+function wrapText(text, cx, y, maxW, lh) {
+  const words = text.split(' ');
+  let line = '', lines = [];
+  for (const w of words) {
+    const test = line ? line + ' ' + w : w;
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+    else line = test;
+  }
+  if (line) lines.push(line);
+  lines.forEach((l, i) => ctx.fillText(l, cx, y + i * lh));
+}
+function drawIslandBackdrop() {
+  ctx.save();
+  const g = ctx.createRadialGradient(W / 2, H * 0.4, 20, W / 2, H * 0.4, W * 0.7);
+  g.addColorStop(0, '#2f7fc7'); g.addColorStop(1, '#0d2138');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
+// ============================================================
+// SCREEN: SETUP FLOW (faction + hero pick for each player)
+// ============================================================
+function startSetupFlow() {
+  game.pendingSetup = { step: 0, playerIdx: 0, picks: [] };
+  game.screen = 'factionPick';
+}
+function renderFactionPick() {
+  ctx.fillStyle = '#1a1408'; ctx.fillRect(0, 0, W, H);
+  const topBar = chromeMetrics().topBar;
+  const setup = game.pendingSetup;
+  const pIdx = setup.playerIdx;
+  ctx.fillStyle = '#f4c95d'; ctx.font = '900 22px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(t('pickFaction', { n: pIdx + 1 }), W / 2, topBar + 34);
+  const cols = W > H ? 4 : 2;
+  const cardW = Math.min(220, (W - 40) / cols - 12);
+  const cardH = 160;
+  const totalW = cols * cardW + (cols - 1) * 14;
+  const startX = W / 2 - totalW / 2;
+  const startY = topBar + 60;
+  FACTIONS.forEach((fac, i) => {
+    const col = i % cols, row = Math.floor(i / cols);
+    const x = startX + col * (cardW + 14);
+    const y = startY + row * (cardH + 14);
+    drawPanel(x, y, cardW, cardH, { fill: 'rgba(255,255,255,0.06)', stroke: fac.primary });
+    drawFactionCrest(fac, x + cardW / 2, y + 55, 34);
+    ctx.fillStyle = '#fff'; ctx.font = '800 14px sans-serif';
+    wrapText(fac.name, x + cardW / 2, y + 108, cardW - 16, 16);
+    ctx.font = '700 11px sans-serif'; ctx.fillStyle = fac.align === 'good' ? '#86efac' : '#fca5a5';
+    ctx.fillText(fac.align === 'good' ? '✦ good' : '✦ evil', x + cardW / 2, y + 142);
+    addButton(x, y, cardW, cardH, () => { initAudio(); sfx.click(); pickFactionForPlayer(fac.id); });
+  });
+}
+function pickFactionForPlayer(factionId) {
+  const setup = game.pendingSetup;
+  setup.picks[setup.playerIdx] = { factionId, heroIdx: null };
+  game.screen = 'heroPick';
+}
+function renderHeroPick() {
+  ctx.fillStyle = '#1a1408'; ctx.fillRect(0, 0, W, H);
+  const topBar = chromeMetrics().topBar;
+  const setup = game.pendingSetup;
+  const pIdx = setup.playerIdx;
+  if (!setup.picks[pIdx]) { game.screen = 'factionPick'; return; }
+  const fac = factionById(setup.picks[pIdx].factionId);
+  ctx.fillStyle = '#f4c95d'; ctx.font = '900 20px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(t('pickHero'), W / 2, topBar + 26);
+  const n = fac.heroes.length, gap = 10;
+  const startY = topBar + 44;
+  const availH = Math.max(150, H - startY - 56);
+  const cardH = Math.max(64, Math.min(128, (availH - gap * (n - 1)) / n));
+  const cardW = Math.min(440, W * 0.92);
+  fac.heroes.forEach((heroDef, i) => {
+    const x = W / 2 - cardW / 2, y = startY + i * (cardH + gap);
+    drawPanel(x, y, cardW, cardH, { fill: 'rgba(255,255,255,0.06)', stroke: fac.primary });
+    const r = cardH * 0.36;
+    const px = x + r + 12, py = y + cardH / 2;
+    drawHeroPortrait(heroDef.portrait, px, py, r);
+    const tx = px + r + 14;
+    ctx.textAlign = 'left'; ctx.fillStyle = '#fff';
+    ctx.font = '800 ' + Math.round(Math.min(16, cardH * 0.19)) + 'px sans-serif';
+    ctx.fillText(heroDef.name, tx, y + cardH * 0.24);
+    ctx.font = '600 ' + Math.round(Math.min(12, cardH * 0.14)) + 'px sans-serif';
+    ctx.fillStyle = '#ead9b8';
+    const statsLine1 = t('attack') + ' ' + heroDef.attack + '  ' + t('defense') + ' ' + heroDef.defense;
+    const statsLine2 = t('spellPower') + ' ' + heroDef.spellPower + '  ' + t('knowledge') + ' ' + heroDef.knowledge;
+    ctx.fillText(statsLine1, tx, y + cardH * 0.5);
+    ctx.fillText(statsLine2, tx, y + cardH * 0.68);
+    ctx.fillStyle = '#fde68a';
+    const skillLvlName = [t('basic'), t('advanced'), t('expert')][(heroDef.skill.level || 1) - 1];
+    ctx.fillText(SKILL_DEFS[heroDef.skill.id].name + ' (' + skillLvlName + ')', tx, y + cardH * 0.86);
+    addButton(x, y, cardW, cardH, () => { initAudio(); sfx.click(); pickHeroForPlayer(i); });
+  });
+  const backY = startY + n * (cardH + gap) + 4;
+  drawButton(W / 2 - 80, backY, 160, 42, t('back'), '#94a3b8', '#475569', () => { game.screen = 'factionPick'; });
+}
+function pickHeroForPlayer(heroIdx) {
+  const setup = game.pendingSetup;
+  setup.picks[setup.playerIdx].heroIdx = heroIdx;
+  if (setup.playerIdx === 0) {
+    setup.playerIdx = 1;
+    game.screen = 'factionPick';
+  } else {
+    const factionIds = setup.picks.map(p => p.factionId);
+    const heroIdxs = setup.picks.map(p => p.heroIdx);
+    startNewDuel(factionIds, heroIdxs);
+  }
+}
+
+// ============================================================
+// SCREEN: ADVENTURE MAP
+// ============================================================
+let mapTileSize = 32;
+function computeTileSize() {
+  const topBar = chromeMetrics().topBar;
+  const usableH = H - topBar - 90; // minus resource bar + bottom panel
+  const usableW = W;
+  return Math.max(18, Math.min(44, Math.min(usableW / 9, usableH / 8)));
+}
+
+// ---- camera: game.camera.{x,y} is the tile the viewport is centered on ----
+function centerCameraOn(x, y) { game.camera = { x, y }; }
+function centerCameraOnHero(hero) { if (hero) centerCameraOn(hero.x, hero.y); }
+function centerCameraOnCastle(playerIdx) {
+  const p = game.players[playerIdx];
+  if (!p) return;
+  const cid = p.castles[0];
+  const c = cid !== undefined ? game.objects.find(o => o.id === cid) : null;
+  if (c) centerCameraOn(c.x, c.y);
+}
+// clamp the camera so the viewport never scrolls past the map edges
+function clampCamera() {
+  const topBar = chromeMetrics().topBar;
+  const size = mapTileSize || 1;
+  const viewTilesX = W / size;
+  const viewTilesY = (H - topBar - 46 - 44) / size;
+  const halfX = viewTilesX / 2, halfY = viewTilesY / 2;
+  let minX = halfX, maxX = MAP_SIZE - halfX;
+  let minY = halfY, maxY = MAP_SIZE - halfY;
+  if (minX > maxX) { minX = maxX = MAP_SIZE / 2; }
+  if (minY > maxY) { minY = maxY = MAP_SIZE / 2; }
+  game.camera.x = Math.max(minX, Math.min(maxX, game.camera.x));
+  game.camera.y = Math.max(minY, Math.min(maxY, game.camera.y));
+}
+
+function worldToScreen(tx, ty) {
+  const topBar = chromeMetrics().topBar;
+  const size = mapTileSize;
+  const originX = W / 2 - game.camera.x * size;
+  const originY = topBar + 46 + (H - topBar - 46 - 44) / 2 - game.camera.y * size;
+  return { x: originX + tx * size, y: originY + ty * size };
+}
+function screenToWorld(sx, sy) {
+  const topBar = chromeMetrics().topBar;
+  const size = mapTileSize;
+  const originX = W / 2 - game.camera.x * size;
+  const originY = topBar + 46 + (H - topBar - 46 - 44) / 2 - game.camera.y * size;
+  return { x: (sx - originX) / size, y: (sy - originY) / size };
+}
+
+function objIcon(obj) {
+  switch (obj.kind) {
+    case OBJ.MINE: return RESOURCE_ICON[obj.resType] || '⛏️';
+    case OBJ.RESOURCE: return RESOURCE_ICON[obj.resType] || '📦';
+    case OBJ.CHEST: return '🎁';
+    case OBJ.ARTIFACT: return '🏺';
+    case OBJ.DWELLING: return '🏠';
+    case OBJ.MONSTER: return '⚔️';
+    case OBJ.CASTLE: return '🏰';
+    default: return '❓';
+  }
+}
+
+function renderAdventure() {
+  mapTileSize = computeTileSize();
+  clampCamera();
+  const topBar = chromeMetrics().topBar;
+  ctx.fillStyle = '#08131f';
+  ctx.fillRect(0, 0, W, H);
+  const p = currentPlayer();
+  const size = mapTileSize;
+  // visible tile range
+  const tl = screenToWorld(0, topBar + 46);
+  const br = screenToWorld(W, H - 44);
+  const x0 = Math.max(0, Math.floor(tl.x) - 1), x1 = Math.min(MAP_SIZE - 1, Math.ceil(br.x) + 1);
+  const y0 = Math.max(0, Math.floor(tl.y) - 1), y1 = Math.min(MAP_SIZE - 1, Math.ceil(br.y) + 1);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, topBar + 46, W, H - topBar - 46 - 44); ctx.clip();
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const fogState = p.fog[y][x];
+      if (fogState === 0) continue;
+      const terr = TERRAIN[game.terrain[y][x]];
+      const s = worldToScreen(x, y);
+      ctx.fillStyle = terr.color;
+      ctx.fillRect(s.x, s.y, size, size);
+      if (fogState === 1) { ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(s.x, s.y, size, size); }
+    }
+  }
+  // objects
+  for (const obj of game.objects) {
+    if (obj.x < x0 - 1 || obj.x > x1 + 1 || obj.y < y0 - 1 || obj.y > y1 + 1) continue;
+    if (p.fog[obj.y][obj.x] !== 2) continue;
+    const s = worldToScreen(obj.x, obj.y);
+    if (obj.kind === OBJ.CASTLE) {
+      const ownerColor = obj.ownerIdx === 0 ? '#3b82f6' : (obj.ownerIdx === 1 ? '#dc2626' : '#888');
+      ctx.fillStyle = ownerColor;
+      roundRect(s.x + 2, s.y + 2, size - 4, size - 4, 4); ctx.fill();
+    }
+    ctx.font = Math.round(size * 0.6) + 'px sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(hero.name[0], hx, hy);
+    ctx.fillText(objIcon(obj), s.x + size / 2, s.y + size / 2);
+  }
+  // heroes (both players' heroes only shown to owner OR if in visible fog and not stealthed — simplification: show any hero currently on a visible tile)
+  for (const pl of game.players) {
+    for (const h of pl.heroes) {
+      if (p.fog[h.y][h.x] !== 2) continue;
+      const s = worldToScreen(h.x, h.y);
+      ctx.fillStyle = h.ownerIdx === 0 ? '#60a5fa' : '#f87171';
+      ctx.beginPath(); ctx.arc(s.x + size / 2, s.y + size / 2, size * 0.38, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+      if (game.selectedHeroId === h.id) { ctx.strokeStyle = '#fde047'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(s.x + size / 2, s.y + size / 2, size * 0.48, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.font = Math.round(size * 0.45) + 'px sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.fillText('🧝', s.x + size / 2, s.y + size / 2);
+    }
+  }
+  ctx.restore();
+
+  drawResourceBar(p, topBar);
+  drawBottomPanel(p, topBar);
+}
+
+function drawResourceBar(p, topBar) {
+  drawPanel(0, topBar, W, 46, { r: 0, fill: 'rgba(20,14,6,0.92)', stroke: 'rgba(255,255,255,0.1)' });
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = '700 13px sans-serif';
+  let x = 10;
+  for (const k of RESOURCE_KEYS) {
+    ctx.fillStyle = '#fff';
+    const label = RESOURCE_ICON[k] + ' ' + (p.resources[k] || 0);
+    ctx.fillText(label, x, topBar + 23);
+    x += ctx.measureText(label).width + 16;
+    if (x > W - 140) break;
+  }
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#f4c95d';
+  ctx.font = '800 13px sans-serif';
+  ctx.fillText(t('day') + ' ' + game.turn.day + ' · ' + t('week') + ' ' + game.turn.week, W - 10, topBar + 23);
+}
+
+function drawBottomPanel(p, topBar) {
+  const y = H - 44;
+  drawPanel(0, y, W, 44, { r: 0, fill: 'rgba(20,14,6,0.92)', stroke: 'rgba(255,255,255,0.1)' });
+  const hero = findHeroById(game.selectedHeroId);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  if (hero) {
+    ctx.fillStyle = '#fff'; ctx.font = '800 13px sans-serif';
+    ctx.fillText('🧝 ' + hero.name + '  Lv' + hero.level + '  ' + t('movePts') + ': ' + Math.round(hero.movePts) + '/' + hero.movePtsMax, 10, y + 22);
+    addButton(0, y, Math.min(220, W * 0.5), 44, () => { game.screen = 'heroScreen'; });
+  } else {
+    ctx.fillStyle = '#ccc'; ctx.font = '600 12px sans-serif';
+    ctx.fillText(t('selectHero'), 10, y + 22);
+  }
+  const btnW = 120;
+  drawButton(W - btnW - 10, y + 4, btnW, 36, t('endTurn'), '#4ade80', '#16a34a', () => { sfx.turnEnd(); endTurn(); });
+}
+
+// ---- input for adventure screen ----
+const adv = { dragging: false, dragStartX: 0, dragStartY: 0, dragMoved: false, camStartX: 0, camStartY: 0 };
+
+function adventurePointerDown(px, py) {
+  if (hitButton(px, py)) return; // handled by click dispatch already
+  adv.dragging = true; adv.dragMoved = false;
+  adv.dragStartX = px; adv.dragStartY = py;
+  adv.camStartX = game.camera.x; adv.camStartY = game.camera.y;
+}
+function adventurePointerMove(px, py) {
+  if (!adv.dragging) return;
+  const dx = px - adv.dragStartX, dy = py - adv.dragStartY;
+  if (Math.hypot(dx, dy) > 6) adv.dragMoved = true;
+  if (adv.dragMoved) {
+    game.camera.x = adv.camStartX - dx / mapTileSize;
+    game.camera.y = adv.camStartY - dy / mapTileSize;
+    clampCamera();
+  }
+}
+function adventurePointerUp(px, py) {
+  const wasDrag = adv.dragMoved;
+  adv.dragging = false;
+  if (wasDrag) return;
+  const w = screenToWorld(px, py);
+  const tx = Math.floor(w.x), ty = Math.floor(w.y);
+  if (!inBounds(tx, ty)) return;
+  handleAdventureTileTap(tx, ty);
+}
+function handleAdventureTileTap(tx, ty) {
+  const p = currentPlayer();
+  const known = p.fog[ty][tx] !== 0;
+  // selecting/opening a hero or castle icon only makes sense for tiles you've actually
+  // discovered — but MOVEMENT should still be allowed into unexplored (black) tiles:
+  // the terrain itself already exists (fog only hides it from the player), so a hero can
+  // be sent walking toward/into the unknown just like real HOMM2's "as far as possible"
+  // click-to-move UX, matching how combat stacks already march toward distant targets.
+  if (known) {
+    const heroHere = heroAt(tx, ty);
+    if (heroHere && heroHere.ownerIdx === p.idx) {
+      if (game.selectedHeroId === heroHere.id) { game.screen = 'heroScreen'; return; }
+      game.selectedHeroId = heroHere.id;
+      centerCameraOnHero(heroHere);
+      sfx.click();
+      return;
+    }
+    const castleHere = findCastleAt(tx, ty);
+    if (castleHere && castleHere.ownerIdx === p.idx) {
+      game.selectedCastleId = castleHere.id;
+      game.screen = 'castle';
+      sfx.click();
+      return;
+    }
+  }
+  const hero = findHeroById(game.selectedHeroId);
+  if (hero && hero.ownerIdx === p.idx) {
+    const moved = tryMoveHeroToward(hero, tx, ty);
+    if (moved) { sfx.move(); centerCameraOnHero(hero); saveGame(); checkVictory(); }
+    else { sfx.click(); } // audible feedback: that tile is unreachable (e.g. across open water)
+  }
+}
+
+// ============================================================
+// SCREEN: HERO SCREEN
+// ============================================================
+let heroScreenSelectedSlot = null;
+function renderHeroScreen() {
+  ctx.fillStyle = '#1a1408'; ctx.fillRect(0, 0, W, H);
+  const topBar = chromeMetrics().topBar;
+  const hero = findHeroById(game.selectedHeroId);
+  if (!hero) { game.screen = 'adventure'; return; }
+  const fac = factionById(hero.factionId);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  drawButton(10, topBar + 8, 90, 34, t('back'), '#94a3b8', '#475569', () => { game.screen = 'adventure'; heroScreenSelectedSlot = null; });
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#f4c95d'; ctx.font = '900 20px sans-serif';
+  ctx.fillText(hero.name + '  (Lv ' + hero.level + ')', W / 2, topBar + 26);
+
+  const colW = Math.min(260, W * 0.42);
+  const leftX = 14, rightX = W - colW - 14;
+  let y = topBar + 56;
+  drawPanel(leftX, y, colW, 130, {});
+  ctx.textAlign = 'left'; ctx.font = '700 13px sans-serif'; ctx.fillStyle = '#fff';
+  const stats = [
+    [t('attack'), hero.attack], [t('defense'), hero.defense],
+    [t('spellPower'), hero.spellPower], [t('knowledge'), hero.knowledge],
+    [t('movePts'), Math.round(hero.movePts) + '/' + hero.movePtsMax],
+    [t('spellPts'), Math.round(hero.spellPts) + '/' + hero.spellPtsMax],
+  ];
+  stats.forEach((s, i) => ctx.fillText(s[0] + ': ' + s[1], leftX + 12, y + 18 + i * 19));
+
+  y += 140;
+  drawPanel(leftX, y, colW, 110, {});
+  ctx.fillStyle = '#fde68a'; ctx.font = '800 13px sans-serif';
+  ctx.fillText(t('skills') + ':', leftX + 12, y + 16);
+  ctx.font = '600 12px sans-serif'; ctx.fillStyle = '#fff';
+  if (hero.skills.length === 0) ctx.fillText('—', leftX + 12, y + 38);
+  hero.skills.forEach((s, i) => {
+    const lvlName = [t('basic'), t('advanced'), t('expert')][s.level - 1];
+    ctx.fillText(SKILL_DEFS[s.id].name + ' (' + lvlName + ')', leftX + 12, y + 38 + i * 18);
   });
 
-  // Resource HUD Bar (Y = 50..92, below top header bar)
-  ctx.fillStyle = '#0f172a';
-  ctx.fillRect(0, 50, W, 42);
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-  ctx.strokeRect(0, 50, W, 42);
+  // right column: army
+  drawPanel(rightX, topBar + 56, colW, H - topBar - 56 - 60, {});
+  ctx.fillStyle = '#fde68a'; ctx.font = '800 13px sans-serif';
+  ctx.fillText(t('army') + ':', rightX + 12, topBar + 72);
+  const slotH = 52;
+  for (let i = 0; i < 5; i++) {
+    const sy = topBar + 90 + i * (slotH + 6);
+    const stack = hero.army[i];
+    const selected = heroScreenSelectedSlot === i;
+    drawPanel(rightX + 8, sy, colW - 16, slotH, { fill: selected ? 'rgba(253,224,71,0.18)' : 'rgba(255,255,255,0.06)', stroke: selected ? '#fde047' : '#8a7a5c' });
+    if (stack) {
+      drawCreatureGlyph(creatureRef(stack).shape, rightX + 34, sy + slotH / 2, 18, creatureColor(stack));
+      ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = '700 12px sans-serif';
+      ctx.fillText(creatureDisplayName(stack), rightX + 60, sy + 18);
+      ctx.font = '600 11px sans-serif'; ctx.fillStyle = '#cbd5e1';
+      ctx.fillText('x' + stack.count, rightX + 60, sy + 36);
+    } else {
+      ctx.textAlign = 'center'; ctx.fillStyle = '#888'; ctx.font = '600 12px sans-serif';
+      ctx.fillText('—', rightX + colW / 2, sy + slotH / 2);
+    }
+    addButton(rightX + 8, sy, colW - 16, slotH, () => onHeroArmySlotTap(hero, i));
+  }
 
-  ctx.fillStyle = '#2ecc71';
-  ctx.font = 'bold 14px -apple-system, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(`🏰 ${p.name}  ·  🪙 ${p.gold}  ·  🪵 ${p.wood}  ·  💎 ${p.crystals}  ·  ⚡ MOVES: ${p.movesLeft}/${p.maxMoves}`, W / 2, 71);
+  // spellbook
+  const sbY = topBar + 90 + 5 * (slotH + 6) + 6;
+  ctx.textAlign = 'left'; ctx.fillStyle = '#fde68a'; ctx.font = '800 13px sans-serif';
+  ctx.fillText(t('spellbook') + ': ' + (hero.spells.length ? hero.spells.map(id => spellDef(id).name).join(', ') : '—'), rightX + 12, sbY + 8);
+}
 
-  // Bottom Action Buttons Bar (Y = H - 30)
-  drawMenuBtn(W / 2 - 75, H - 30, 130, 38, '🏰 CASTLE', () => openCastleModal());
-  drawMenuBtn(W / 2 + 75, H - 30, 130, 38, '⏳ END TURN', () => endCurrentTurn());
+function onHeroArmySlotTap(hero, i) {
+  if (heroScreenSelectedSlot === null) {
+    if (hero.army[i]) { heroScreenSelectedSlot = i; sfx.click(); }
+    return;
+  }
+  if (heroScreenSelectedSlot === i) { heroScreenSelectedSlot = null; return; }
+  const a = hero.army[heroScreenSelectedSlot], b = hero.army[i];
+  if (a && b && a.factionId === b.factionId && a.tier === b.tier && a.upgraded === b.upgraded) {
+    b.count += a.count;
+    hero.army[heroScreenSelectedSlot] = null;
+  } else {
+    hero.army[heroScreenSelectedSlot] = b;
+    hero.army[i] = a;
+  }
+  heroScreenSelectedSlot = null;
+  saveGame();
+}
+
+// ============================================================
+// SCREEN: CASTLE SCREEN
+// ============================================================
+function renderCastle() {
+  ctx.fillStyle = '#1a1408'; ctx.fillRect(0, 0, W, H);
+  const topBar = chromeMetrics().topBar;
+  const castle = game.objects.find(o => o.id === game.selectedCastleId);
+  if (!castle) { game.screen = 'adventure'; return; }
+  const fac = factionById(castle.factionId);
+  const p = game.players[castle.ownerIdx];
+  drawButton(10, topBar + 8, 90, 34, t('back'), '#94a3b8', '#475569', () => { game.screen = 'adventure'; });
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#f4c95d'; ctx.font = '900 20px sans-serif';
+  ctx.fillText(castle.name + ' — ' + fac.name, W / 2, topBar + 26);
+
+  const colW = Math.min(280, W * 0.46);
+  const leftX = 14, rightX = W - colW - 14;
+  let y = topBar + 56;
+  drawPanel(leftX, y, colW, H - topBar - 56 - 14, {});
+  ctx.textAlign = 'left'; ctx.fillStyle = '#fde68a'; ctx.font = '800 13px sans-serif';
+  ctx.fillText(t('buildings') + (castle.builtThisTurn ? ' — ' + t('alreadyBuiltThisTurn') : ''), leftX + 12, y + 18);
+  let by = y + 40;
+  const rowH = 40;
+  for (const def of BUILDING_DEFS) {
+    const curLevel = castle.buildings[def.id] || 0;
+    const isDwelling = !!def.tier;
+    let label = def.name;
+    if (isDwelling) {
+      const cdef = fac.creatures[def.tier - 1];
+      label = (def.upgrade ? 'Upgrade: ' : '') + (def.upgrade ? cdef.upgrade : cdef.name) + (def.upgrade ? '' : ' Dwelling');
+    }
+    const built = curLevel >= def.maxLevel;
+    const check = canBuild(castle, def.id);
+    drawPanel(leftX + 8, by, colW - 16, rowH - 6, { fill: built ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.05)', stroke: built ? '#4ade80' : '#8a7a5c' });
+    ctx.fillStyle = '#fff'; ctx.font = '700 12px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(label + (built ? ' ✓' : ''), leftX + 16, by + (rowH - 6) / 2);
+    if (!built) {
+      const btnLabel = check.ok ? t('build') : '✕';
+      drawButton(leftX + colW - 70, by + 3, 56, rowH - 12, btnLabel, check.ok ? '#4ade80' : '#6b6b6b', check.ok ? '#16a34a' : '#444', check.ok ? (() => {
+        if (buildInCastle(castle, def.id)) showMessage(t('build'), label, [{ label: t('ok') }]);
+      }) : null, { disabled: !check.ok, fontSize: 11 });
+    }
+    by += rowH;
+    if (by > H - 70) break;
+  }
+
+  // right: recruit + garrison
+  drawPanel(rightX, y, colW, H - topBar - 56 - 14, {});
+  ctx.fillStyle = '#fde68a'; ctx.font = '800 13px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText(t('recruit') + ':', rightX + 12, y + 18);
+  let ry = y + 40;
+  const recruitBtnW = Math.min(88, colW - 24);
+  for (let tier = 1; tier <= 5; tier++) {
+    if (!castle.buildings['dwelling' + tier]) continue;
+    const avail = castleAvailableToRecruit(castle, tier);
+    const upgraded = !!castle.buildings['dwelling' + tier + 'up'];
+    const cdef = fac.creatures[tier - 1];
+    const name = upgraded ? cdef.upgrade : cdef.name;
+    drawPanel(rightX + 8, ry, colW - 16, 40, { fill: 'rgba(255,255,255,0.05)', stroke: '#8a7a5c' });
+    ctx.fillStyle = '#fff'; ctx.font = '700 12px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(name + ' (' + avail + ')', rightX + 16, ry + 20);
+    // button sized to fit the full (untruncated) label so its drawn geometry always
+    // matches its registered hit rect — a too-narrow button was the earlier symptom here
+    const rbx = rightX + colW - 8 - recruitBtnW, rby = ry + 3, rbh = 34;
+    drawButton(rbx, rby, recruitBtnW, rbh, t('recruit'), avail > 0 ? '#4ade80' : '#6b6b6b', avail > 0 ? '#16a34a' : '#444', avail > 0 ? (() => openRecruitModal(castle, tier)) : null, { disabled: avail <= 0, fontSize: 12 });
+    ry += 46;
+  }
+  const guildLvl = castle.buildings.mageGuild || 0;
+  if (guildLvl > 0) {
+    const hero = findHeroById(game.selectedHeroId);
+    drawButton(rightX + 8, ry + 8, colW - 16, 38, '📖 ' + t('spellbook'), '#a78bfa', '#6d28d9', hero ? (() => openLearnSpellsModal(castle, hero, guildLvl)) : null, { disabled: !hero });
+  }
+}
+
+function openLearnSpellsModal(castle, hero, guildLvl) {
+  const maxLvl = Math.min(guildLvl, heroMaxSpellLevel(hero));
+  const learnable = SPELL_DEFS.filter(s => s.level <= maxLvl && !hero.spells.includes(s.id));
+  showListModal(t('spellbook'), hero.name, learnable.map(s => ({
+    label: s.name + ' (Lv' + s.level + ', ' + s.cost + ' SP)',
+    onClick: () => { hero.spells.push(s.id); hideListModal(); sfx.spell(); saveGame(); },
+  })), [{ label: t('close') }]);
+}
+
+function openRecruitModal(castle, tier) {
+  // recruit into whichever hero is actually standing in the castle; if none is,
+  // troops go into the castle garrison instead of silently failing
+  const hero = heroAtCastle(castle);
+  const avail = castleAvailableToRecruit(castle, tier);
+  const sub = hero ? hero.name : t('recruitToGarrison');
+  const doRecruit = (count) => {
+    const ok = hero ? recruitFromCastle(castle, hero, tier, count) : recruitIntoGarrison(castle, tier, count);
+    hideListModal();
+    if (!ok) showMessage(t('recruitFailed'), '', [{ label: t('ok') }]);
+  };
+  showListModal(t('recruitTitle'), sub, [
+    { label: t('max') + ' (' + avail + ')', onClick: () => doRecruit(avail) },
+    { label: '1', onClick: () => doRecruit(1) },
+    { label: '5', onClick: () => doRecruit(5) },
+  ], [{ label: t('close') }]);
+}
+
+// ============================================================
+// SCREEN: COMBAT
+// ============================================================
+let combatCellSize = 30;
+const COMBAT_HEADER_H = 78; // room for round counter + active stack name + turn order row
+function combatOrigin() {
+  const topBar = chromeMetrics().topBar;
+  const gridW = COMBAT_W * combatCellSize, gridH = COMBAT_H * combatCellSize;
+  return { x: W / 2 - gridW / 2, y: topBar + COMBAT_HEADER_H + (H - topBar - COMBAT_HEADER_H - 120 - gridH) / 2 };
+}
+function computeCombatCellSize() {
+  const topBar = chromeMetrics().topBar;
+  const usableW = W - 20, usableH = H - topBar - COMBAT_HEADER_H - 120;
+  return Math.max(14, Math.min(40, Math.min(usableW / COMBAT_W, usableH / COMBAT_H)));
+}
+function combatCellToScreen(x, y) {
+  const o = combatOrigin();
+  return { x: o.x + x * combatCellSize, y: o.y + y * combatCellSize };
+}
+function combatScreenToCell(px, py) {
+  const o = combatOrigin();
+  return { x: Math.floor((px - o.x) / combatCellSize), y: Math.floor((py - o.y) / combatCellSize) };
 }
 
 function renderCombat() {
-  if (!activeCombat) return;
-  const b = activeCombat;
-
-  ctx.fillStyle = '#1b2a47';
-  ctx.fillRect(0, 0, W, H);
-
-  ctx.fillStyle = '#2ecc71';
-  ctx.font = 'bold 24px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('⚔️ TACTICAL BATTLEGROUND', W / 2, 40);
-
-  const tileSize = Math.min((W - 40) / b.gridCols, (H - 120) / b.gridRows);
-  const offsetX = (W - b.gridCols * tileSize) / 2;
-  const offsetY = 70;
-
-  // Grid
-  for (let r = 0; r < b.gridRows; r++) {
-    for (let c = 0; c < b.gridCols; c++) {
-      const tx = offsetX + c * tileSize;
-      const ty = offsetY + r * tileSize;
-      ctx.fillStyle = (c + r) % 2 === 0 ? '#2c3e50' : '#34495e';
-      ctx.fillRect(tx, ty, tileSize, tileSize);
-      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-      ctx.strokeRect(tx, ty, tileSize, tileSize);
-    }
-  }
-
-  // Render Combat Stacks
-  b.units.forEach(u => {
-    if (!u.active) return;
-    const ux = offsetX + u.x * tileSize + tileSize / 2;
-    const uy = offsetY + u.y * tileSize + tileSize / 2;
-
-    ctx.font = `${tileSize * 0.5}px sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(u.type.icon, ux, uy - 6);
-
-    ctx.fillStyle = u.side === 'attacker' ? '#2ecc71' : '#e74c3c';
-    ctx.font = 'bold 12px sans-serif';
-    ctx.fillText(`x${u.count}`, ux, uy + 16);
-  });
-
-  // Action Bar
-  const activeUnit = b.getActiveUnit();
-  if (activeUnit && activeUnit.side === 'attacker') {
-    ctx.fillStyle = '#ffd700';
-    ctx.font = 'bold 16px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(`YOUR TURN: ${activeUnit.type.name} (x${activeUnit.count})`, W / 2, H - 40);
-
-    // Target button
-    const target = b.units.find(u => u.side === 'defender' && u.active);
-    if (target) {
-      drawMenuBtn(W / 2, H - 80, 220, 44, `ATTACK ${target.type.name} ⚔️`, () => {
-        b.attackTarget(activeUnit, target);
-      });
-    }
-  }
-}
-
-function drawMenuBtn(x, y, w, h, text, onClick, disabled = false) {
-  ctx.save();
-  ctx.fillStyle = disabled ? '#1e2b45' : '#27ae60';
-  ctx.strokeStyle = disabled ? '#34495e' : '#58d68d';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.roundRect(x - w / 2, y - h / 2, w, h, 14);
-  ctx.fill(); ctx.stroke();
-
-  ctx.font = 'bold 16px -apple-system, sans-serif';
+  combatCellSize = computeCombatCellSize();
+  ctx.fillStyle = '#0f1a12'; ctx.fillRect(0, 0, W, H);
+  const topBar = chromeMetrics().topBar;
+  const c = game.combat;
+  if (!c) { game.screen = 'adventure'; return; }
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillStyle = disabled ? '#8fa3c4' : '#ffffff';
-  ctx.fillText(text, x, y);
-  ctx.restore();
+  ctx.fillStyle = '#f4c95d'; ctx.font = '900 15px sans-serif';
+  ctx.fillText(t('combatRound') + ' ' + c.round, W / 2, topBar + 15);
 
-  if (!disabled && menuClick && stateCooldown <= 0) {
-    if (menuClick.x >= x - w/2 && menuClick.x <= x + w/2 && menuClick.y >= y - h/2 && menuClick.y <= y + h/2) {
-      playSfx('coin');
-      menuClick = null;
-      stateCooldown = 0.35;
-      onClick();
+  const o = combatOrigin();
+  const activeStack = currentActorStack();
+  const reach = (activeStack && !combatSideIsAI(activeStack.side)) ? combatReachable(activeStack) : new Map();
+
+  // active stack name — readable status line
+  if (activeStack) {
+    ctx.font = '700 12px sans-serif';
+    ctx.fillStyle = activeStack.side === 'attacker' ? '#93c5fd' : '#fca5a5';
+    ctx.fillText(t('stackTurn', { name: creatureDisplayName(activeStack) }), W / 2, topBar + 33);
+  }
+  // initiative / turn order row
+  const aliveOrder = c.order.map(id => c.stacks.find(s => s.id === id)).filter(s => s && s.alive);
+  if (aliveOrder.length) {
+    const chip = 20, chipGap = 4;
+    const rowW = aliveOrder.length * (chip + chipGap) - chipGap;
+    let ox = W / 2 - Math.min(rowW, W - 20) / 2;
+    const maxChips = Math.max(1, Math.floor((W - 20) / (chip + chipGap)));
+    aliveOrder.slice(0, maxChips).forEach((s) => {
+      const isCur = activeStack && s.id === activeStack.id;
+      ctx.fillStyle = isCur ? 'rgba(253,224,71,0.9)' : 'rgba(255,255,255,0.14)';
+      roundRect(ox, topBar + 46, chip, chip, 5); ctx.fill();
+      if (isCur) { ctx.strokeStyle = '#fde047'; ctx.lineWidth = 1.5; ctx.stroke(); }
+      drawCreatureGlyph(creatureRef(s).shape, ox + chip / 2, topBar + 46 + chip / 2, chip * 0.34, creatureColor(s));
+      ox += chip + chipGap;
+    });
+  }
+  for (let y = 0; y < COMBAT_H; y++) {
+    for (let x = 0; x < COMBAT_W; x++) {
+      const s = combatCellToScreen(x, y);
+      const k = x + ',' + y;
+      ctx.fillStyle = (x + y) % 2 === 0 ? '#3a6b3f' : '#356338';
+      if (reach.has(k)) ctx.fillStyle = '#5b8fd6';
+      ctx.fillRect(s.x, s.y, combatCellSize - 1, combatCellSize - 1);
     }
   }
-}
-
-function drawModalCard(title, sub, buttons) {
-  ctx.save();
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-  ctx.fillRect(0, 0, W, H);
-
-  const cardW = Math.min(W * 0.9, 420);
-  const cardH = 280;
-  const cardX = (W - cardW) / 2;
-  const cardY = (H - cardH) / 2;
-
-  ctx.fillStyle = '#111a2e';
-  ctx.strokeStyle = '#3498db';
-  ctx.lineWidth = 3;
-  ctx.roundRect(cardX, cardY, cardW, cardH, 20);
-  ctx.fill(); ctx.stroke();
-
-  ctx.fillStyle = '#2ecc71';
-  ctx.font = 'bold 28px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(title, W / 2, cardY + 50);
-
-  ctx.fillStyle = '#a9c7eb';
-  ctx.font = '14px sans-serif';
-  ctx.fillText(sub, W / 2, cardY + 90);
-
-  buttons.forEach((btn, idx) => {
-    drawMenuBtn(W / 2, cardY + 145 + idx * 52, 240, 44, btn.label, btn.action);
-  });
-
-  ctx.restore();
-}
-
-// ============ CASTLE MODAL ENGINE ============
-function openCastleModal() {
-  const p = players[activePlayerIdx];
-  document.getElementById('castleTitle').innerText = `🏰 ${p.name}'S CASTLE`;
-  
-  const container = document.getElementById('castleBuildings');
-  let html = '';
-
-  UNIT_TYPES.forEach(u => {
-    const cost = u.tier * 200;
-    const canAfford = p.gold >= cost;
-    html += `
-      <div class="building-item">
-        <div class="building-name">${u.icon} ${u.name}</div>
-        <div class="building-cost">Cost: ${cost} Gold | Atk:${u.atk} Def:${u.def}</div>
-        <button class="building-btn" ${canAfford ? '' : 'disabled'} onclick="recruitUnit('${u.id}', ${cost})">
-          ${t('recruit')} (+5)
-        </button>
-      </div>
-    `;
-  });
-
-  container.innerHTML = html;
-  document.getElementById('castleModal').style.display = 'flex';
-}
-
-window.recruitUnit = function(unitId, cost) {
-  const p = players[activePlayerIdx];
-  if (p.gold >= cost) {
-    p.gold -= cost;
-    const stack = p.army.find(a => a.unitId === unitId);
-    if (stack) stack.count += 5;
-    else p.army.push({ unitId, count: 5 });
-    playSfx('coin');
-    openCastleModal();
+  // stacks
+  for (const st of c.stacks) {
+    if (!st.alive) continue;
+    const s = combatCellToScreen(st.x, st.y);
+    const isActive = activeStack && activeStack.id === st.id;
+    if (isActive) { ctx.strokeStyle = '#fde047'; ctx.lineWidth = 3; ctx.strokeRect(s.x + 1, s.y + 1, combatCellSize - 3, combatCellSize - 3); }
+    drawCreatureGlyph(creatureRef(st).shape, s.x + combatCellSize / 2, s.y + combatCellSize / 2 - 2, combatCellSize * 0.36, creatureColor(st));
+    ctx.fillStyle = st.side === 'attacker' ? '#60a5fa' : '#f87171';
+    ctx.beginPath(); ctx.arc(s.x + combatCellSize - 6, s.y + 6, 3, 0, Math.PI * 2); ctx.fill();
+    // creature count — outlined for legibility over any background/colour
+    ctx.font = '800 ' + Math.max(10, Math.round(combatCellSize * 0.32)) + 'px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const countLabel = String(st.count);
+    const countY = s.y + combatCellSize - 9;
+    ctx.lineWidth = Math.max(2, combatCellSize * 0.09);
+    ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+    ctx.strokeText(countLabel, s.x + combatCellSize / 2, countY);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(countLabel, s.x + combatCellSize / 2, countY);
+    // HP bar for the stack
+    const hpFrac = Math.max(0, Math.min(1, st.hpMax ? st.hp / st.hpMax : 1));
+    const barW = combatCellSize - 6, barH = Math.max(2, combatCellSize * 0.09);
+    const barX = s.x + 3, barY = s.y + combatCellSize - barH - 2;
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = hpFrac > 0.5 ? '#4ade80' : (hpFrac > 0.25 ? '#fbbf24' : '#f87171');
+    ctx.fillRect(barX, barY, Math.max(0, barW * hpFrac), barH);
+    addButton(s.x, s.y, combatCellSize, combatCellSize, () => { humanActOnTile(st.x, st.y); });
   }
-};
-
-document.getElementById('castleCloseBtn').addEventListener('click', () => {
-  document.getElementById('castleModal').style.display = 'none';
-});
-
-// ============ LEADERBOARD & PLAYER NAME SYSTEM ============
-function loadLeaderboard() {
-  try {
-    const saved = localStorage.getItem('heroesLeaderboard');
-    if (saved) return JSON.parse(saved);
-  } catch (e) {}
-  return [];
-}
-
-function saveLeaderboard(board) {
-  try {
-    localStorage.setItem('heroesLeaderboard', JSON.stringify(board));
-  } catch (e) {}
-}
-
-function renderLeaderboardUI() {
-  const board = loadLeaderboard();
-  const listEl = document.getElementById('lbList');
-  document.getElementById('lbTitle').innerText = t('topScores');
-  document.getElementById('lbCloseBtn').innerText = t('close');
-
-  if (!board.length) {
-    listEl.innerHTML = `<div style="text-align:center; padding:20px; color:#a9c7eb;">${t('noScoresYet')}</div>`;
-    return;
-  }
-
-  let html = '';
-  board.slice(0, 10).forEach((entry, idx) => {
-    const rankBadge = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : `#${idx + 1}`));
-    html += `
-      <div class="lb-row">
-        <span class="lb-rank">${rankBadge}</span>
-        <span class="lb-name">${entry.name}</span>
-        <span class="lb-mode">${entry.mode || '1P'}</span>
-        <span class="lb-score">${entry.score}</span>
-      </div>
-    `;
-  });
-  listEl.innerHTML = html;
-}
-
-function openLeaderboardModal() {
-  renderLeaderboardUI();
-  document.getElementById('leaderboardModal').style.display = 'flex';
-}
-
-document.getElementById('lbCloseBtn').addEventListener('click', () => {
-  document.getElementById('leaderboardModal').style.display = 'none';
-});
-
-// ============ INPUT & EVENT LISTENERS ============
-function handleCanvasPointer(e) {
-  initAudio();
-  if (stateCooldown > 0) return;
-  const now = performance.now();
-  if (now - lastPointerTime < 300) return;
-  lastPointerTime = now;
-
-  if (e.type === 'touchend') e.preventDefault();
-
-  const rect = canvas.getBoundingClientRect();
-  let clientX = e.clientX;
-  let clientY = e.clientY;
-  if (e.changedTouches && e.changedTouches[0]) {
-    clientX = e.changedTouches[0].clientX;
-    clientY = e.changedTouches[0].clientY;
-  }
-
-  if (clientX !== undefined && clientY !== undefined) {
-    const px = clientX - rect.left;
-    const py = clientY - rect.top;
-    menuClick = { x: px, y: py };
-
-    if (gameState === 'OVERWORLD') {
-      handleOverworldTap(px, py);
+  // empty tile taps
+  for (let y = 0; y < COMBAT_H; y++) {
+    for (let x = 0; x < COMBAT_W; x++) {
+      if (c.stacks.some(st => st.alive && st.x === x && st.y === y)) continue;
+      const s = combatCellToScreen(x, y);
+      addButton(s.x, s.y, combatCellSize, combatCellSize, () => { humanActOnTile(x, y); });
     }
   }
+  // floaters
+  for (let i = c.floaters.length - 1; i >= 0; i--) {
+    const f = c.floaters[i];
+    const s = combatCellToScreen(f.x, f.y);
+    ctx.fillStyle = '#fca5a5'; ctx.font = '800 13px sans-serif';
+    ctx.fillText(f.text, s.x + combatCellSize / 2, s.y - f.t * 0.6);
+    f.t++;
+    if (f.t > 40) c.floaters.splice(i, 1);
+  }
+
+  // action bar
+  const barY = o.y + COMBAT_H * combatCellSize + 14;
+  const isHumanTurn = activeStack && !combatSideIsAI(activeStack.side);
+  const btnW = Math.min(100, (W - 40) / 5), btnH = 38, gap = 8;
+  const totalW = btnW * 5 + gap * 4;
+  let bx = W / 2 - totalW / 2;
+  const side = activeStack ? activeStack.side : 'attacker';
+  const hero = side === 'attacker' ? combatAttackerHero() : combatDefenderHero();
+  const canCast = isHumanTurn && hero && hero.spells.length > 0 && !game.combat.sideCast[side];
+  drawButton(bx, barY, btnW, btnH, t('castSpell'), '#a78bfa', '#6d28d9', canCast ? (() => openCombatSpellModal(side, hero)) : null, { disabled: !canCast, fontSize: 11 });
+  bx += btnW + gap;
+  drawButton(bx, barY, btnW, btnH, t('defend'), '#38bdf8', '#0284c7', isHumanTurn ? humanDefend : null, { disabled: !isHumanTurn, fontSize: 11 });
+  bx += btnW + gap;
+  drawButton(bx, barY, btnW, btnH, t('wait'), '#94a3b8', '#475569', isHumanTurn ? humanWait : null, { disabled: !isHumanTurn, fontSize: 11 });
+  bx += btnW + gap;
+  const canFlee = isHumanTurn && (side === 'attacker' ? combatAttackerHero() : combatDefenderHero());
+  drawButton(bx, barY, btnW, btnH, t('flee'), '#fbbf24', '#b45309', canFlee ? (() => combatFlee(side)) : null, { disabled: !canFlee, fontSize: 11 });
+  bx += btnW + gap;
+  drawButton(bx, barY, btnW, btnH, t('surrender'), '#f87171', '#b91c1c', canFlee ? (() => combatSurrender(side)) : null, { disabled: !canFlee, fontSize: 11 });
+
+  // log
+  ctx.textAlign = 'left'; ctx.font = '600 11px sans-serif'; ctx.fillStyle = '#d1fae5';
+  const logLines = c.log.slice(-3);
+  logLines.forEach((l, i) => ctx.fillText(l, 10, barY + btnH + 16 + i * 14));
 }
 
-function handleOverworldTap(px, py) {
-  const p = players[activePlayerIdx];
-  const tileSize = Math.min((W - 32) / GRID_COLS, (H - 160) / GRID_ROWS);
-  const offsetX = (W - GRID_COLS * tileSize) / 2;
-  const offsetY = 96;
-
-  const col = Math.floor((px - offsetX) / tileSize);
-  const row = Math.floor((py - offsetY) / tileSize);
-
-  if (col >= 0 && col < GRID_COLS && row >= 0 && row < GRID_ROWS) {
-    const dist = Math.abs(col - p.x) + Math.abs(row - p.y);
-    if (dist === 1 && p.movesLeft > 0) {
-      const tile = overworldMap[row][col];
-      if (tile.type !== 'mountain') {
-        p.x = col;
-        p.y = row;
-        p.movesLeft--;
-        playSfx('step');
-
-        if (tile.structure) {
-          if (tile.structure.kind === 'chest') {
-            p.gold += 600;
-            playSfx('coin');
-            tile.structure = null;
-            showWarningMessage('+600 GOLD FOUND IN CHEST! 🪙');
-          } else if (tile.structure.kind === 'monster') {
-            activeCombat = new CombatBattle(p, tile.structure);
-            setGameState('COMBAT');
-          }
+function openCombatSpellModal(side, hero) {
+  const items = hero.spells.map(id => {
+    const def = spellDef(id);
+    const canAfford = hero.spellPts >= def.cost;
+    return {
+      label: def.name + ' (' + def.cost + ' SP)' + (canAfford ? '' : ' ✕'),
+      disabled: !canAfford,
+      onClick: () => {
+        hideListModal();
+        if (def.kind === 'buff' || def.kind === 'debuff' || (def.kind === 'damage' && def.aoe)) {
+          combatCastSpell(side, id, null);
+        } else {
+          // pick a target stack: damage single-target or heal — target first valid enemy/ally
+          const targets = def.kind === 'heal' ? combatAliveStacks().filter(s => s.side === side) : combatAliveStacks().filter(s => s.side !== side);
+          if (targets.length) combatCastSpell(side, id, targets[0].id);
         }
-      }
-    }
-  }
+      },
+    };
+  });
+  showListModal(t('castSpell'), hero.name + ' — ' + Math.round(hero.spellPts) + ' SP', items, [{ label: t('close') }]);
 }
 
-canvas.addEventListener('click', handleCanvasPointer);
-canvas.addEventListener('touchend', handleCanvasPointer);
+// ============================================================
+// SCREEN: COMBAT RESULT
+// ============================================================
+function renderCombatResult() {
+  ctx.fillStyle = '#0f1a12'; ctx.fillRect(0, 0, W, H);
+  const topBar = chromeMetrics().topBar;
+  const c = game.combat;
+  if (!c) { game.screen = 'adventure'; return; }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const win = c.result === 'attackerWin' || c.result === 'defenderFled' || c.result === 'defenderSurrendered';
+  ctx.fillStyle = win ? '#4ade80' : '#f87171';
+  ctx.font = '900 26px sans-serif';
+  let msg = t('combatVictory');
+  if (c.result === 'defenderWin') msg = t('combatDefeat');
+  else if (c.result === 'attackerFled') msg = t('combatFled');
+  else if (c.result === 'attackerSurrendered') msg = t('combatSurrendered');
+  ctx.fillText(msg, W / 2, H / 2 - 20);
+  drawButton(W / 2 - 90, H / 2 + 20, 180, 46, t('continueBtn'), '#4ade80', '#16a34a', () => { game.combat = null; game.screen = 'adventure'; });
+}
 
-window.addEventListener('keydown', e => {
+// ============================================================
+// MAIN LOOP DISPATCH
+// ============================================================
+let lastScreenForModals = null;
+function render() {
+  clearUIButtons();
+  switch (game.screen) {
+    case 'modeSelect': hideScreenExclusiveModals(); renderModeSelect(); break;
+    case 'factionPick': hideScreenExclusiveModals(); renderFactionPick(); break;
+    case 'heroPick': hideScreenExclusiveModals(); renderHeroPick(); break;
+    case 'adventure': hideScreenExclusiveModals(); renderAdventure(); break;
+    case 'castle': hideScreenExclusiveModals(); renderCastle(); break;
+    case 'heroScreen': hideScreenExclusiveModals(); renderHeroScreen(); break;
+    case 'combat': hideScreenExclusiveModals(); renderCombat(); break;
+    case 'combatResult': hideScreenExclusiveModals(); renderCombatResult(); break;
+    case 'passDevice': ctx.fillStyle = '#08131f'; ctx.fillRect(0, 0, W, H); showPassDeviceScreen(); break;
+    case 'victory': ctx.fillStyle = '#08131f'; ctx.fillRect(0, 0, W, H); showVictoryScreen(); break;
+    default: ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  }
+  lastScreenForModals = game.screen;
+}
+
+function update(dt) {
+  // Stage 1 is turn-based; no continuous simulation is required per frame.
+  // Reserved for future animation/timer needs.
+}
+
+// ============================================================
+// INPUT WIRING
+// ============================================================
+function pointFromEvent(e) {
+  if (e.touches && e.touches.length) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  if (e.changedTouches && e.changedTouches.length) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+  return { x: e.clientX, y: e.clientY };
+}
+
+function onDown(px, py) {
   initAudio();
-  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
-
-  if (e.code === 'KeyP' || e.code === 'Escape') {
-    if (gameState === 'OVERWORLD') setGameState('PAUSED');
-    else if (gameState === 'PAUSED') setGameState('OVERWORLD');
-  }
-});
-
-// Touch controls binding
-function bindTouchBtn(id, action) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const start = e => { e.preventDefault(); initAudio(); action(); };
-  el.addEventListener('touchstart', start);
-  el.addEventListener('mousedown', start);
+  const btn = hitButton(px, py);
+  if (btn) { btn.onClick(); return; }
+  if (game.screen === 'adventure') adventurePointerDown(px, py);
 }
-bindTouchBtn('btnEndTurn', endCurrentTurn);
+function onMove(px, py) {
+  if (game.screen === 'adventure') adventurePointerMove(px, py);
+}
+function onUp(px, py) {
+  if (game.screen === 'adventure') adventurePointerUp(px, py);
+}
 
-// Game Loop
-let lastTime = performance.now();
-function gameLoop(now) {
-  const dt = Math.min(0.05, (now - lastTime) / 1000);
-  lastTime = now;
+canvas.addEventListener('touchstart', e => { e.preventDefault(); const p = pointFromEvent(e); onDown(p.x, p.y); }, { passive: false });
+canvas.addEventListener('touchmove', e => { e.preventDefault(); const p = pointFromEvent(e); onMove(p.x, p.y); }, { passive: false });
+canvas.addEventListener('touchend', e => { e.preventDefault(); const p = pointFromEvent(e); onUp(p.x, p.y); }, { passive: false });
+canvas.addEventListener('mousedown', e => onDown(e.clientX, e.clientY));
+window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+window.addEventListener('mouseup', e => onUp(e.clientX, e.clientY));
 
-  if (pendingState !== null) {
-    gameState = pendingState;
-    pendingState = null;
-  }
-
-  if (stateCooldown > 0) stateCooldown -= dt;
-  if (warningTimer > 0) warningTimer -= dt;
-
+// ============================================================
+// BOOT
+// ============================================================
+let lastFrameTime = 0;
+function frame(ts) {
+  const dt = lastFrameTime ? Math.min(0.1, (ts - lastFrameTime) / 1000) : 0;
+  lastFrameTime = ts;
+  update(dt);
   render();
-  requestAnimationFrame(gameLoop);
+  requestAnimationFrame(frame);
 }
-requestAnimationFrame(gameLoop);
 
+function init() {
+  resize();
+  game.screen = 'modeSelect';
+  requestAnimationFrame(frame);
+}
+init();
 </script>
 </body>
 </html>
