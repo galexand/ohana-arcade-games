@@ -153,7 +153,7 @@ const TEXT = {
     modeDuel: 'DUEL (2 Players)',
     modeDuelSub: 'Hot-seat battle for two heroes on one island',
     modeCampaign: 'CAMPAIGN',
-    modeCampaignSub: 'Coming in the next update!',
+    modeCampaignSub: '5 missions — save your hero\'s island, one story at a time',
     pickFaction: 'Player {n}: Choose a House',
     pickHero: 'Choose your Hero',
     startDuel: 'BEGIN DUEL',
@@ -238,6 +238,42 @@ const TEXT = {
     luckGood: 'Lucky strike!',
     heroTab: 'Hero', castleTab: 'Castle',
     tapHeroToOpen: 'Tap your hero again to open the hero screen. Tap a castle you own to open it.',
+
+    // ---- Campaign (Stage 2) ----
+    missionSelectTitle: 'THE OHANA CAMPAIGN',
+    missionLocked: 'Locked', missionAvailable: 'Available', missionCompleted: 'Completed',
+    missionStart: 'START MISSION', missionReplay: 'REPLAY',
+    backToModes: 'BACK TO MENU',
+    mission1Name: "Kaua'i Beach", mission1Obj: 'Capture the neighboring castle.',
+    mission2Name: 'Experiment Hunt', mission2Obj: 'Collect {n} experiment pods.',
+    mission3Name: 'The Federation Arrives', mission3Obj: 'Hold your castle for {n} turns.',
+    mission4Name: 'Leroy Multiplies', mission4Obj: 'Defeat every enemy hero.',
+    mission5Name: "Hämsterviel's Reckoning", mission5Obj: 'Capture every enemy castle.',
+    mission1Story: "Stitch has crash-landed on Kaua'i and a rival landing party has claimed the next beach over. Learn the ropes: move your hero, capture a mine, build a dwelling, recruit some troops — then take their castle.",
+    mission2Story: "Jumba's escaped experiments are hiding pods full of unstable genetic material all across the island. Gather them before a rival hero does, and watch out — some pods are guarded.",
+    mission3Story: "The Galactic Federation has traced Stitch's signal. Wave after wave of troopers will try to storm your castle. Dig in, grow your garrison, and outlast the siege.",
+    mission4Story: "Gantu's clone-happy pet keeps churning out fresh Leroys from a hidden lair. Hunt down every clone hero that comes at you — and find the lair before it swamps you.",
+    mission5Story: "Dr. Hämsterviel has built a small empire of his own. This is his stronghold system — take every one of his castles to end his reign for good.",
+    missionObjectiveLabel: 'Objective',
+    chooseBonus: 'Choose your starting bonus:',
+    bonusResourcesName: 'Resource Bundle', bonusResourcesDesc: '+2500 Gold, +10 Wood, +10 Ore',
+    bonusCreaturesName: 'Extra Troops', bonusCreaturesDesc: '+6 Tier-2 creatures join your army',
+    bonusArtifactName: 'Ancient Artifact', bonusArtifactDesc: 'Start with a bonus artifact',
+    beginMission: 'BEGIN',
+    missionVictoryTitle: 'MISSION COMPLETE!',
+    missionVictorySub: 'Your hero carries their level, skills and a token force onward to the next mission.',
+    missionDefeatTitle: 'MISSION FAILED',
+    missionDefeatSub: 'Your forces have fallen. Try again — the island will forgive you.',
+    tryAgain: 'TRY AGAIN',
+    nextMission: 'NEXT MISSION',
+    backToMissions: 'MISSION SELECT',
+    podFound: 'Experiment Pod!', podProgress: 'Collected {n} of {total}.',
+    lairDestroyed: 'The lair is destroyed — no more reinforcements will come.',
+    surviveProgress: 'Turn {n} of {total}', collectProgress: 'Collected {n} of {total}',
+    heroesLeftProgress: '{n} enemy heroes remain', castlesLeftProgress: '{n} enemy castles remain',
+    castleTargetProgress: 'Capture the marked castle',
+    mission1Tutorial: 'Tip: Tap your hero, then tap a tile to walk there. Walking onto a mine or resource pile claims it. Open your castle to BUILD a dwelling, then RECRUIT troops into your hero. Tap END TURN when you are ready to attack the enemy castle!',
+    enemyTurnBanner: '⚔️ Enemy turn…',
   },
   ro: {
     gameTitle: 'EROII DIN OHANA',
@@ -245,7 +281,7 @@ const TEXT = {
     modeDuel: 'DUEL (2 Jucători)',
     modeDuelSub: 'Luptă pe rând pentru doi eroi pe o insulă',
     modeCampaign: 'CAMPANIE',
-    modeCampaignSub: 'Vine în actualizarea următoare!',
+    modeCampaignSub: '5 misiuni — salvează insula eroului tău, poveste cu poveste',
     pickFaction: 'Jucătorul {n}: Alege o Casă',
     pickHero: 'Alege-ți eroul',
     startDuel: 'ÎNCEPE DUELUL',
@@ -329,6 +365,42 @@ const TEXT = {
     luckGood: 'Lovitură norocoasă!',
     heroTab: 'Erou', castleTab: 'Castel',
     tapHeroToOpen: 'Apasă din nou eroul pentru a-i vedea ecranul. Apasă un castel al tău pentru a-l deschide.',
+
+    // ---- Campanie (Etapa 2) ----
+    missionSelectTitle: 'CAMPANIA OHANA',
+    missionLocked: 'Blocată', missionAvailable: 'Disponibilă', missionCompleted: 'Terminată',
+    missionStart: 'ÎNCEPE MISIUNEA', missionReplay: 'REIA',
+    backToModes: 'ÎNAPOI LA MENIU',
+    mission1Name: 'Plaja din Kaua\'i', mission1Obj: 'Cucerește castelul vecin.',
+    mission2Name: 'Vânătoarea de Experimente', mission2Obj: 'Adună {n} capsule cu experimente.',
+    mission3Name: 'Sosește Federația', mission3Obj: 'Apără-ți castelul timp de {n} runde.',
+    mission4Name: 'Leroy se Multiplică', mission4Obj: 'Învinge fiecare erou inamic.',
+    mission5Name: 'Răzbunarea lui Hämsterviel', mission5Obj: 'Cucerește toate castelele inamice.',
+    mission1Story: 'Stitch a aterizat forțat pe Kaua\'i, iar o echipă rivală a ocupat plaja alăturată. Învață bazele: mișcă-ți eroul, capturează o mină, construiește o locuință, recrutează trupe — apoi cucerește-le castelul.',
+    mission2Story: 'Experimentele evadate ale lui Jumba ascund capsule cu material genetic instabil pe toată insula. Adună-le înaintea unui erou rival — atenție, unele sunt păzite.',
+    mission3Story: 'Federația Galactică a localizat semnalul lui Stitch. Valuri de soldați vor încerca să-ți ia castelul cu asalt. Rezistă, crește-ți garnizoana și supraviețuiește asediului.',
+    mission4Story: 'Animalul de companie al lui Gantu produce clone Leroy dintr-un bârlog ascuns. Vânează fiecare erou-clonă care te atacă — și găsește bârlogul înainte să fii copleșit.',
+    mission5Story: 'Dr. Hämsterviel și-a construit propriul mic imperiu. Acesta e sistemul lui de fortărețe — cucerește fiecare castel pentru a-i încheia definitiv domnia.',
+    missionObjectiveLabel: 'Obiectiv',
+    chooseBonus: 'Alege bonusul de start:',
+    bonusResourcesName: 'Pachet de Resurse', bonusResourcesDesc: '+2500 Aur, +10 Lemn, +10 Minereu',
+    bonusCreaturesName: 'Trupe Suplimentare', bonusCreaturesDesc: '+6 creaturi de nivel 2 în armată',
+    bonusArtifactName: 'Artefact Antic', bonusArtifactDesc: 'Începi cu un artefact bonus',
+    beginMission: 'ÎNCEPE',
+    missionVictoryTitle: 'MISIUNE ÎNDEPLINITĂ!',
+    missionVictorySub: 'Eroul tău își păstrează nivelul, abilitățile și o mică forță pentru misiunea următoare.',
+    missionDefeatTitle: 'MISIUNE EȘUATĂ',
+    missionDefeatSub: 'Forțele tale au căzut. Încearcă din nou — insula te va ierta.',
+    tryAgain: 'ÎNCEARCĂ DIN NOU',
+    nextMission: 'MISIUNEA URMĂTOARE',
+    backToMissions: 'SELECTEAZĂ MISIUNEA',
+    podFound: 'Capsulă cu Experiment!', podProgress: 'Adunate {n} din {total}.',
+    lairDestroyed: 'Bârlogul a fost distrus — nu vor mai veni întăriri.',
+    surviveProgress: 'Runda {n} din {total}', collectProgress: 'Adunate {n} din {total}',
+    heroesLeftProgress: 'Mai sunt {n} eroi inamici', castlesLeftProgress: 'Mai sunt {n} castele inamice',
+    castleTargetProgress: 'Cucerește castelul marcat',
+    mission1Tutorial: 'Sfat: Apasă eroul, apoi o căsuță pentru a merge acolo. Mersul peste o mină sau o grămadă de resurse o capturează. Deschide-ți castelul pentru a CONSTRUI o locuință, apoi RECRUTEAZĂ trupe în erou. Apasă TERMINĂ RÂNDUL când ești gata să ataci castelul inamic!',
+    enemyTurnBanner: '⚔️ Rândul inamicului…',
   },
 };
 function t(key, vars) {
@@ -440,6 +512,10 @@ resize();
 // ============ PERSISTENCE ============
 const SAVE_KEY = 'heroesOhanaSave';
 function saveGame() {
+  // campaign mid-mission progress is intentionally NOT persisted through SAVE_KEY — that
+  // slot is reserved for the duel "resume" flow. Campaign unlock/completion/carry-over
+  // state lives in CAMPAIGN_KEY instead (see saveCampaignProgress).
+  if (game.mode !== 'duel') return;
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(serializeGame()));
   } catch (e) {}
@@ -595,6 +671,7 @@ function spellDef(id) { return SPELL_DEFS.find(s => s.id === id); }
 const OBJ = {
   MINE: 'mine', RESOURCE: 'resource', CHEST: 'chest', ARTIFACT: 'artifact',
   DWELLING: 'dwelling', MONSTER: 'monster', CASTLE: 'castle',
+  POD: 'pod', LAIR: 'lair', // campaign-only: experiment pod (collectible), monster lair (heroes respawn point)
 };
 
 // ---- Artifacts (simple attribute bonuses) ----
@@ -829,10 +906,11 @@ function makeFogGrid() {
 // GAME STATE
 // ============================================================
 const game = {
-  screen: 'modeSelect', // modeSelect, factionPick, adventure, castle, heroScreen, combat, passDevice, victory
+  screen: 'modeSelect', // modeSelect, factionPick, adventure, castle, heroScreen, combat, passDevice, victory, missionSelect, missionIntro, missionOutro, missionDefeat
+  mode: 'duel', // 'duel' | 'campaign'
   terrain: null,
   objects: [], // map objects: {id, kind, x, y, ...}
-  players: [], // 2 players for duel
+  players: [], // player 0 = human, player 1 = human (duel) or AI (campaign)
   turn: { playerIdx: 0, day: 1, week: 1 },
   selectedHeroId: null,
   camera: { x: MAP_SIZE / 2, y: MAP_SIZE / 2 }, // in tile coords, per-player camera restored on pass
@@ -842,7 +920,15 @@ const game = {
   victor: null,
   uiButtons: [], // hit-test rects populated each render() call: {x,y,w,h,onClick}
   modalStack: [],
+  // ---- campaign-only state ----
+  campaignMissionIdx: -1, // 0-4 index into MISSIONS while a mission is loaded
+  objective: null, // {type, ...} — see missionObjectiveHudText()/checkMissionOutcome()
+  pendingMissionBonus: null, // chosen start-bonus id while on the missionIntro screen
+  aiBannerUntil: 0, // Date.now() timestamp — while in the future, renderAdventure shows a
+                     // brief self-clearing "Enemy turn" banner instead of any blocking UI
 };
+
+function isAIPlayer(idx) { return game.mode === 'campaign' && idx === 1; }
 
 function currentPlayer() { return game.players[game.turn.playerIdx]; }
 function otherPlayerIdx() { return game.turn.playerIdx === 0 ? 1 : 0; }
@@ -948,7 +1034,9 @@ function findStartSpots() {
   return best;
 }
 
-function placeMapObjects() {
+function placeMapObjects(opts) {
+  opts = opts || {};
+  const monsterMul = opts.monsterMul != null ? opts.monsterMul : 1;
   const rng = Math.random;
   const usedTiles = new Set(game.objects.map(o => o.x + ',' + o.y));
   function freeSpot() {
@@ -992,13 +1080,115 @@ function placeMapObjects() {
     const tier = 1 + Math.floor(rng() * 5);
     game.objects.push({ id: genId(), kind: OBJ.DWELLING, x: s.x, y: s.y, factionId: fac.id, tier, joinCount: 2 + Math.floor(rng() * (8 - tier * 1.2)) });
   }
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < Math.round(14 * monsterMul); i++) {
     const s = freeSpot(); if (!s) continue;
     const fac = FACTIONS[Math.floor(rng() * FACTIONS.length)];
     const tier = 1 + Math.floor(rng() * 5);
     const count = Math.max(2, Math.round((8 - tier) * (0.6 + rng())));
     game.objects.push({ id: genId(), kind: OBJ.MONSTER, x: s.x, y: s.y, stack: makeCreatureStack(fac.id, tier, count) });
   }
+}
+
+// generic free-land-tile finder reused by campaign mission setup (pods, lairs, extra
+// castles/heroes) — same rules as placeMapObjects' internal freeSpot(): passable terrain,
+// not already occupied, and (optionally) far enough from existing castles
+function findFreeLandTile(opts) {
+  opts = opts || {};
+  const minCastleDist = opts.minCastleDist != null ? opts.minCastleDist : 3;
+  for (let tries = 0; tries < 500; tries++) {
+    const x = Math.floor(Math.random() * MAP_SIZE), y = Math.floor(Math.random() * MAP_SIZE);
+    const terr = game.terrain[y][x];
+    if (terr === 'water' || terr === 'rock' || terr === 'lava') continue;
+    if (opts.reachable && !opts.reachable.has(x + ',' + y)) continue;
+    if (objectAt(x, y)) continue;
+    if (heroAt(x, y)) continue;
+    let tooClose = false;
+    for (const o of game.objects) {
+      if (o.kind === OBJ.CASTLE && Math.hypot(o.x - x, o.y - y) < minCastleDist) { tooClose = true; break; }
+    }
+    if (tooClose) continue;
+    return { x, y };
+  }
+  return null;
+}
+
+// flood-fills the landmass reachable from `start` over passable terrain (8-directional,
+// matching astar's neighbor set) — used to guarantee AI castles/heroes/objectives are
+// only ever placed somewhere the human can actually walk to, instead of risking an
+// isolated island fragment from generateMap's noise leaving a mission unwinnable
+function floodFillLand(start) {
+  const seen = new Set();
+  const startKey = start.x + ',' + start.y;
+  if (movementCost(game.terrain, start.x, start.y) === Infinity) return seen;
+  seen.add(startKey);
+  const queue = [start];
+  while (queue.length) {
+    const cur = queue.shift();
+    const neighbors = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+    for (const [dx, dy] of neighbors) {
+      const nx = cur.x + dx, ny = cur.y + dy;
+      if (!inBounds(nx, ny)) continue;
+      const k = nx + ',' + ny;
+      if (seen.has(k)) continue;
+      if (movementCost(game.terrain, nx, ny) === Infinity) continue;
+      seen.add(k);
+      queue.push({ x: nx, y: ny });
+    }
+  }
+  return seen;
+}
+
+// the largest connected landmass on the map — campaign missions always place the human's
+// starting castle here (never on one of generateMap's occasional single-tile disconnected
+// beach specks), which is what makes pickDistantLandSpots' reachability filter meaningful
+function largestLandComponent() {
+  const seenAll = new Set();
+  let best = null;
+  for (let y = 0; y < MAP_SIZE; y++) for (let x = 0; x < MAP_SIZE; x++) {
+    const k = x + ',' + y;
+    if (seenAll.has(k)) continue;
+    if (movementCost(game.terrain, x, y) === Infinity) continue;
+    const comp = floodFillLand({ x, y });
+    for (const kk of comp) seenAll.add(kk);
+    if (!best || comp.size > best.size) best = comp;
+  }
+  return best || new Set();
+}
+function pickLandTileFromSet(set, preferTerrain) {
+  const arr = Array.from(set).filter(k => {
+    if (!preferTerrain) return true;
+    const [x, y] = k.split(',').map(Number);
+    return game.terrain[y][x] === preferTerrain;
+  });
+  const pool = arr.length ? arr : Array.from(set);
+  const [x, y] = pool[Math.floor(Math.random() * pool.length)].split(',').map(Number);
+  return { x, y };
+}
+
+// pick `count` land tiles that are mutually spaced apart, far from `avoidPoints`, and
+// reachable on foot from avoidPoints[0] (the human's start) — used to place AI castles/
+// heroes away from the human player's start while guaranteeing the mission is winnable
+function pickDistantLandSpots(avoidPoints, count, minDist) {
+  const reachable = floodFillLand(avoidPoints[0]);
+  const land = [];
+  for (let y = 0; y < MAP_SIZE; y++) for (let x = 0; x < MAP_SIZE; x++) {
+    const tr = game.terrain[y][x];
+    if ((tr === 'grass' || tr === 'beach') && reachable.has(x + ',' + y)) land.push({ x, y });
+  }
+  if (!land.length) return [{ x: 4, y: 4 }];
+  const chosen = [];
+  let tries = 0;
+  while (chosen.length < count && tries < 3000) {
+    tries++;
+    const cand = land[Math.floor(Math.random() * land.length)];
+    let ok = true;
+    for (const p of avoidPoints.concat(chosen)) {
+      if (Math.hypot(p.x - cand.x, p.y - cand.y) < minDist) { ok = false; break; }
+    }
+    if (ok) chosen.push(cand);
+  }
+  while (chosen.length < count) chosen.push(land[Math.floor(Math.random() * land.length)]);
+  return chosen;
 }
 
 // ============ FOG OF WAR ============
@@ -1089,14 +1279,38 @@ function endTurn() {
   // each player's turn opens centered on their own castle
   centerCameraOnCastle(nextIdx);
   game.selectedHeroId = null;
+  if (game.mode === 'campaign') missionOnTurnStart(nextIdx);
   checkVictory();
-  if (game.screen !== 'victory') {
-    game.screen = 'passDevice';
+  const missionOver = game.screen === 'victory' || game.screen === 'missionOutro' || game.screen === 'missionDefeat';
+  if (!missionOver) {
+    if (game.mode === 'campaign') {
+      // campaign is always one human (player 0) vs the AI (player 1) on the same device —
+      // there is never a second human to hand the device to, so passDevice never applies,
+      // whichever side's turn is starting (see BUG 1 fix: this used to only skip passDevice
+      // for the AI's own turn and fell through to it again once control returned to the
+      // human, which is wrong for the same reason)
+      if (isAIPlayer(nextIdx)) {
+        game.aiBannerUntil = Date.now() + 1400; // non-blocking "Enemy turn" banner, see renderAdventure
+        aiTakeTurn(nextIdx); // may itself call endTurn() again once it's done (see aiTakeTurn)
+      } else {
+        game.screen = 'adventure';
+      }
+    } else {
+      game.screen = 'passDevice';
+    }
   }
   saveGame();
 }
 
+// dispatches to the campaign objective/defeat framework in campaign mode, or the
+// original "last one standing" duel rule otherwise. All existing call sites keep
+// calling checkVictory() unchanged.
 function checkVictory() {
+  if (game.mode === 'campaign') return checkMissionOutcome();
+  return checkDuelVictory();
+}
+
+function checkDuelVictory() {
   const aliveCastleOwners = new Set(game.objects.filter(o => o.kind === OBJ.CASTLE).map(o => o.ownerIdx));
   const aliveHeroOwners = new Set();
   for (const p of game.players) if (p.heroes.length > 0) aliveHeroOwners.add(p.idx);
@@ -1245,24 +1459,31 @@ function captureCastle(hero, castleObj) {
   checkVictory();
 }
 
+// object interactions fire from both the human's own moves AND from aiTakeTurn() marching
+// an AI hero around the map — every showMessage()/showListModal() below must be gated on
+// the ACTING hero being human, or the human ends up dismissing a blocking dialog that's
+// actually describing something the AI just did to itself (see BUG 2). The underlying
+// effect (resources/army/objective progress) always applies either way; only the modal
+// (and any interactive choice, like the chest) is skipped for the AI.
 function visitObject(hero, obj) {
   const p = game.players[hero.ownerIdx];
+  const forHuman = !isAIPlayer(hero.ownerIdx);
   switch (obj.kind) {
     case OBJ.MINE: {
       obj.owner = hero.ownerIdx;
       sfx.coin();
-      showMessage(t('mineChosen'), '', [{ label: t('ok') }]);
+      if (forHuman) showMessage(t('mineChosen'), '', [{ label: t('ok') }]);
       break;
     }
     case OBJ.RESOURCE: {
       p.resources[obj.resType] += obj.amount;
       removeObject(obj);
       sfx.coin();
-      showMessage(t('resourceFound'), RESOURCE_ICON[obj.resType] + ' +' + obj.amount, [{ label: t('ok') }]);
+      if (forHuman) showMessage(t('resourceFound'), RESOURCE_ICON[obj.resType] + ' +' + obj.amount, [{ label: t('ok') }]);
       break;
     }
     case OBJ.CHEST: {
-      openChest(hero, obj);
+      openChest(hero, obj, forHuman);
       break;
     }
     case OBJ.ARTIFACT: {
@@ -1271,7 +1492,7 @@ function visitObject(hero, obj) {
       hero[art.attr] += art.amount;
       removeObject(obj);
       sfx.chest();
-      showMessage(t('artifactFound'), art.name, [{ label: t('ok') }]);
+      if (forHuman) showMessage(t('artifactFound'), art.name, [{ label: t('ok') }]);
       break;
     }
     case OBJ.DWELLING: {
@@ -1279,8 +1500,30 @@ function visitObject(hero, obj) {
       const cdef = fac.creatures[obj.tier - 1];
       addToArmy(hero, obj.factionId, obj.tier, obj.joinCount, false);
       sfx.recruit();
-      showMessage(t('dwellingTitle'), obj.joinCount + 'x ' + cdef.name + ' — ' + t('dwellingJoinFree'), [{ label: t('ok') }]);
+      if (forHuman) showMessage(t('dwellingTitle'), obj.joinCount + 'x ' + cdef.name + ' — ' + t('dwellingJoinFree'), [{ label: t('ok') }]);
       removeObject(obj);
+      break;
+    }
+    case OBJ.POD: {
+      // campaign-only collectible (Mission 2: Experiment Hunt) — only the human's own
+      // pickups count toward the objective; the AI never has a pod objective
+      if (hero.ownerIdx === 0 && game.objective && game.objective.type === 'collectN') {
+        game.objective.progress = Math.min(game.objective.target, (game.objective.progress || 0) + 1);
+      }
+      removeObject(obj);
+      sfx.chest();
+      if (forHuman) showMessage(t('podFound'), t('podProgress', { n: game.objective ? game.objective.progress : 1, total: game.objective ? game.objective.target : 1 }), [{ label: t('ok') }]);
+      break;
+    }
+    case OBJ.LAIR: {
+      // campaign-only respawn point (Mission 4: Leroy Multiplies) — capturing it stops
+      // the AI from spawning fresh weak heroes there; only the human can ever do this
+      // (the AI never targets its own lair — see aiHeroTargetableObjects), but gate on
+      // forHuman anyway for safety/consistency
+      if (game.objective && game.objective.lairId === obj.id) game.objective.lairActive = false;
+      removeObject(obj);
+      sfx.build();
+      if (forHuman) showMessage(t('lairDestroyed'), '', [{ label: t('ok') }]);
       break;
     }
     default: break;
@@ -1289,7 +1532,16 @@ function visitObject(hero, obj) {
 
 function removeObject(obj) { game.objects = game.objects.filter(o => o.id !== obj.id); }
 
-function openChest(hero, obj) {
+function openChest(hero, obj, forHuman) {
+  if (forHuman === undefined) forHuman = !isAIPlayer(hero.ownerIdx);
+  if (!forHuman) {
+    // AI can't answer an interactive modal — auto-resolve immediately (always takes the
+    // gold; keeps aiTakeTurn's single tryMoveHeroToward() call fully synchronous)
+    game.players[hero.ownerIdx].resources.gold += 500;
+    removeObject(obj);
+    sfx.coin();
+    return;
+  }
   showListModal(t('chestTitle'), t('chestGoldOrXp'), [], [
     { label: t('chestGold'), onClick: () => { game.players[hero.ownerIdx].resources.gold += 500; removeObject(obj); hideListModal(); sfx.coin(); } },
     { label: t('chestXp'), onClick: () => { grantXp(hero, 300); removeObject(obj); hideListModal(); sfx.chest(); } },
@@ -1478,9 +1730,20 @@ function combatAttackerHero() { return findHeroById(game.combat.attackerHeroId);
 function combatDefenderHero() { return game.combat.defenderHeroId ? findHeroById(game.combat.defenderHeroId) : null; }
 function combatSideIsAI(side) {
   const c = game.combat;
-  if (side === 'attacker') return false;
-  if (c.kind === 'hero') return false;
-  return true; // monster or unmanned castle garrison
+  if (side === 'attacker') {
+    // in duel mode the attacker is always a human who clicked "attack" — but in campaign
+    // mode the AI player can also be the one initiating combat (marching a hero into the
+    // human, or into a wild monster stack), and there is no human to click for it
+    const h = combatAttackerHero();
+    return h ? isAIPlayer(h.ownerIdx) : false;
+  }
+  if (c.kind === 'hero') {
+    // defending hero: AI-controlled only if that hero belongs to the campaign AI player
+    // (a human defender always gets to fight back interactively, even on the AI's turn)
+    const h = combatDefenderHero();
+    return h ? isAIPlayer(h.ownerIdx) : false;
+  }
+  return true; // monster, or unmanned castle garrison (defends itself automatically either way)
 }
 function effSpeed(stack) {
   let sp = creatureRef(stack).speed;
@@ -2566,20 +2829,22 @@ function renderModeSelect() {
   ctx.fillText('🌴 ' + t('modeDuel'), W / 2, startY + 38);
   ctx.font = '600 12px sans-serif'; ctx.fillStyle = '#d4f5df';
   wrapText(t('modeDuelSub'), W / 2, startY + 66, cardW - 30, 15);
-  addButton(cx, startY, cardW, cardH, () => { initAudio(); startSetupFlow(); });
+  addButton(cx, startY, cardW, cardH, () => { initAudio(); game.mode = 'duel'; startSetupFlow(); });
 
   const y2 = startY + cardH + gap;
-  drawPanel(cx, y2, cardW, cardH, { fill: 'rgba(60,50,20,0.6)', stroke: '#a3a3a3' });
-  ctx.fillStyle = '#d4d4d4'; ctx.font = '900 20px sans-serif';
+  drawPanel(cx, y2, cardW, cardH, { fill: 'rgba(60,40,70,0.75)', stroke: '#c084fc' });
+  ctx.fillStyle = '#fff'; ctx.font = '900 20px sans-serif';
   ctx.fillText('📜 ' + t('modeCampaign'), W / 2, y2 + 38);
-  ctx.font = '600 12px sans-serif'; ctx.fillStyle = '#bbb';
+  ctx.font = '600 12px sans-serif'; ctx.fillStyle = '#e9d5ff';
   wrapText(t('modeCampaignSub'), W / 2, y2 + 66, cardW - 30, 15);
+  addButton(cx, y2, cardW, cardH, () => { initAudio(); sfx.click(); game.mode = 'campaign'; game.screen = 'missionSelect'; });
 
   const savedExists = !!loadSavedGame();
   if (savedExists) {
     const y3 = y2 + cardH + gap;
     drawButton(cx, y3, cardW, 48, t('resumeGame'), '#38bdf8', '#0284c7', () => {
       initAudio();
+      game.mode = 'duel';
       const data = loadSavedGame();
       if (data && deserializeGame(data)) { game.screen = 'adventure'; }
     });
@@ -2602,6 +2867,512 @@ function drawIslandBackdrop() {
   g.addColorStop(0, '#2f7fc7'); g.addColorStop(1, '#0d2138');
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   ctx.restore();
+}
+
+// ============================================================
+// CAMPAIGN — STAGE 2
+// ============================================================
+// Data model summary (see report to George for the long version):
+//  - CAMPAIGN_KEY in localStorage holds { unlocked:[bool x5], completed:[bool x5], carry:{...}|null }
+//    — this is the ONLY campaign state that survives a reload; a mission in progress does not
+//    (mid-duel saves still use SAVE_KEY and are untouched by any of this).
+//  - `carry` is the HOMM2-style hand-off between missions: the primary hero's level/xp/attributes/
+//    skills/spells/artifacts, plus up to one creature stack (capped) that follows them into the
+//    next mission, plus a small cumulative resource stipend for every mission already completed.
+//  - `game.objective` is the live, per-mission goal: { type, progress, target, ... } — see
+//    checkMissionOutcome() for the five types and missionObjectiveHudText() for the HUD text.
+//  - Player 0 is always the human; player 1 is always the campaign AI (isAIPlayer()). This reuses
+//    the existing 2-owner engine as-is: "several enemy heroes" / "all enemy castles" just means
+//    player 1 owns more than one hero/castle — no new owner slots were needed.
+
+const CAMPAIGN_KEY = 'heroesOhanaCampaign';
+function defaultCampaignProgress() {
+  return { unlocked: [true, false, false, false, false], completed: [false, false, false, false, false], carry: null };
+}
+function loadCampaignProgress() {
+  try {
+    const raw = localStorage.getItem(CAMPAIGN_KEY);
+    if (!raw) return defaultCampaignProgress();
+    return Object.assign(defaultCampaignProgress(), JSON.parse(raw));
+  } catch (e) { return defaultCampaignProgress(); }
+}
+function saveCampaignProgress(cp) {
+  try { localStorage.setItem(CAMPAIGN_KEY, JSON.stringify(cp)); } catch (e) {}
+}
+let campaignProgress = loadCampaignProgress();
+
+// ---- static mission definitions (story/objective text + setup parameters) ----
+const MISSIONS = [
+  { id: 0, nameKey: 'mission1Name', objKey: 'mission1Obj', storyKey: 'mission1Story', seed: 910001,
+    aiFaction: 'federation', aiCastles: 1, aiHeroes: 1, monsterMul: 0.35, aiTownHallLevel: 1,
+    objectiveType: 'captureCastle' },
+  { id: 1, nameKey: 'mission2Name', objKey: 'mission2Obj', storyKey: 'mission2Story', seed: 910002,
+    aiFaction: 'experiments', aiCastles: 1, aiHeroes: 1, monsterMul: 0.7, aiTownHallLevel: 1,
+    objectiveType: 'collectN', podCount: 6 },
+  { id: 2, nameKey: 'mission3Name', objKey: 'mission3Obj', storyKey: 'mission3Story', seed: 910003,
+    aiFaction: 'federation', aiCastles: 1, aiHeroes: 1, monsterMul: 0.5, aiTownHallLevel: 2,
+    objectiveType: 'surviveN', surviveTurns: 10, waveInterval: 2 },
+  { id: 3, nameKey: 'mission4Name', objKey: 'mission4Obj', storyKey: 'mission4Story', seed: 910004,
+    aiFaction: 'hamsterviel', aiCastles: 1, aiHeroes: 2, monsterMul: 0.6, aiTownHallLevel: 2,
+    objectiveType: 'defeatAllHeroes', lairInterval: 3 },
+  { id: 4, nameKey: 'mission5Name', objKey: 'mission5Obj', storyKey: 'mission5Story', seed: 910005,
+    aiFaction: 'hamsterviel', aiCastles: 3, aiHeroes: 2, monsterMul: 1, aiTownHallLevel: 2,
+    aiDwellings: [1, 2], objectiveType: 'captureAllCastles' },
+];
+
+const START_BONUSES = ['resources', 'creatures', 'artifact'];
+
+function applyStartBonus(hero, player, bonusId, mission) {
+  if (bonusId === 'resources') {
+    player.resources.gold += 2500; player.resources.wood += 10; player.resources.ore += 10;
+  } else if (bonusId === 'creatures') {
+    if (!addToArmy(hero, hero.factionId, 2, 6, false)) player.resources.gold += 1200; // army full: fall back to gold
+  } else if (bonusId === 'artifact') {
+    const art = ARTIFACT_DEFS[mission.id % ARTIFACT_DEFS.length];
+    if (!hero.artifacts.includes(art.id)) { hero.artifacts.push(art.id); hero[art.attr] += art.amount; }
+  }
+}
+
+// carries the primary hero's growth (level/xp/attributes/skills/spells/artifacts) and up to
+// one creature stack (capped at 8 units) into the next mission; also grants a small cumulative
+// resource stipend for every mission already completed (documented rule, kept simple on purpose)
+function buildCarrySnapshot(hero, completedCount) {
+  const bestStack = hero.army.filter(s => s).sort((a, b) => creatureRef(b).tier - creatureRef(a).tier)[0];
+  return {
+    level: hero.level, xp: hero.xp,
+    attack: hero.attack, defense: hero.defense, spellPower: hero.spellPower, knowledge: hero.knowledge,
+    skills: JSON.parse(JSON.stringify(hero.skills)), spells: hero.spells.slice(), artifacts: hero.artifacts.slice(),
+    stack: bestStack ? { factionId: bestStack.factionId, tier: bestStack.tier, count: Math.min(8, bestStack.count), upgraded: bestStack.upgraded } : null,
+    completedCount: completedCount,
+  };
+}
+function applyCarryOver(hero, player) {
+  const c = campaignProgress.carry;
+  if (!c) return;
+  hero.level = Math.max(hero.level, c.level); hero.xp = Math.max(hero.xp, c.xp);
+  hero.attack = Math.max(hero.attack, c.attack); hero.defense = Math.max(hero.defense, c.defense);
+  hero.spellPower = Math.max(hero.spellPower, c.spellPower); hero.knowledge = Math.max(hero.knowledge, c.knowledge);
+  for (const s of c.skills) if (!hero.skills.some(hs => hs.id === s.id)) hero.skills.push(s);
+  for (const sp of c.spells) if (!hero.spells.includes(sp)) hero.spells.push(sp);
+  for (const a of c.artifacts) if (!hero.artifacts.includes(a)) hero.artifacts.push(a);
+  if (c.stack && armyFreeSlot(hero)) addToArmy(hero, c.stack.factionId, c.stack.tier, c.stack.count, c.stack.upgraded);
+  const stipend = (c.completedCount || 0) * 500;
+  if (player) { player.resources.gold += stipend; player.resources.wood += (c.completedCount || 0) * 2; }
+}
+
+// ============ MISSION SETUP ============
+function setupMission(missionIdx, bonusId) {
+  const m = MISSIONS[missionIdx];
+  nextId = 1;
+  game.mode = 'campaign';
+  game.campaignMissionIdx = missionIdx;
+  game.terrain = generateMap(m.seed);
+  game.objects = [];
+  game.players = [makePlayer(0, 'ohana'), makePlayer(1, m.aiFaction)];
+  game.players[0].fog = makeFogGrid();
+  game.players[1].fog = makeFogGrid();
+  game.turn = { playerIdx: 0, day: 1, week: 1 };
+  game.victor = null;
+  game.combat = null;
+  game.selectedHeroId = null;
+
+  // always start the human on the map's largest landmass — never on one of
+  // generateMap's rare single-tile disconnected specks (see largestLandComponent)
+  const mainland = largestLandComponent();
+  const p0 = pickLandTileFromSet(mainland, 'grass');
+  const castle0src = makeCastle('ohana', 'Home Castle', p0.x, p0.y, 0);
+  game.objects.push(Object.assign({ kind: OBJ.CASTLE }, castle0src));
+  game.players[0].castles.push(castle0src.id);
+  const heroSpot0 = findAdjacentFreeTile(p0.x, p0.y) || p0;
+  const heroDef0 = factionById('ohana').heroes[0];
+  const hero0 = makeHero('ohana', heroDef0, heroSpot0.x, heroSpot0.y, 0);
+  hero0.army[0] = makeCreatureStack('ohana', 1, 10);
+  hero0.army[1] = makeCreatureStack('ohana', 2, 4);
+  applyCarryOver(hero0, game.players[0]);
+  hero0.movePtsMax = heroMovePtsMax(hero0); hero0.movePts = hero0.movePtsMax;
+  hero0.spellPtsMax = heroSpellPtsMax(hero0); hero0.spellPts = hero0.spellPtsMax;
+  game.players[0].heroes.push(hero0);
+  game.cameraByPlayer[0] = { x: p0.x, y: p0.y };
+
+  const aiCastleSpots = pickDistantLandSpots([p0], m.aiCastles, 12);
+  const aiCastleObjs = [];
+  aiCastleSpots.forEach((s, i) => {
+    const c = makeCastle(m.aiFaction, 'Enemy Castle ' + (i + 1), s.x, s.y, 1);
+    for (let lvl = 1; lvl <= (m.aiTownHallLevel || 1); lvl++) c.buildings.townHall = lvl;
+    if (m.aiDwellings) m.aiDwellings.forEach(tier => { c.buildings['dwelling' + tier] = 1; c.dwellingCounts[tier] = factionById(m.aiFaction).creatures[tier - 1].growth; });
+    const obj = Object.assign({ kind: OBJ.CASTLE }, c);
+    game.objects.push(obj);
+    game.players[1].castles.push(c.id);
+    aiCastleObjs.push(obj);
+  });
+  game.players[1].resources = startingResources();
+  game.players[1].resources.gold += m.aiTownHallLevel * 1500;
+
+  for (let i = 0; i < (m.aiHeroes || 1); i++) {
+    const cs = aiCastleSpots[i % aiCastleSpots.length];
+    const hs = findAdjacentFreeTile(cs.x, cs.y) || cs;
+    const facDef = factionById(m.aiFaction);
+    const hd = facDef.heroes[(i + 1) % facDef.heroes.length];
+    const h = makeHero(m.aiFaction, hd, hs.x, hs.y, 1);
+    h.army[0] = makeCreatureStack(m.aiFaction, 1, 5 + missionIdx * 2);
+    h.army[1] = makeCreatureStack(m.aiFaction, 2, 2 + missionIdx);
+    h.movePtsMax = heroMovePtsMax(h); h.movePts = h.movePtsMax;
+    h.spellPtsMax = heroSpellPtsMax(h); h.spellPts = h.spellPtsMax;
+    game.players[1].heroes.push(h);
+  }
+
+  placeMapObjects({ monsterMul: m.monsterMul != null ? m.monsterMul : 1 });
+
+  const reachableFromHome = floodFillLand(p0);
+  game.objective = null;
+  if (m.objectiveType === 'captureCastle') {
+    game.objective = { type: 'captureCastle', targetCastleId: aiCastleObjs[0].id };
+  } else if (m.objectiveType === 'collectN') {
+    const pods = [];
+    for (let i = 0; i < m.podCount; i++) {
+      const s = findFreeLandTile({ minCastleDist: 2, reachable: reachableFromHome });
+      if (!s) continue;
+      game.objects.push({ id: genId(), kind: OBJ.POD, x: s.x, y: s.y });
+      pods.push(s);
+      if (i % 2 === 1) {
+        const g = findAdjacentFreeTile(s.x, s.y);
+        if (g && !objectAt(g.x, g.y)) game.objects.push({ id: genId(), kind: OBJ.MONSTER, x: g.x, y: g.y, stack: makeCreatureStack(m.aiFaction, 1 + (i % 2), 4 + i) });
+      }
+    }
+    game.objective = { type: 'collectN', progress: 0, target: m.podCount };
+  } else if (m.objectiveType === 'surviveN') {
+    game.objective = { type: 'surviveN', progress: 0, target: m.surviveTurns, untilDay: 1 + m.surviveTurns, waveInterval: m.waveInterval || 2, mustHoldCastleId: castle0src.id };
+  } else if (m.objectiveType === 'defeatAllHeroes') {
+    const lairSpot = findFreeLandTile({ minCastleDist: 2, reachable: reachableFromHome }) || aiCastleSpots[0];
+    const lairObj = { id: genId(), kind: OBJ.LAIR, x: lairSpot.x, y: lairSpot.y };
+    game.objects.push(lairObj);
+    game.objective = { type: 'defeatAllHeroes', lairId: lairObj.id, lairActive: true, lairInterval: m.lairInterval || 3, lairTimer: 0, lairSpot };
+  } else if (m.objectiveType === 'captureAllCastles') {
+    game.objective = { type: 'captureAllCastles' };
+  }
+
+  applyStartBonus(hero0, game.players[0], bonusId, m);
+
+  for (let i = 0; i < 2; i++) recomputeFog(i);
+  game.screen = 'adventure';
+  centerCameraOnCastle(0);
+  if (missionIdx === 0) showMessage(t(m.nameKey), t('mission1Tutorial'), [{ label: t('ok') }]);
+}
+
+// ============ OBJECTIVE / DEFEAT FRAMEWORK ============
+function checkMissionOutcome() {
+  if (game.screen === 'victory' || game.screen === 'missionOutro' || game.screen === 'missionDefeat') return true;
+  const obj = game.objective;
+  if (!obj) return false;
+  const human = game.players[0], ai = game.players[1];
+  let victory = false;
+  switch (obj.type) {
+    case 'captureCastle': {
+      const target = game.objects.find(o => o.id === obj.targetCastleId);
+      victory = !target || target.ownerIdx === 0;
+      break;
+    }
+    case 'collectN': victory = obj.progress >= obj.target; break;
+    case 'surviveN': victory = game.turn.day > obj.untilDay; break;
+    case 'defeatAllHeroes': victory = ai.heroes.length === 0 && !obj.lairActive; break;
+    case 'captureAllCastles': {
+      const aiCastles = game.objects.filter(o => o.kind === OBJ.CASTLE && o.ownerIdx === 1);
+      victory = aiCastles.length === 0;
+      break;
+    }
+  }
+  if (victory) { missionVictory(); return true; }
+  let defeat = human.heroes.length === 0 && human.castles.length === 0;
+  if (obj.type === 'surviveN' && obj.mustHoldCastleId) {
+    const c = game.objects.find(o => o.id === obj.mustHoldCastleId);
+    if (!c || c.ownerIdx !== 0) defeat = true;
+  }
+  if (defeat) { missionDefeat(); return true; }
+  return false;
+}
+
+function missionVictory() {
+  const idx = game.campaignMissionIdx;
+  campaignProgress.completed[idx] = true;
+  if (idx + 1 < MISSIONS.length) campaignProgress.unlocked[idx + 1] = true;
+  const hero = game.players[0].heroes[0];
+  if (hero) {
+    const completedCount = campaignProgress.completed.filter(Boolean).length;
+    campaignProgress.carry = buildCarrySnapshot(hero, completedCount);
+  }
+  saveCampaignProgress(campaignProgress);
+  sfx.victory();
+  game.screen = 'missionOutro';
+}
+function missionDefeat() {
+  sfx.defeatSting();
+  game.screen = 'missionDefeat';
+}
+
+function missionObjectiveHudText() {
+  const obj = game.objective;
+  if (!obj) return '';
+  switch (obj.type) {
+    case 'captureCastle': return t('missionObjectiveLabel') + ': ' + t('castleTargetProgress');
+    case 'collectN': return t('missionObjectiveLabel') + ': ' + t('collectProgress', { n: obj.progress, total: obj.target });
+    case 'surviveN': return t('missionObjectiveLabel') + ': ' + t('surviveProgress', { n: Math.min(obj.target, game.turn.day - 1), total: obj.target });
+    case 'defeatAllHeroes': return t('missionObjectiveLabel') + ': ' + t('heroesLeftProgress', { n: game.players[1].heroes.length });
+    case 'captureAllCastles': return t('missionObjectiveLabel') + ': ' + t('castlesLeftProgress', { n: game.objects.filter(o => o.kind === OBJ.CASTLE && o.ownerIdx === 1).length });
+    default: return '';
+  }
+}
+
+// runs once per new day (i.e. once per full player-0-then-player-1 round) — spawns Mission 3's
+// attacker waves and ticks Mission 4's lair respawn timer
+function missionOnTurnStart(nextIdx) {
+  const obj = game.objective;
+  if (!obj || nextIdx !== 0 || game.turn.day <= 1) return;
+  if (obj.type === 'surviveN' && obj.waveInterval && (game.turn.day - 1) % obj.waveInterval === 0) {
+    spawnWaveAttacker();
+  }
+  if (obj.type === 'defeatAllHeroes' && obj.lairActive) {
+    obj.lairTimer = (obj.lairTimer || 0) + 1;
+    if (obj.lairTimer >= obj.lairInterval && game.players[1].heroes.length < 4) {
+      obj.lairTimer = 0;
+      spawnWeakAIHero(obj.lairSpot.x, obj.lairSpot.y, MISSIONS[game.campaignMissionIdx].aiFaction);
+    }
+  }
+}
+
+// spawns a fresh, deliberately weak AI hero near (x,y) — used by both Mission 3's wave
+// timer (spawning near the human's castle) and Mission 4's lair (spawning at the lair)
+function spawnWeakAIHero(x, y, factionId) {
+  const spot = findAdjacentFreeTile(x, y) || { x, y };
+  const facDef = factionById(factionId);
+  const hd = facDef.heroes[Math.floor(Math.random() * facDef.heroes.length)];
+  const h = makeHero(factionId, hd, spot.x, spot.y, 1);
+  h.army[0] = makeCreatureStack(factionId, 1, 3 + Math.floor(Math.random() * 3));
+  h.movePtsMax = heroMovePtsMax(h); h.movePts = h.movePtsMax;
+  h.spellPtsMax = heroSpellPtsMax(h); h.spellPts = h.spellPtsMax;
+  game.players[1].heroes.push(h);
+  recomputeFog(1);
+}
+function spawnWaveAttacker() {
+  const homeCastleId = game.objective.mustHoldCastleId;
+  const c = game.objects.find(o => o.id === homeCastleId);
+  if (!c) return;
+  const s = findFreeLandTile({ minCastleDist: 0 }) || { x: c.x, y: c.y };
+  spawnWeakAIHero(s.x, s.y, MISSIONS[game.campaignMissionIdx].aiFaction);
+}
+
+// ============ SIMPLE AI OPPONENT ============
+// A modest, readable computer player: each of its heroes picks the single nearest
+// worthwhile target (a free pickup, else the human) and marches at it once per turn —
+// tryMoveHeroToward() already spends all remaining movement points in one call and
+// resolves any combat encountered along the way, so there is no inner loop here that
+// could spin forever. Castle upkeep (build one thing, recruit what it can afford) runs
+// after all heroes have acted. Every loop below is bounded by a fixed array length, so
+// an AI turn always terminates in O(heroes + castles) steps — no unbounded recursion.
+function aiHeroTargetableObjects() {
+  return [OBJ.MINE, OBJ.RESOURCE, OBJ.CHEST, OBJ.ARTIFACT, OBJ.DWELLING, OBJ.POD];
+}
+// tiered priority: (1) an enemy hero close enough to threaten/be threatened this turn is
+// always attacked first — a sensible AI does not wander off for gold while standing next
+// to the human; (2) otherwise grab the nearest free economic pickup; (3) otherwise march
+// on the human's nearest hero, or failing that their nearest castle
+const AI_ENGAGE_RANGE = 4;
+function aiPickHeroTarget(hero) {
+  const aiIdx = hero.ownerIdx, humanIdx = aiIdx === 1 ? 0 : 1;
+  const human = game.players[humanIdx];
+  let nearestHero = null, nearestHeroD = Infinity;
+  for (const h of human.heroes) {
+    const d = Math.max(Math.abs(hero.x - h.x), Math.abs(hero.y - h.y));
+    if (d < nearestHeroD) { nearestHeroD = d; nearestHero = h; }
+  }
+  if (nearestHero && nearestHeroD <= AI_ENGAGE_RANGE) return nearestHero;
+
+  let best = null, bestD = Infinity;
+  const pickupKinds = aiHeroTargetableObjects();
+  for (const o of game.objects) {
+    if (!pickupKinds.includes(o.kind)) continue;
+    if (o.kind === OBJ.MINE && o.owner === aiIdx) continue;
+    const d = Math.max(Math.abs(hero.x - o.x), Math.abs(hero.y - o.y));
+    if (d < bestD) { bestD = d; best = o; }
+  }
+  if (best && bestD <= 14) return best;
+
+  if (nearestHero) return nearestHero;
+  for (const cid of human.castles) {
+    const c = game.objects.find(o => o.id === cid);
+    if (!c) continue;
+    const d = Math.max(Math.abs(hero.x - c.x), Math.abs(hero.y - c.y));
+    if (d < bestD) { bestD = d; best = c; }
+  }
+  return best;
+}
+// returns true if the move triggered a combat that is now waiting on human input
+// (i.e. the AI turn must pause here — see aiTakeTurn)
+function aiActHero(hero) {
+  if (!hero || hero.movePts <= 0) return false;
+  const target = aiPickHeroTarget(hero);
+  if (!target) return false;
+  tryMoveHeroToward(hero, target.x, target.y);
+  if (game.screen === 'combat') return true; // waiting on human input — see aiTakeTurn
+  if (game.screen === 'combatResult') {
+    // combat fully resolved without any human side involved (e.g. AI hero vs a wild
+    // monster, or AI vs AI) — nobody is going to click "continue", so do it for them
+    game.combat = null; game.screen = 'adventure';
+  }
+  return false;
+}
+function aiCastleActions(player) {
+  const buildOrder = ['dwelling1', 'dwelling2', 'townHall', 'dwelling3', 'mageGuild', 'dwelling4', 'dwelling5', 'cityWalls'];
+  for (const cid of player.castles.slice()) {
+    const castle = game.objects.find(o => o.id === cid);
+    if (!castle) continue;
+    if (!castle.builtThisTurn) {
+      for (const bid of buildOrder) {
+        const chk = canBuild(castle, bid);
+        if (chk.ok) { buildInCastle(castle, bid); break; }
+      }
+    }
+    const holder = heroAtCastle(castle);
+    for (let tier = 1; tier <= 5; tier++) {
+      const avail = castleAvailableToRecruit(castle, tier);
+      if (avail <= 0) continue;
+      const fac = factionById(castle.factionId);
+      const cost = fac.creatures[tier - 1].cost;
+      let n = avail;
+      while (n > 0) {
+        let afford = true;
+        for (const k in cost) if ((player.resources[k] || 0) < cost[k] * n) afford = false;
+        if (afford) break;
+        n--;
+      }
+      if (n > 0) {
+        if (holder) recruitFromCastle(castle, holder, tier, n);
+        else recruitIntoGarrison(castle, tier, n);
+      }
+    }
+  }
+}
+// drives a full AI turn; bounded by the AI's own (finite) heroes/castles arrays.
+// If an AI-initiated attack lands on a human hero, combat pauses for interactive human
+// defense (combatSideIsAI leaves the human's side human-controlled) — the AI turn then
+// stops early and is concluded from the combatResult "continue" button instead.
+function aiTakeTurn(aiIdx) {
+  const p = game.players[aiIdx];
+  const heroes = p.heroes.slice();
+  for (const hero of heroes) {
+    if (!findHeroById(hero.id)) continue; // hero died earlier this same turn
+    const pausedForHuman = aiActHero(hero);
+    if (pausedForHuman) return; // wait for the human to resolve combat; see aiCastleActions note below
+    if (checkVictory()) return; // mission ended mid-turn (e.g. AI captured the human's last castle)
+  }
+  aiCastleActions(p);
+  endTurn();
+}
+
+// ============================================================
+// SCREEN: MISSION SELECT / INTRO / OUTRO / DEFEAT
+// ============================================================
+function renderMissionSelect() {
+  ctx.fillStyle = '#1a1408'; ctx.fillRect(0, 0, W, H);
+  const topBar = chromeMetrics().topBar;
+  drawIslandBackdrop();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#f4c95d'; ctx.font = '900 ' + Math.min(30, W * 0.065) + 'px sans-serif';
+  ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 8;
+  ctx.fillText(t('missionSelectTitle'), W / 2, topBar + 34);
+  ctx.shadowBlur = 0;
+
+  const cardW = Math.min(520, W * 0.92), cardH = 84, gap = 12;
+  const startY = topBar + 60;
+  const cx = W / 2 - cardW / 2;
+  MISSIONS.forEach((m, i) => {
+    const y = startY + i * (cardH + gap);
+    const unlocked = !!campaignProgress.unlocked[i];
+    const completed = !!campaignProgress.completed[i];
+    drawPanel(cx, y, cardW, cardH, { fill: unlocked ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)', stroke: completed ? '#4ade80' : (unlocked ? '#c9a35c' : '#555') });
+    ctx.textAlign = 'left';
+    ctx.fillStyle = unlocked ? '#fff' : '#888'; ctx.font = '800 16px sans-serif';
+    ctx.fillText((i + 1) + '. ' + t(m.nameKey), cx + 16, y + 26);
+    ctx.font = '600 12px sans-serif'; ctx.fillStyle = unlocked ? '#ead9b8' : '#777';
+    wrapText(t(m.objKey, { n: m.podCount || m.surviveTurns || 0 }), cx + 16 + (cardW - 32) / 2, y + 52, cardW - 32, 15);
+    ctx.textAlign = 'right';
+    ctx.font = '800 11px sans-serif';
+    ctx.fillStyle = completed ? '#4ade80' : (unlocked ? '#fde68a' : '#888');
+    ctx.fillText(completed ? t('missionCompleted') : (unlocked ? t('missionAvailable') : t('missionLocked')), cx + cardW - 14, y + 20);
+    if (unlocked) {
+      addButton(cx, y, cardW, cardH, () => { initAudio(); sfx.click(); game.pendingMissionBonus = null; game.campaignMissionIdx = i; game.screen = 'missionIntro'; });
+    }
+    ctx.textAlign = 'center';
+  });
+  const backY = startY + MISSIONS.length * (cardH + gap) + 6;
+  drawButton(W / 2 - 100, backY, 200, 42, t('backToModes'), '#94a3b8', '#475569', () => { game.screen = 'modeSelect'; });
+}
+
+function renderMissionIntro() {
+  ctx.fillStyle = '#1a1408'; ctx.fillRect(0, 0, W, H);
+  const topBar = chromeMetrics().topBar;
+  const m = MISSIONS[game.campaignMissionIdx];
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#f4c95d'; ctx.font = '900 22px sans-serif';
+  ctx.fillText(t(m.nameKey), W / 2, topBar + 28);
+  ctx.font = '600 13px sans-serif'; ctx.fillStyle = '#ead9b8';
+  const storyW = Math.min(560, W * 0.9);
+  wrapText(t(m.storyKey), W / 2, topBar + 60, storyW, 17);
+  ctx.font = '800 13px sans-serif'; ctx.fillStyle = '#fde68a';
+  const objY = topBar + 60 + 17 * 6;
+  ctx.fillText(t('missionObjectiveLabel') + ': ' + t(m.objKey, { n: m.podCount || m.surviveTurns || 0 }), W / 2, objY);
+
+  ctx.font = '700 14px sans-serif'; ctx.fillStyle = '#fff';
+  ctx.fillText(t('chooseBonus'), W / 2, objY + 34);
+  const bonusW = Math.min(170, (W - 60) / 3), bonusH = 92, gap = 12;
+  const totalW = 3 * bonusW + 2 * gap;
+  const bx = W / 2 - totalW / 2, by = objY + 52;
+  START_BONUSES.forEach((bid, i) => {
+    const x = bx + i * (bonusW + gap);
+    const selected = game.pendingMissionBonus === bid;
+    drawPanel(x, by, bonusW, bonusH, { fill: selected ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.06)', stroke: selected ? '#4ade80' : '#c9a35c' });
+    ctx.font = '800 12px sans-serif'; ctx.fillStyle = '#fff';
+    wrapText(t('bonus' + bid.charAt(0).toUpperCase() + bid.slice(1) + 'Name'), x + bonusW / 2, by + 22, bonusW - 14, 14);
+    ctx.font = '600 10px sans-serif'; ctx.fillStyle = '#ccc';
+    wrapText(t('bonus' + bid.charAt(0).toUpperCase() + bid.slice(1) + 'Desc'), x + bonusW / 2, by + 60, bonusW - 14, 12);
+    addButton(x, by, bonusW, bonusH, () => { sfx.click(); game.pendingMissionBonus = bid; });
+  });
+
+  const beginY = by + bonusH + 20;
+  drawButton(W / 2 - 90, beginY, 180, 46, t('beginMission'), '#4ade80', '#16a34a', () => {
+    initAudio();
+    const bonus = game.pendingMissionBonus || START_BONUSES[0];
+    setupMission(game.campaignMissionIdx, bonus);
+  });
+  drawButton(W / 2 - 90, beginY + 56, 180, 40, t('back'), '#94a3b8', '#475569', () => { game.screen = 'missionSelect'; });
+}
+
+function renderMissionOutro() {
+  ctx.fillStyle = '#0f1a12'; ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#4ade80'; ctx.font = '900 26px sans-serif';
+  ctx.fillText(t('missionVictoryTitle'), W / 2, H / 2 - 50);
+  ctx.font = '600 13px sans-serif'; ctx.fillStyle = '#ead9b8';
+  wrapText(t('missionVictorySub'), W / 2, H / 2 - 14, Math.min(480, W * 0.85), 16);
+  const idx = game.campaignMissionIdx;
+  if (idx + 1 < MISSIONS.length) {
+    drawButton(W / 2 - 100, H / 2 + 30, 200, 46, t('nextMission'), '#4ade80', '#16a34a', () => {
+      sfx.click(); game.pendingMissionBonus = null; game.campaignMissionIdx = idx + 1; game.screen = 'missionIntro';
+    });
+  }
+  drawButton(W / 2 - 100, H / 2 + 84, 200, 42, t('backToMissions'), '#94a3b8', '#475569', () => { game.screen = 'missionSelect'; });
+}
+
+function renderMissionDefeat() {
+  ctx.fillStyle = '#1a0f0f'; ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#f87171'; ctx.font = '900 26px sans-serif';
+  ctx.fillText(t('missionDefeatTitle'), W / 2, H / 2 - 40);
+  ctx.font = '600 13px sans-serif'; ctx.fillStyle = '#ead9b8';
+  wrapText(t('missionDefeatSub'), W / 2, H / 2 - 6, Math.min(480, W * 0.85), 16);
+  drawButton(W / 2 - 100, H / 2 + 30, 200, 46, t('tryAgain'), '#fbbf24', '#b45309', () => {
+    sfx.click(); game.screen = 'missionIntro';
+  });
+  drawButton(W / 2 - 100, H / 2 + 84, 200, 42, t('backToMissions'), '#94a3b8', '#475569', () => { game.screen = 'missionSelect'; });
 }
 
 // ============================================================
@@ -2697,9 +3468,13 @@ function pickHeroForPlayer(heroIdx) {
 // SCREEN: ADVENTURE MAP
 // ============================================================
 let mapTileSize = 32;
+// campaign mode reserves a second HUD strip under the resource bar for the mission
+// objective + progress readout; duel mode keeps the original 46px-tall bar only.
+function resourceBarH() { return (game.mode === 'campaign' && game.objective) ? 68 : 46; }
+
 function computeTileSize() {
   const topBar = chromeMetrics().topBar;
-  const usableH = H - topBar - 90; // minus resource bar + bottom panel
+  const usableH = H - topBar - (resourceBarH() + 44); // minus resource bar (+objective strip) + bottom panel
   const usableW = W;
   return Math.max(18, Math.min(44, Math.min(usableW / 9, usableH / 8)));
 }
@@ -2719,7 +3494,7 @@ function clampCamera() {
   const topBar = chromeMetrics().topBar;
   const size = mapTileSize || 1;
   const viewTilesX = W / size;
-  const viewTilesY = (H - topBar - 46 - 44) / size;
+  const viewTilesY = (H - topBar - resourceBarH() - 44) / size;
   const halfX = viewTilesX / 2, halfY = viewTilesY / 2;
   let minX = halfX, maxX = MAP_SIZE - halfX;
   let minY = halfY, maxY = MAP_SIZE - halfY;
@@ -2732,15 +3507,17 @@ function clampCamera() {
 function worldToScreen(tx, ty) {
   const topBar = chromeMetrics().topBar;
   const size = mapTileSize;
+  const rbH = resourceBarH();
   const originX = W / 2 - game.camera.x * size;
-  const originY = topBar + 46 + (H - topBar - 46 - 44) / 2 - game.camera.y * size;
+  const originY = topBar + rbH + (H - topBar - rbH - 44) / 2 - game.camera.y * size;
   return { x: originX + tx * size, y: originY + ty * size };
 }
 function screenToWorld(sx, sy) {
   const topBar = chromeMetrics().topBar;
   const size = mapTileSize;
+  const rbH = resourceBarH();
   const originX = W / 2 - game.camera.x * size;
-  const originY = topBar + 46 + (H - topBar - 46 - 44) / 2 - game.camera.y * size;
+  const originY = topBar + rbH + (H - topBar - rbH - 44) / 2 - game.camera.y * size;
   return { x: (sx - originX) / size, y: (sy - originY) / size };
 }
 
@@ -2753,6 +3530,8 @@ function objIcon(obj) {
     case OBJ.DWELLING: return '🏠';
     case OBJ.MONSTER: return '⚔️';
     case OBJ.CASTLE: return '🏰';
+    case OBJ.POD: return '🧪';
+    case OBJ.LAIR: return '🛸';
     default: return '❓';
   }
 }
@@ -2765,13 +3544,14 @@ function renderAdventure() {
   ctx.fillRect(0, 0, W, H);
   const p = currentPlayer();
   const size = mapTileSize;
+  const rbH = resourceBarH();
   // visible tile range
-  const tl = screenToWorld(0, topBar + 46);
+  const tl = screenToWorld(0, topBar + rbH);
   const br = screenToWorld(W, H - 44);
   const x0 = Math.max(0, Math.floor(tl.x) - 1), x1 = Math.min(MAP_SIZE - 1, Math.ceil(br.x) + 1);
   const y0 = Math.max(0, Math.floor(tl.y) - 1), y1 = Math.min(MAP_SIZE - 1, Math.ceil(br.y) + 1);
   ctx.save();
-  ctx.beginPath(); ctx.rect(0, topBar + 46, W, H - topBar - 46 - 44); ctx.clip();
+  ctx.beginPath(); ctx.rect(0, topBar + rbH, W, H - topBar - rbH - 44); ctx.clip();
   for (let y = y0; y <= y1; y++) {
     for (let x = x0; x <= x1; x++) {
       const fogState = p.fog[y][x];
@@ -2814,7 +3594,31 @@ function renderAdventure() {
   ctx.restore();
 
   drawResourceBar(p, topBar);
+  if (game.mode === 'campaign' && game.objective) drawObjectiveBar(topBar);
   drawBottomPanel(p, topBar);
+  if (game.mode === 'campaign' && Date.now() < game.aiBannerUntil) drawAiTurnBanner();
+}
+
+// brief, non-blocking "Enemy turn" indicator (BUG 1 fix) — no buttons, no addButton() call,
+// purely informational, and clears itself once aiBannerUntil elapses (no dismiss needed)
+function drawAiTurnBanner() {
+  const w = Math.min(260, W * 0.7), h = 34;
+  const x = W / 2 - w / 2, y = 14;
+  ctx.save();
+  ctx.globalAlpha = 0.92;
+  drawPanel(x, y, w, h, { fill: 'rgba(90,20,20,0.9)', stroke: '#f87171' });
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#fff'; ctx.font = '800 13px sans-serif';
+  ctx.fillText(t('enemyTurnBanner'), x + w / 2, y + h / 2 + 1);
+  ctx.restore();
+}
+
+function drawObjectiveBar(topBar) {
+  const y = topBar + 46;
+  drawPanel(0, y, W, 22, { r: 0, fill: 'rgba(60,20,10,0.92)', stroke: 'rgba(255,255,255,0.1)' });
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffe9b0'; ctx.font = '700 12px sans-serif';
+  ctx.fillText(missionObjectiveHudText(), W / 2, y + 12);
 }
 
 function drawResourceBar(p, topBar) {
@@ -3283,7 +4087,12 @@ function renderCombatResult() {
   else if (c.result === 'attackerFled') msg = t('combatFled');
   else if (c.result === 'attackerSurrendered') msg = t('combatSurrendered');
   ctx.fillText(msg, W / 2, H / 2 - 20);
-  drawButton(W / 2 - 90, H / 2 + 20, 180, 46, t('continueBtn'), '#4ade80', '#16a34a', () => { game.combat = null; game.screen = 'adventure'; });
+  drawButton(W / 2 - 90, H / 2 + 20, 180, 46, t('continueBtn'), '#4ade80', '#16a34a', () => {
+    game.combat = null; game.screen = 'adventure';
+    // a combat that happened mid-AI-turn (the AI attacked a human hero/castle) always ends
+    // the AI's turn right there instead of resuming further AI actions — see aiTakeTurn()
+    if (game.mode === 'campaign' && game.turn.playerIdx === 1 && !checkVictory()) endTurn();
+  });
 }
 
 // ============================================================
@@ -3296,6 +4105,10 @@ function render() {
     case 'modeSelect': hideScreenExclusiveModals(); renderModeSelect(); break;
     case 'factionPick': hideScreenExclusiveModals(); renderFactionPick(); break;
     case 'heroPick': hideScreenExclusiveModals(); renderHeroPick(); break;
+    case 'missionSelect': hideScreenExclusiveModals(); renderMissionSelect(); break;
+    case 'missionIntro': hideScreenExclusiveModals(); renderMissionIntro(); break;
+    case 'missionOutro': hideScreenExclusiveModals(); renderMissionOutro(); break;
+    case 'missionDefeat': hideScreenExclusiveModals(); renderMissionDefeat(); break;
     case 'adventure': hideScreenExclusiveModals(); renderAdventure(); break;
     case 'castle': hideScreenExclusiveModals(); renderCastle(); break;
     case 'heroScreen': hideScreenExclusiveModals(); renderHeroScreen(); break;
