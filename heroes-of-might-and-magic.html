@@ -84,6 +84,25 @@
   }
   .panel-list-item:active { transform: scale(0.98); }
   .panel-list-item.disabled { opacity: 0.45; cursor: default; }
+  /* duel victory: the canvas draws the whole celebration; the modal is just a see-through layer
+     carrying the PLAY AGAIN button along the bottom edge (taps elsewhere skip the animation) */
+  #victoryModal { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; align-items: flex-end; padding: 0 0 10px; pointer-events: none; }
+  #victoryModal .panel-card { background: none; border: none; box-shadow: none; padding: 0; width: auto; overflow: visible; pointer-events: none; }
+  #victoryModal .panel-title, #victoryModal .panel-sub { display: none; }
+  #victoryModal .panel-btn { pointer-events: auto; min-width: 220px; height: 44px; padding: 0 26px; }
+  #levelModal { z-index: 35; }
+  .level-choices { max-height: none; }
+  .level-choices .panel-list-item {
+    text-align: center; font-size: 16px; padding: 16px 12px; border: 2px solid #c9a35c;
+    background: linear-gradient(180deg, rgba(253,224,71,0.16), rgba(253,224,71,0.05)); color: #fde68a;
+  }
+  .level-choices .panel-list-item small { display: block; margin-top: 4px; font-size: 12px; font-weight: 600; color: #ead9b8; }
+  @media (orientation: landscape) and (max-height: 500px) {
+    #levelModal .panel-card { padding: 12px 16px; gap: 8px; max-height: 92vh; }
+    #levelModal .panel-title { font-size: 18px; }
+    .level-choices { flex-direction: row; }
+    .level-choices .panel-list-item { flex: 1; padding: 10px 8px; font-size: 14px; }
+  }
 </style>
 </head>
 <body>
@@ -131,6 +150,15 @@
     <div class="panel-sub" id="listSub"></div>
     <div class="panel-list" id="listItems"></div>
     <div class="panel-row" id="listButtons"></div>
+  </div>
+</div>
+
+<!-- Level-up choice modal (human heroes only — the AI auto-resolves its level-ups silently) -->
+<div class="overlay-panel" id="levelModal">
+  <div class="panel-card">
+    <div class="panel-title" id="levelTitle"></div>
+    <div class="panel-sub" id="levelSub"></div>
+    <div class="panel-list level-choices" id="levelChoices"></div>
   </div>
 </div>
 
@@ -184,9 +212,9 @@ const TEXT = {
     bldReady: 'Ready to build',
     bldLevel: 'Level {n}/{max}',
     descTownHall: 'Pays gold every day: +{a} at level 1, +{b} at level 2, +{c} at level 3.',
-    descTavern: 'A cosy meeting place. It has no effect on the game yet.',
+    descTavern: 'A lively meeting place. Troops defending this castle fight with +2 Morale (fewer lost turns, more chances for an extra action).',
     descMageGuild: 'Your hero can learn spells up to the guild level. Higher levels teach stronger spells.',
-    descCityWalls: 'Defenders get +3 Defense when enemies attack this castle.',
+    descCityWalls: 'When enemies attack, a wall with a gate rises on the battlefield. It blocks movement and ranged fire, so attackers must fight through the gate.',
     descStatue: 'A proud statue that brings +250 gold every day.',
     descDwellingR: 'Recruit {name} here (ranged, {ammo} shots). +{growth} more every week.',
     descDwellingM: 'Recruit {name} here (melee). +{growth} more every week.',
@@ -288,6 +316,28 @@ const TEXT = {
     heroesLeftProgress: '{n} enemy heroes remain', castlesLeftProgress: '{n} enemy castles remain',
     castleTargetProgress: 'Capture the marked castle',
     mission1Tutorial: 'Tip: Tap your hero, then tap a tile to walk there. Walking onto a mine or resource pile claims it. Open your castle to BUILD a dwelling, then RECRUIT troops into your hero. Tap END TURN when you are ready to attack the enemy castle!',
+    // ---- Stage 3 polish ----
+    bldTownHall: 'Town Hall', bldTavern: 'Tavern', bldMageGuild: 'Mage Guild', bldCityWalls: 'City Walls', bldStatue: 'Statue',
+    bldDwelling: '{name} Dwelling', bldUpgrade: 'Upgrade: {name}',
+    upgradeBonus: 'Upgraded stats: {list}',
+    tavernCheer: '🍻 The Tavern cheers the defenders! (+2 Morale)',
+    siegeStart: '🏰 Siege! The walls block movement and shots — break through the gate.',
+    skillLogistics: 'Logistics', skillWisdom: 'Wisdom', skillLuck: 'Luck', skillLeadership: 'Leadership', skillArchery: 'Archery',
+    spellFireball: 'Fireball', spellLightning: 'Lightning Bolt', spellBless: 'Bless', spellHaste: 'Haste', spellCurse: 'Curse', spellSlow: 'Slow', spellHeal: 'Heal', spellTownPortal: 'Town Portal',
+    levelUpTitle: 'LEVEL UP!',
+    levelUpSub: '{name} reached level {lvl}. Choose your reward:',
+    lvlGainAttr: '+1 {attr}',
+    lvlGainSkillNew: 'Learn {skill} ({lvl})',
+    lvlGainSkillUp: '{skill}: {from} → {to}',
+    spellPickTarget: 'Cast {spell} — tap a highlighted target',
+    spellCancel: 'CANCEL SPELL',
+    noHealTargets: 'No wounded allies to heal.',
+    noSpellTargets: 'No valid targets.',
+    finaleCongrats: 'Congratulations, Player {n}! The island is yours.',
+    finaleMissionCongrats: 'Well fought, {name}! The island is safe once more.',
+    finaleDefeatLine: 'The island has fallen — but heroes always rise again.',
+    finaleDay: 'Day reached', finaleCastles: 'Castles held', finaleHeroes: 'Heroes defeated',
+    finaleTapSkip: 'Tap to skip the show',
     enemyTurnBanner: '⚔️ Enemy turn…',
   },
   ro: {
@@ -326,9 +376,9 @@ const TEXT = {
     bldReady: 'Gata de construit',
     bldLevel: 'Nivel {n}/{max}',
     descTownHall: 'Plătește aur în fiecare zi: +{a} la nivelul 1, +{b} la nivelul 2, +{c} la nivelul 3.',
-    descTavern: 'Un loc primitor de întâlnire. Încă nu are niciun efect în joc.',
+    descTavern: 'Un loc plin de viață. Trupele care apără acest castel luptă cu +2 Moral (mai puține ture pierdute, mai multe șanse la o acțiune în plus).',
     descMageGuild: 'Eroul tău poate învăța vrăji până la nivelul breslei. Nivelurile mai mari oferă vrăji mai puternice.',
-    descCityWalls: 'Apărătorii primesc +3 Apărare când inamicii atacă acest castel.',
+    descCityWalls: 'Când inamicii atacă, pe câmpul de luptă apare un zid cu poartă. Blochează mișcarea și tirul, deci atacatorii trebuie să forțeze poarta.',
     descStatue: 'O statuie mândră care aduce +250 aur în fiecare zi.',
     descDwellingR: 'Recrutează aici {name} (la distanță, {ammo} proiectile). +{growth} în plus în fiecare săptămână.',
     descDwellingM: 'Recrutează aici {name} (corp la corp). +{growth} în plus în fiecare săptămână.',
@@ -430,6 +480,28 @@ const TEXT = {
     heroesLeftProgress: 'Mai sunt {n} eroi inamici', castlesLeftProgress: 'Mai sunt {n} castele inamice',
     castleTargetProgress: 'Cucerește castelul marcat',
     mission1Tutorial: 'Sfat: Apasă eroul, apoi o căsuță pentru a merge acolo. Mersul peste o mină sau o grămadă de resurse o capturează. Deschide-ți castelul pentru a CONSTRUI o locuință, apoi RECRUTEAZĂ trupe în erou. Apasă TERMINĂ RÂNDUL când ești gata să ataci castelul inamic!',
+    // ---- Stage 3 polish ----
+    bldTownHall: 'Primărie', bldTavern: 'Tavernă', bldMageGuild: 'Breasla Magilor', bldCityWalls: 'Ziduri de Apărare', bldStatue: 'Statuie',
+    bldDwelling: 'Locuință: {name}', bldUpgrade: 'Îmbunătățire: {name}',
+    upgradeBonus: 'Statistici îmbunătățite: {list}',
+    tavernCheer: '🍻 Taverna îi încurajează pe apărători! (+2 Moral)',
+    siegeStart: '🏰 Asediu! Zidurile blochează mișcarea și tirul — forțează poarta.',
+    skillLogistics: 'Logistică', skillWisdom: 'Înțelepciune', skillLuck: 'Noroc', skillLeadership: 'Conducere', skillArchery: 'Tir cu arcul',
+    spellFireball: 'Minge de foc', spellLightning: 'Fulger', spellBless: 'Binecuvântare', spellHaste: 'Grabă', spellCurse: 'Blestem', spellSlow: 'Încetinire', spellHeal: 'Vindecare', spellTownPortal: 'Portal spre Castel',
+    levelUpTitle: 'NIVEL NOU!',
+    levelUpSub: '{name} a ajuns la nivelul {lvl}. Alege-ți recompensa:',
+    lvlGainAttr: '+1 {attr}',
+    lvlGainSkillNew: 'Învață {skill} ({lvl})',
+    lvlGainSkillUp: '{skill}: {from} → {to}',
+    spellPickTarget: 'Aruncă {spell} — atinge o țintă evidențiată',
+    spellCancel: 'ANULEAZĂ VRAJA',
+    noHealTargets: 'Nu ai aliați răniți de vindecat.',
+    noSpellTargets: 'Nicio țintă validă.',
+    finaleCongrats: 'Felicitări, Jucătorul {n}! Insula este a ta.',
+    finaleMissionCongrats: 'Bine luptat, {name}! Insula este din nou în siguranță.',
+    finaleDefeatLine: 'Insula a căzut — dar eroii se ridică întotdeauna.',
+    finaleDay: 'Ziua atinsă', finaleCastles: 'Castele deținute', finaleHeroes: 'Eroi învinși',
+    finaleTapSkip: 'Atinge pentru a sări peste spectacol',
     enemyTurnBanner: '⚔️ Rândul inamicului…',
   },
 };
@@ -583,7 +655,8 @@ const RESOURCE_ICON = { gold: '🪙', wood: '🪵', ore: '⛏️', crystal: '�
 // ---- Factions & creatures ----
 // Each creature: tier(1-5), name, upgrade (name or null), atk, def, dmg[min,max],
 // hp, speed, growth (per week from base dwelling), ranged(bool), ammo,
-// cost {resources}, shape (drawing key), color
+// cost {resources}, shape (drawing key), color, up {stat overrides for the upgraded form — every
+// stat is >= the base creature's and several are strictly better; see creatureRef()}
 const FACTIONS = [
   {
     id: 'ohana', name: 'Ohana', align: 'good', primary: '#2fae60', secondary: '#ffd54f',
@@ -593,11 +666,11 @@ const FACTIONS = [
       { name: 'David', portrait: 'david', attack: 5, defense: 3, spellPower: 1, knowledge: 1, skill: { id: 'archery', level: 1 } },
     ],
     creatures: [
-      { tier: 1, name: 'Sandy Scout', upgrade: 'Reef Scout', atk: 2, def: 1, dmg: [1, 2], hp: 5, speed: 5, growth: 14, ranged: false, ammo: 0, cost: { gold: 40 }, shape: 'scout', color: '#f0dcae' },
-      { tier: 2, name: 'Hula Dancer', upgrade: 'Fire Dancer', atk: 4, def: 3, dmg: [2, 3], hp: 10, speed: 6, growth: 9, ranged: false, ammo: 0, cost: { gold: 90, wood: 1 }, shape: 'dancer', color: '#ff8fb1' },
-      { tier: 3, name: 'Wave Rider', upgrade: 'Big-Wave Rider', atk: 6, def: 5, dmg: [3, 5], hp: 18, speed: 7, growth: 6, ranged: false, ammo: 0, cost: { gold: 150, wood: 2 }, shape: 'surfer', color: '#4fc3f7' },
-      { tier: 4, name: 'Coconut Shaman', upgrade: 'Elder Shaman', atk: 7, def: 7, dmg: [3, 6], hp: 22, speed: 5, growth: 4, ranged: true, ammo: 8, cost: { gold: 250, crystal: 1 }, shape: 'shaman', color: '#a3e635' },
-      { tier: 5, name: 'Ohana Guardian', upgrade: "Nani's Guardian", atk: 11, def: 10, dmg: [6, 10], hp: 40, speed: 6, growth: 2, ranged: false, ammo: 0, cost: { gold: 400, ore: 2, crystal: 1 }, shape: 'guardian', color: '#f4c95d' },
+      { tier: 1, name: 'Sandy Scout', upgrade: 'Reef Scout', atk: 2, def: 1, dmg: [1, 2], hp: 5, speed: 5, growth: 14, ranged: false, ammo: 0, cost: { gold: 40 }, shape: 'scout', color: '#f0dcae', up: { atk: 3, def: 2, dmg: [1, 3], hp: 7, speed: 6 } },
+      { tier: 2, name: 'Hula Dancer', upgrade: 'Fire Dancer', atk: 4, def: 3, dmg: [2, 3], hp: 10, speed: 6, growth: 9, ranged: false, ammo: 0, cost: { gold: 90, wood: 1 }, shape: 'dancer', color: '#ff8fb1', up: { atk: 5, def: 4, dmg: [2, 4], hp: 13, speed: 7 } },
+      { tier: 3, name: 'Wave Rider', upgrade: 'Big-Wave Rider', atk: 6, def: 5, dmg: [3, 5], hp: 18, speed: 7, growth: 6, ranged: false, ammo: 0, cost: { gold: 150, wood: 2 }, shape: 'surfer', color: '#4fc3f7', up: { atk: 7, def: 6, dmg: [4, 6], hp: 22, speed: 8 } },
+      { tier: 4, name: 'Coconut Shaman', upgrade: 'Elder Shaman', atk: 7, def: 7, dmg: [3, 6], hp: 22, speed: 5, growth: 4, ranged: true, ammo: 8, cost: { gold: 250, crystal: 1 }, shape: 'shaman', color: '#a3e635', up: { atk: 8, def: 8, dmg: [4, 7], hp: 27, speed: 6, ammo: 10 } },
+      { tier: 5, name: 'Ohana Guardian', upgrade: "Nani's Guardian", atk: 11, def: 10, dmg: [6, 10], hp: 40, speed: 6, growth: 2, ranged: false, ammo: 0, cost: { gold: 400, ore: 2, crystal: 1 }, shape: 'guardian', color: '#f4c95d', up: { atk: 12, def: 12, dmg: [8, 12], hp: 50, speed: 7 } },
     ],
   },
   {
@@ -608,11 +681,11 @@ const FACTIONS = [
       { name: 'Gantu', portrait: 'gantu', attack: 6, defense: 6, spellPower: 1, knowledge: 1, skill: { id: 'leadership', level: 1 } },
     ],
     creatures: [
-      { tier: 1, name: 'Cadet Trooper', upgrade: 'Shock Trooper', atk: 2, def: 2, dmg: [1, 2], hp: 6, speed: 4, growth: 14, ranged: true, ammo: 12, cost: { gold: 50 }, shape: 'trooper', color: '#93c5fd' },
-      { tier: 2, name: 'Blaster Trooper', upgrade: 'Plasma Trooper', atk: 4, def: 3, dmg: [2, 4], hp: 9, speed: 5, growth: 9, ranged: true, ammo: 10, cost: { gold: 100, ore: 1 }, shape: 'trooper', color: '#60a5fa' },
-      { tier: 3, name: 'Recon Droid', upgrade: 'War Droid', atk: 6, def: 6, dmg: [3, 4], hp: 20, speed: 6, growth: 6, ranged: false, ammo: 0, cost: { gold: 160, ore: 2 }, shape: 'droid', color: '#cbd5e1' },
-      { tier: 4, name: 'Federation Officer', upgrade: 'Federation Captain', atk: 8, def: 6, dmg: [4, 6], hp: 24, speed: 7, growth: 4, ranged: false, ammo: 0, cost: { gold: 260, crystal: 1 }, shape: 'officer', color: '#1d4ed8' },
-      { tier: 5, name: 'Gantu Enforcer', upgrade: "Gantu's Elite Enforcer", atk: 12, def: 11, dmg: [7, 11], hp: 45, speed: 5, growth: 2, ranged: false, ammo: 0, cost: { gold: 420, ore: 2, plasma: 1 }, shape: 'gantu', color: '#334155' },
+      { tier: 1, name: 'Cadet Trooper', upgrade: 'Shock Trooper', atk: 2, def: 2, dmg: [1, 2], hp: 6, speed: 4, growth: 14, ranged: true, ammo: 12, cost: { gold: 50 }, shape: 'trooper', color: '#93c5fd', up: { atk: 3, def: 3, dmg: [1, 3], hp: 8, speed: 4, ammo: 14 } },
+      { tier: 2, name: 'Blaster Trooper', upgrade: 'Plasma Trooper', atk: 4, def: 3, dmg: [2, 4], hp: 9, speed: 5, growth: 9, ranged: true, ammo: 10, cost: { gold: 100, ore: 1 }, shape: 'blaster', color: '#60a5fa', up: { atk: 5, def: 4, dmg: [3, 5], hp: 12, speed: 5, ammo: 12 } },
+      { tier: 3, name: 'Recon Droid', upgrade: 'War Droid', atk: 6, def: 6, dmg: [3, 4], hp: 20, speed: 6, growth: 6, ranged: false, ammo: 0, cost: { gold: 160, ore: 2 }, shape: 'droid', color: '#cbd5e1', up: { atk: 7, def: 8, dmg: [4, 5], hp: 25, speed: 7 } },
+      { tier: 4, name: 'Federation Officer', upgrade: 'Federation Captain', atk: 8, def: 6, dmg: [4, 6], hp: 24, speed: 7, growth: 4, ranged: false, ammo: 0, cost: { gold: 260, crystal: 1 }, shape: 'officer', color: '#1d4ed8', up: { atk: 9, def: 8, dmg: [5, 7], hp: 30, speed: 8 } },
+      { tier: 5, name: 'Gantu Enforcer', upgrade: "Gantu's Elite Enforcer", atk: 12, def: 11, dmg: [7, 11], hp: 45, speed: 5, growth: 2, ranged: false, ammo: 0, cost: { gold: 420, ore: 2, plasma: 1 }, shape: 'gantu', color: '#334155', up: { atk: 13, def: 13, dmg: [8, 13], hp: 56, speed: 6 } },
     ],
   },
   {
@@ -623,11 +696,11 @@ const FACTIONS = [
       { name: 'Angel', portrait: 'angel', attack: 3, defense: 2, spellPower: 4, knowledge: 3, skill: { id: 'luck', level: 1 } },
     ],
     creatures: [
-      { tier: 1, name: 'Sparky Larva', upgrade: 'Volt Larva', atk: 2, def: 1, dmg: [1, 3], hp: 4, speed: 6, growth: 16, ranged: false, ammo: 0, cost: { gold: 35 }, shape: 'larva', color: '#fde047' },
-      { tier: 2, name: 'Mutant Crawler', upgrade: 'Alpha Crawler', atk: 3, def: 3, dmg: [2, 3], hp: 11, speed: 5, growth: 9, ranged: false, ammo: 0, cost: { gold: 85, wood: 1 }, shape: 'crawler', color: '#86198f' },
-      { tier: 3, name: 'Reuben Clone', upgrade: 'Elite Clone', atk: 5, def: 5, dmg: [3, 5], hp: 17, speed: 5, growth: 6, ranged: false, ammo: 0, cost: { gold: 140, ore: 2 }, shape: 'clone', color: '#f97316' },
-      { tier: 4, name: 'Angel Songstress', upgrade: 'Siren Songstress', atk: 6, def: 6, dmg: [2, 5], hp: 21, speed: 7, growth: 4, ranged: true, ammo: 8, cost: { gold: 230, crystal: 1 }, shape: 'songstress', color: '#f472b6' },
-      { tier: 5, name: 'Experiment 626', upgrade: 'Alpha Experiment', atk: 13, def: 9, dmg: [7, 12], hp: 38, speed: 8, growth: 2, ranged: false, ammo: 0, cost: { gold: 400, ore: 1, plasma: 1 }, shape: 'exp626', color: '#1e3a8a' },
+      { tier: 1, name: 'Sparky Larva', upgrade: 'Volt Larva', atk: 2, def: 1, dmg: [1, 3], hp: 4, speed: 6, growth: 16, ranged: false, ammo: 0, cost: { gold: 35 }, shape: 'larva', color: '#fde047', up: { atk: 3, def: 2, dmg: [2, 3], hp: 6, speed: 7 } },
+      { tier: 2, name: 'Mutant Crawler', upgrade: 'Alpha Crawler', atk: 3, def: 3, dmg: [2, 3], hp: 11, speed: 5, growth: 9, ranged: false, ammo: 0, cost: { gold: 85, wood: 1 }, shape: 'crawler', color: '#86198f', up: { atk: 4, def: 4, dmg: [2, 4], hp: 14, speed: 6 } },
+      { tier: 3, name: 'Reuben Clone', upgrade: 'Elite Clone', atk: 5, def: 5, dmg: [3, 5], hp: 17, speed: 5, growth: 6, ranged: false, ammo: 0, cost: { gold: 140, ore: 2 }, shape: 'clone', color: '#f97316', up: { atk: 6, def: 6, dmg: [4, 6], hp: 22, speed: 6 } },
+      { tier: 4, name: 'Angel Songstress', upgrade: 'Siren Songstress', atk: 6, def: 6, dmg: [2, 5], hp: 21, speed: 7, growth: 4, ranged: true, ammo: 8, cost: { gold: 230, crystal: 1 }, shape: 'songstress', color: '#f472b6', up: { atk: 7, def: 7, dmg: [3, 6], hp: 26, speed: 8, ammo: 10 } },
+      { tier: 5, name: 'Experiment 626', upgrade: 'Alpha Experiment', atk: 13, def: 9, dmg: [7, 12], hp: 38, speed: 8, growth: 2, ranged: false, ammo: 0, cost: { gold: 400, ore: 1, plasma: 1 }, shape: 'exp626', color: '#1e3a8a', up: { atk: 14, def: 11, dmg: [8, 13], hp: 48, speed: 9 } },
     ],
   },
   {
@@ -638,15 +711,18 @@ const FACTIONS = [
       { name: 'Reuben', portrait: 'reuben', attack: 4, defense: 3, spellPower: 2, knowledge: 2, skill: { id: 'luck', level: 1 } },
     ],
     creatures: [
-      { tier: 1, name: 'Hamster Drone', upgrade: 'War Drone', atk: 2, def: 2, dmg: [1, 2], hp: 6, speed: 4, growth: 14, ranged: false, ammo: 0, cost: { gold: 40 }, shape: 'drone', color: '#a8a29e' },
-      { tier: 2, name: 'Leroy Clone', upgrade: 'Elite Leroy Clone', atk: 4, def: 4, dmg: [2, 3], hp: 10, speed: 5, growth: 9, ranged: false, ammo: 0, cost: { gold: 90, ore: 1 }, shape: 'leroy', color: '#2563eb' },
-      { tier: 3, name: 'Legion Robot', upgrade: 'Legion Heavy Robot', atk: 6, def: 6, dmg: [3, 5], hp: 19, speed: 4, growth: 6, ranged: true, ammo: 10, cost: { gold: 150, ore: 2 }, shape: 'robot', color: '#71717a' },
-      { tier: 4, name: 'Siege Walker', upgrade: 'Heavy Siege Walker', atk: 8, def: 9, dmg: [4, 7], hp: 26, speed: 4, growth: 4, ranged: false, ammo: 0, cost: { gold: 260, ore: 2 }, shape: 'walker', color: '#7f1d1d' },
-      { tier: 5, name: 'Hämsterviel Warbot', upgrade: 'Hämsterviel Overlord', atk: 12, def: 12, dmg: [7, 10], hp: 48, speed: 5, growth: 2, ranged: false, ammo: 0, cost: { gold: 420, ore: 3 }, shape: 'warbot', color: '#111827' },
+      { tier: 1, name: 'Hamster Drone', upgrade: 'War Drone', atk: 2, def: 2, dmg: [1, 2], hp: 6, speed: 4, growth: 14, ranged: false, ammo: 0, cost: { gold: 40 }, shape: 'drone', color: '#a8a29e', up: { atk: 3, def: 3, dmg: [1, 3], hp: 8, speed: 5 } },
+      { tier: 2, name: 'Leroy Clone', upgrade: 'Elite Leroy Clone', atk: 4, def: 4, dmg: [2, 3], hp: 10, speed: 5, growth: 9, ranged: false, ammo: 0, cost: { gold: 90, ore: 1 }, shape: 'leroy', color: '#2563eb', up: { atk: 5, def: 5, dmg: [3, 4], hp: 13, speed: 5 } },
+      { tier: 3, name: 'Legion Robot', upgrade: 'Legion Heavy Robot', atk: 6, def: 6, dmg: [3, 5], hp: 19, speed: 4, growth: 6, ranged: true, ammo: 10, cost: { gold: 150, ore: 2 }, shape: 'robot', color: '#71717a', up: { atk: 7, def: 7, dmg: [4, 6], hp: 24, speed: 5, ammo: 12 } },
+      { tier: 4, name: 'Siege Walker', upgrade: 'Heavy Siege Walker', atk: 8, def: 9, dmg: [4, 7], hp: 26, speed: 4, growth: 4, ranged: false, ammo: 0, cost: { gold: 260, ore: 2 }, shape: 'walker', color: '#7f1d1d', up: { atk: 9, def: 10, dmg: [5, 8], hp: 32, speed: 5 } },
+      { tier: 5, name: 'Hämsterviel Warbot', upgrade: 'Hämsterviel Overlord', atk: 12, def: 12, dmg: [7, 10], hp: 48, speed: 5, growth: 2, ranged: false, ammo: 0, cost: { gold: 420, ore: 3 }, shape: 'warbot', color: '#111827', up: { atk: 13, def: 14, dmg: [8, 12], hp: 60, speed: 6 } },
     ],
   },
 ];
 function factionById(id) { return FACTIONS.find(f => f.id === id); }
+// upgraded form of every creature: base stats overlaid with its `up` block (see the FACTIONS table);
+// creatureRef() hands these out for upgraded stacks so all combat maths picks the better stats up
+for (const f of FACTIONS) for (const cd of f.creatures) cd.upDef = Object.assign({}, cd, cd.up, { upgraded: true });
 
 // ---- Buildings ----
 // dwelling buildings map to creature tier; upgrade buildings unlock the tier-4/5 upgrade.
@@ -841,13 +917,15 @@ function makeCreatureStack(factionId, tier, count, upgraded) {
 }
 
 function creatureRef(stack) {
-  const fac = factionById(stack.factionId);
-  return fac.creatures[stack.tier - 1];
+  const cd = factionById(stack.factionId).creatures[stack.tier - 1];
+  return stack.upgraded ? cd.upDef : cd;
 }
 function creatureDisplayName(stack) {
   const cd = creatureRef(stack);
   return stack.upgraded ? cd.upgrade : cd.name;
 }
+function skillName(id) { return t('skill' + id.charAt(0).toUpperCase() + id.slice(1)); }
+function spellName(id) { return t('spell' + id.charAt(0).toUpperCase() + id.slice(1)); }
 function creatureAtk(stack) { return creatureRef(stack).atk; }
 function creatureDef(stack) { return creatureRef(stack).def; }
 function creatureHp(stack) { return creatureRef(stack).hp; }
@@ -963,6 +1041,9 @@ const game = {
   combat: null,
   pendingSetup: { numPlayers: 2, picks: [] }, // during faction/hero pick flow
   victor: null,
+  heroInfo: [null, null], // {name, portrait} of each player's starting hero (for the finale after they fall)
+  stats: { heroesDefeated: [0, 0] }, // per player index, shown on the victory / mission-complete screens
+  levelUpOffer: null, // { heroId, options } while the level-up modal is up
   uiButtons: [], // hit-test rects populated each render() call: {x,y,w,h,onClick}
   modalStack: [],
   // ---- campaign-only state ----
@@ -1003,6 +1084,7 @@ function startNewDuel(factionIds, heroIdxs) {
   game.players[1].fog = makeFogGrid();
   game.turn = { playerIdx: 0, day: 1, week: 1 };
   game.victor = null;
+  game.stats = { heroesDefeated: [0, 0] };
   game.combat = null;
 
   // find two landmass spots far apart for starting castles: opposite corners of island
@@ -1026,6 +1108,7 @@ function startNewDuel(factionIds, heroIdxs) {
     game.cameraByPlayer[i] = { x: s.x, y: s.y };
   }
   placeMapObjects();
+  rememberHeroes();
   for (let i = 0; i < 2; i++) recomputeFog(i);
   game.screen = 'adventure';
   // camera opens centered on player 1's own castle
@@ -1626,13 +1709,17 @@ function grantXp(hero, amount) {
   if (leveled) sfx.levelUp();
 }
 
-function levelUpHero(hero) {
-  // choose attribute to increase: weighted random pick presented to player via modal in real flow;
-  // for simplicity in Stage 1 we auto-apply a small deterministic bump and let players see it in the hero screen.
-  const attrs = ['attack', 'defense', 'spellPower', 'knowledge'];
-  const pick = attrs[Math.floor(Math.random() * attrs.length)];
-  hero[pick] += 1;
-  // 40% chance to also gain/upgrade a secondary skill
+// Level-up: the human picks one of two rewards in a modal; the AI silently auto-resolves (random
+// attribute, sometimes a skill) so no dialog ever appears during an AI turn. A human level-up is
+// recorded as hero.pendingLevelUps (saved with the hero) and offered by showNextLevelUp().
+const LEVEL_ATTRS = ['attack', 'defense', 'spellPower', 'knowledge'];
+function refreshHeroDerived(hero) {
+  hero.movePtsMax = heroMovePtsMax(hero);
+  hero.spellPtsMax = heroSpellPtsMax(hero);
+}
+function autoResolveLevelUp(hero) {
+  hero[LEVEL_ATTRS[Math.floor(Math.random() * LEVEL_ATTRS.length)]] += 1;
+  // 50% chance to also gain/upgrade a secondary skill
   if (Math.random() < 0.5 && hero.skills.length < 8) {
     const known = hero.skills.map(s => s.id);
     const upgradeable = hero.skills.filter(s => s.level < 3);
@@ -1644,9 +1731,74 @@ function levelUpHero(hero) {
       if (avail.length) hero.skills.push({ id: avail[Math.floor(Math.random() * avail.length)], level: 1 });
     }
   }
-  // learn a spell automatically if a Mage Guild is available at hero's castle and level allows
-  hero.movePtsMax = heroMovePtsMax(hero);
-  hero.spellPtsMax = heroSpellPtsMax(hero);
+  refreshHeroDerived(hero);
+}
+// two distinct rewards: an attribute, plus either a second attribute or a new/upgraded skill
+function levelUpOptions(hero) {
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const attrs = shuffle(LEVEL_ATTRS).map(attr => ({ kind: 'attr', attr }));
+  const skillOpts = [];
+  for (const sk of hero.skills) if (sk.level < 3) skillOpts.push({ kind: 'skill', id: sk.id, from: sk.level, to: sk.level + 1 });
+  for (const id of SKILL_IDS) if (!hero.skills.some(sk => sk.id === id)) skillOpts.push({ kind: 'skill', id, from: 0, to: 1 });
+  const opts = [attrs[0]];
+  opts.push(skillOpts.length && Math.random() < 0.65 ? shuffle(skillOpts)[0] : attrs[1]);
+  return opts;
+}
+function applyLevelUpChoice(hero, opt) {
+  if (opt.kind === 'attr') hero[opt.attr] += 1;
+  else {
+    const sk = hero.skills.find(x => x.id === opt.id);
+    if (sk) sk.level = Math.min(3, sk.level + 1); else hero.skills.push({ id: opt.id, level: 1 });
+  }
+  refreshHeroDerived(hero);
+}
+function levelUpOptionLabel(opt) {
+  const lv = n => [t('basic'), t('advanced'), t('expert')][n - 1];
+  if (opt.kind === 'attr') return t('lvlGainAttr', { attr: t(opt.attr) });
+  return opt.from ? t('lvlGainSkillUp', { skill: skillName(opt.id), from: lv(opt.from), to: lv(opt.to) }) : t('lvlGainSkillNew', { skill: skillName(opt.id), lvl: lv(1) });
+}
+function levelUpHero(hero) {
+  if (isAIPlayer(hero.ownerIdx)) { autoResolveLevelUp(hero); return; }
+  hero.pendingLevelUps = (hero.pendingLevelUps || 0) + 1;
+  showNextLevelUp();
+}
+function showNextLevelUp() {
+  if (game.levelUpOffer) return false;
+  for (const p of game.players) for (const h of p.heroes) {
+    if (h.pendingLevelUps > 0 && !isAIPlayer(h.ownerIdx)) { openLevelUpModal(h); return true; }
+  }
+  return false;
+}
+function openLevelUpModal(hero) {
+  const options = levelUpOptions(hero);
+  game.levelUpOffer = { heroId: hero.id, options };
+  document.getElementById('levelTitle').textContent = '⭐ ' + t('levelUpTitle');
+  document.getElementById('levelSub').textContent = t('levelUpSub', { name: hero.name, lvl: hero.level - (hero.pendingLevelUps - 1) });
+  const box = document.getElementById('levelChoices');
+  box.innerHTML = '';
+  options.forEach((opt, i) => {
+    const div = document.createElement('div');
+    div.className = 'panel-list-item';
+    div.textContent = levelUpOptionLabel(opt);
+    div.addEventListener('click', () => chooseLevelUp(i));
+    box.appendChild(div);
+  });
+  document.getElementById('levelModal').style.display = 'flex';
+}
+function chooseLevelUp(i) {
+  const offer = game.levelUpOffer;
+  if (!offer) return false;
+  const hero = findHeroById(offer.heroId);
+  if (hero && offer.options[i]) {
+    applyLevelUpChoice(hero, offer.options[i]);
+    hero.pendingLevelUps = Math.max(0, (hero.pendingLevelUps || 1) - 1);
+    sfx.click();
+    saveGame();
+  }
+  game.levelUpOffer = null;
+  document.getElementById('levelModal').style.display = 'none';
+  showNextLevelUp();
+  return true;
 }
 
 // ---- Building ----
@@ -1744,7 +1896,7 @@ function combatStackFromArmySlot(armySlot, side, ownerIdx) {
 
 function startCombat(attackerHero, target, kind) {
   const attackerStacks = attackerHero.army.filter(s => s).map(s => combatStackFromArmySlot(s, 'attacker', attackerHero.ownerIdx));
-  let defenderStacks = [], defenderHero = null, defenderOwnerIdx = -1, siege = false, monsterObjId = null, castleObjId = null;
+  let defenderStacks = [], defenderHero = null, defenderOwnerIdx = -1, siege = false, tavern = false, monsterObjId = null, castleObjId = null;
   if (kind === 'monster') {
     defenderStacks = [combatStackFromArmySlot(target.stack, 'defender', -1)];
     defenderOwnerIdx = -1;
@@ -1753,10 +1905,16 @@ function startCombat(attackerHero, target, kind) {
     defenderHero = target;
     defenderStacks = target.army.filter(s => s).map(s => combatStackFromArmySlot(s, 'defender', target.ownerIdx));
     defenderOwnerIdx = target.ownerIdx;
+    // a hero defending from inside its own castle gets that castle's walls and tavern too
+    const homeCastle = findCastleAt(target.x, target.y);
+    if (homeCastle && homeCastle.ownerIdx === target.ownerIdx) {
+      siege = !!homeCastle.buildings.cityWalls; tavern = !!homeCastle.buildings.tavern;
+    }
   } else if (kind === 'castle') {
     defenderStacks = target.garrison.filter(s => s).map(s => combatStackFromArmySlot(s, 'defender', target.ownerIdx));
     defenderOwnerIdx = target.ownerIdx;
     siege = !!target.buildings.cityWalls;
+    tavern = !!target.buildings.tavern;
     castleObjId = target.id;
   }
   // place on grid: attacker at x=1 column, defender at x=COMBAT_W-2 column, spread across rows by slot index
@@ -1768,7 +1926,8 @@ function startCombat(attackerHero, target, kind) {
 
   game.combat = {
     attackerHeroId: attackerHero.id, defenderHeroId: defenderHero ? defenderHero.id : null,
-    defenderOwnerIdx, siege, monsterObjId, castleObjId, kind,
+    defenderOwnerIdx, siege, tavern, monsterObjId, castleObjId, kind,
+    walls: siege ? makeSiegeWalls() : null, targeting: null, notice: null,
     stacks: attackerStacks.concat(defenderStacks),
     round: 0, order: [], orderIndex: 0,
     sideCast: { attacker: false, defender: false },
@@ -1776,9 +1935,60 @@ function startCombat(attackerHero, target, kind) {
     attackerFromX: attackerHero.x, attackerFromY: attackerHero.y,
   };
   game.screen = 'combat';
+  if (siege) combatLog(t('siegeStart'));
+  if (tavern) combatLog(t('tavernCheer'));
   beginCombatRound();
 }
 
+// ---- siege walls ----
+// A defended walled castle draws a stone wall down column WALL_X with a 2-cell gate in the middle
+// (static, non-destructible). Wall cells block movement and line of fire for BOTH sides, so the
+// attackers have to funnel through the gate (or the defenders have to come out to meet them).
+const WALL_X = 8;
+const GATE_ROWS = [4, 5];
+function makeSiegeWalls() {
+  const cells = [], keys = {};
+  for (let y = 0; y < COMBAT_H; y++) {
+    if (GATE_ROWS.includes(y)) continue;
+    const tower = y === 0 || y === COMBAT_H - 1 || y === GATE_ROWS[0] - 1 || y === GATE_ROWS[1] + 1;
+    cells.push({ x: WALL_X, y, tower }); keys[WALL_X + ',' + y] = true;
+  }
+  return { cells, keys, gateX: WALL_X, gateRows: GATE_ROWS.slice() };
+}
+function combatIsWall(x, y) { const w = game.combat && game.combat.walls; return !!(w && w.keys[x + ',' + y]); }
+// is the straight line between two cells free of wall cells? (sampled along the cell-centre line;
+// the two end cells themselves never count, so shooting into the gate mouth works)
+function combatLineClear(a, b) {
+  const w = game.combat && game.combat.walls;
+  if (!w) return true;
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const n = Math.max(Math.abs(dx), Math.abs(dy)) * 6;
+  for (let i = 1; i < n; i++) {
+    const cx = Math.floor(a.x + 0.5 + dx * i / n), cy = Math.floor(a.y + 0.5 + dy * i / n);
+    if ((cx === a.x && cy === a.y) || (cx === b.x && cy === b.y)) continue;
+    if (w.keys[cx + ',' + cy]) return false;
+  }
+  return true;
+}
+// BFS step-distance map from a cell over open (non-wall) cells, ignoring other stacks — used so
+// units path through the gate instead of hugging the wall
+function combatDistMap(from) {
+  const dist = new Map();
+  dist.set(from.x + ',' + from.y, 0);
+  const q = [{ x: from.x, y: from.y }];
+  for (let qi = 0; qi < q.length; qi++) {
+    const cur = q[qi], d = dist.get(cur.x + ',' + cur.y);
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+      if (!dx && !dy) continue;
+      const nx = cur.x + dx, ny = cur.y + dy;
+      if (nx < 0 || ny < 0 || nx >= COMBAT_W || ny >= COMBAT_H || combatIsWall(nx, ny)) continue;
+      const k = nx + ',' + ny;
+      if (dist.has(k)) continue;
+      dist.set(k, d + 1); q.push({ x: nx, y: ny });
+    }
+  }
+  return dist;
+}
 function combatAliveStacks() { return game.combat.stacks.filter(s => s.alive); }
 function combatAttackerHero() { return findHeroById(game.combat.attackerHeroId); }
 function combatDefenderHero() { return game.combat.defenderHeroId ? findHeroById(game.combat.defenderHeroId) : null; }
@@ -1834,7 +2044,7 @@ function processCurrentActor() {
   if (!stack) { beginCombatRound(); return; }
   // morale roll
   const hero = stack.side === 'attacker' ? combatAttackerHero() : combatDefenderHero();
-  const moraleVal = hero ? heroMorale(hero) : 0;
+  const moraleVal = (hero ? heroMorale(hero) : 0) + (c.tavern && stack.side === 'defender' ? 2 : 0);
   const badChance = Math.max(0, 0.06 - moraleVal * 0.02);
   const goodChance = moraleVal * 0.08;
   const roll = Math.random();
@@ -1881,6 +2091,7 @@ function combatReachable(stack) {
     for (const [dx, dy] of neighbors) {
       const nx = cur.x + dx, ny = cur.y + dy;
       if (nx < 0 || ny < 0 || nx >= COMBAT_W || ny >= COMBAT_H) continue;
+      if (combatIsWall(nx, ny)) continue;
       const k = nx + ',' + ny;
       if (occupied.has(k)) continue;
       if (visited.has(k) && visited.get(k) <= cur.d + 1) continue;
@@ -1913,12 +2124,14 @@ function moveStackNearTarget(stack, target) {
     }
   }
   if (best) { stack.x = best.x; stack.y = best.y; return true; }
-  // else move as close as possible
-  let bestTile = null, bestDist = chebyshev(stack, target);
+  // else move as close as possible — measured along open ground so units aim for the gate
+  // rather than pressing against a wall (identical to plain distance when there is no wall)
+  const dm = combatDistMap(target);
+  const big = 999;
+  let bestTile = null, bestDist = dm.has(stack.x + ',' + stack.y) ? dm.get(stack.x + ',' + stack.y) : big;
   for (const [k] of reach) {
-    const [x, y] = k.split(',').map(Number);
-    const d = chebyshev({ x, y }, target);
-    if (d < bestDist) { bestDist = d; bestTile = { x, y }; }
+    const d = dm.has(k) ? dm.get(k) : big;
+    if (d < bestDist) { bestDist = d; const [x, y] = k.split(',').map(Number); bestTile = { x, y }; }
   }
   if (bestTile) { stack.x = bestTile.x; stack.y = bestTile.y; }
   return chebyshev(stack, target) <= 1;
@@ -1934,7 +2147,6 @@ function computeDamage(attacker, defender, ranged) {
   let def = creatureDef(defender);
   const hero = attacker.side === 'attacker' ? combatAttackerHero() : combatDefenderHero();
   const dHero = defender.side === 'attacker' ? combatAttackerHero() : combatDefenderHero();
-  if (game.combat.siege && defender.side === 'defender') def += 3;
   let mult = 1 + Math.max(-0.7, Math.min(3.0, (atk - def) * 0.05));
   if (attacker.buffs.dmgUp) mult *= (1 + attacker.buffs.dmgUp);
   if (attacker.buffs.dmgDown) mult *= Math.max(0.1, 1 - attacker.buffs.dmgDown);
@@ -1983,10 +2195,14 @@ function addFloater(x, y, text) {
 function aiActStack(stack) {
   const enemies = combatAliveStacks().filter(s => s.side !== stack.side);
   if (!enemies.length) return;
-  let target = enemies[0], bestD = chebyshev(stack, target);
-  for (const e of enemies) { const d = chebyshev(stack, e); if (d < bestD) { bestD = d; target = e; } }
-  const ranged = creatureRanged(stack) && stack.ammo > 0;
-  if (ranged) { performAttack(stack, target, true); return; }
+  const nearestBy = (list, keyFn) => { let best = list[0], bd = keyFn(best); for (const e of list) { const d = keyFn(e); if (d < bd) { bd = d; best = e; } } return best; };
+  // ranged stacks shoot whatever they have a clear line to (never through a siege wall)
+  if (creatureRanged(stack) && stack.ammo > 0) {
+    const shootable = enemies.filter(e => combatLineClear(stack, e));
+    if (shootable.length) { performAttack(stack, nearestBy(shootable, e => chebyshev(stack, e)), true); return; }
+  }
+  const dm = combatDistMap(stack);
+  const target = nearestBy(enemies, e => dm.has(e.x + ',' + e.y) ? dm.get(e.x + ',' + e.y) : 999);
   if (chebyshev(stack, target) <= 1) { performAttack(stack, target, false); return; }
   const gotAdjacent = moveStackNearTarget(stack, target);
   if (gotAdjacent) performAttack(stack, target, false);
@@ -1999,7 +2215,7 @@ function humanActOnTile(tx, ty) {
   if (!stack || combatSideIsAI(stack.side)) return false;
   const targetStack = combatAliveStacks().find(s => s.x === tx && s.y === ty);
   if (targetStack && targetStack.side !== stack.side) {
-    const ranged = creatureRanged(stack) && stack.ammo > 0;
+    const ranged = creatureRanged(stack) && stack.ammo > 0 && combatLineClear(stack, targetStack);
     if (ranged) { performAttack(stack, targetStack, true); finishHumanAction(stack); return true; }
     if (chebyshev(stack, targetStack) <= 1) { performAttack(stack, targetStack, false); finishHumanAction(stack); return true; }
     // too far to reach this turn: march as close as possible instead of doing nothing
@@ -2017,6 +2233,9 @@ function humanActOnTile(tx, ty) {
   return false;
 }
 function finishHumanAction(stack) {
+  // the last enemy may just have fallen on a good-morale bonus action — end the battle now instead of
+  // handing the player an extra turn with nothing left to hit
+  if (checkCombatEnd()) return;
   if (stack.pendingGoodMorale && !stack.extraActionUsed && stack.alive) {
     stack.extraActionUsed = true;
     stack.pendingGoodMorale = false;
@@ -2048,29 +2267,69 @@ function combatCastSpell(side, spellId, targetStackId) {
   c.sideCast[side] = true;
   const power = hero.spellPower;
   if (def.kind === 'damage') {
-    const targets = def.aoe ? combatAliveStacks().filter(s => s.side !== side) : [c.stacks.find(s => s.id === targetStackId)].filter(Boolean);
+    const targets = def.aoe ? combatAliveStacks().filter(s => s.side !== side) : [c.stacks.find(s => s.id === targetStackId && s.alive)].filter(Boolean);
     for (const tgt of targets) {
       const dmg = Math.round(def.base + power * 2);
       applyDamageToStack(tgt, dmg);
       addFloater(tgt.x, tgt.y, '-' + dmg);
-      combatLog('🔥 ' + def.name + ' → ' + creatureDisplayName(tgt) + ': -' + dmg);
+      combatLog('🔥 ' + spellName(def.id) + ' → ' + creatureDisplayName(tgt) + ': -' + dmg);
     }
   } else if (def.kind === 'heal') {
     const tgt = c.stacks.find(s => s.id === targetStackId);
-    if (tgt) {
-      tgt.hp = Math.min(tgt.count * tgt.hpEach + (def.base + power * 2), tgt.hp + def.base + power * 2);
+    if (tgt && tgt.alive) {
+      // heals wounds only — never above the stack's starting strength
+      tgt.hp = Math.min(tgt.hpMax, tgt.hp + def.base + power * 2);
       tgt.count = Math.max(tgt.count, Math.ceil(tgt.hp / tgt.hpEach));
-      combatLog('✨ ' + def.name + ' → ' + creatureDisplayName(tgt));
+      addFloater(tgt.x, tgt.y, '+' + Math.round(def.base + power * 2));
+      combatLog('✨ ' + spellName(def.id) + ' → ' + creatureDisplayName(tgt));
     }
   } else if (def.kind === 'buff' || def.kind === 'debuff') {
     const targets = def.kind === 'buff' ? combatAliveStacks().filter(s => s.side === side) : combatAliveStacks().filter(s => s.side !== side);
     for (const tgt of targets) tgt.buffs[def.stat] = def.amount;
-    combatLog('✨ ' + def.name);
+    combatLog('✨ ' + spellName(def.id));
   }
   sfx.spell();
   checkCombatEnd();
   return true;
 }
+
+// ---- spell targeting ----
+// single-target damage and heal spells need a chosen stack. Humans enter a targeting mode (valid
+// stacks are highlighted, they tap one, or cancel — nothing is spent until the spell lands); the
+// AI (and any non-interactive caller) auto-picks via combatAutoTarget().
+function combatSpellNeedsTarget(def) { return def.kind === 'heal' || (def.kind === 'damage' && !def.aoe); }
+function combatSpellTargets(side, def) {
+  const alive = combatAliveStacks();
+  if (def.kind === 'heal') return alive.filter(s => s.side === side && s.hp < s.hpMax); // only wounded allies
+  return alive.filter(s => s.side !== side);
+}
+function combatAutoTarget(side, def) {
+  const list = combatSpellTargets(side, def);
+  if (!list.length) return null;
+  if (def.kind === 'heal') return list.reduce((a, b) => (b.hp / b.hpMax < a.hp / a.hpMax ? b : a));
+  return list.reduce((a, b) => (b.hp > a.hp ? b : a)); // hit the biggest enemy stack
+}
+function combatNotice(text) { game.combat.notice = { text, until: Date.now() + 2200 }; }
+function combatBeginSpell(side, spellId) {
+  const c = game.combat;
+  if (!c || c.result || c.sideCast[side]) return false;
+  const hero = side === 'attacker' ? combatAttackerHero() : combatDefenderHero();
+  const def = spellDef(spellId);
+  if (!hero || !def || !hero.spells.includes(spellId) || hero.spellPts < def.cost) return false;
+  if (!combatSpellNeedsTarget(def)) return combatCastSpell(side, spellId, null);
+  const valid = combatSpellTargets(side, def);
+  if (!valid.length) { combatNotice(t(def.kind === 'heal' ? 'noHealTargets' : 'noSpellTargets')); return false; }
+  if (combatSideIsAI(side)) return combatCastSpell(side, spellId, combatAutoTarget(side, def).id);
+  c.targeting = { side, spellId, valid: valid.map(s => s.id) };
+  return true;
+}
+function combatTapSpellTarget(stack) {
+  const c = game.combat, tg = c && c.targeting;
+  if (!tg || !stack || !stack.alive || !tg.valid.includes(stack.id)) return false;
+  c.targeting = null;
+  return combatCastSpell(tg.side, tg.spellId, stack.id);
+}
+function combatCancelTargeting() { if (game.combat) game.combat.targeting = null; }
 
 // ---- end conditions ----
 function checkCombatEnd() {
@@ -2127,6 +2386,7 @@ function resolveCombat() {
     if (c.kind === 'hero' && defenderHero) {
       const p = game.players[defenderHero.ownerIdx];
       p.heroes = p.heroes.filter(h => h.id !== defenderHero.id);
+      if (attackerHero) game.stats.heroesDefeated[attackerHero.ownerIdx]++;
     }
     sfx.victory();
   } else if (c.result === 'defenderWin') {
@@ -2138,6 +2398,7 @@ function resolveCombat() {
     if (attackerHero) {
       const p = game.players[attackerHero.ownerIdx];
       p.heroes = p.heroes.filter(h => h.id !== attackerHero.id);
+      if (defenderHero) game.stats.heroesDefeated[defenderHero.ownerIdx]++;
     }
     sfx.defeatSting();
   } else if (c.result === 'attackerFled' || c.result === 'attackerSurrendered') {
@@ -2168,6 +2429,7 @@ function serializeGame() {
     players: game.players.map(p => ({ idx: p.idx, factionId: p.factionId, resources: p.resources, heroes: p.heroes, castles: p.castles, fog: p.fog })),
     turn: game.turn,
     cameraByPlayer: game.cameraByPlayer,
+    stats: game.stats,
     nextId,
   };
 }
@@ -2181,6 +2443,7 @@ function deserializeGame(data) {
   game.camera = { x: game.cameraByPlayer[game.turn.playerIdx].x, y: game.cameraByPlayer[game.turn.playerIdx].y };
   nextId = data.nextId || 1000;
   game.victor = null;
+  game.stats = data.stats || { heroesDefeated: [0, 0] };
   game.combat = null;
   game.selectedHeroId = null;
   game.screen = 'adventure';
@@ -2269,6 +2532,7 @@ function hideVictoryScreen() { document.getElementById('victoryModal').style.dis
 
 function hideAllModals() {
   hideMessage(); hideListModal(); hidePassDeviceScreen(); hideVictoryScreen();
+  document.getElementById('levelModal').style.display = 'none'; game.levelUpOffer = null;
 }
 // pass-device and victory are screen-exclusive full-screen modals whose visibility is a
 // pure function of game.screen. syncScreenModals() enforces that invariant, but it only
@@ -2340,31 +2604,451 @@ function drawPanel(x, y, w, h, opts) {
 }
 function creatureColor(stack) { return creatureRef(stack).color; }
 
-// draws a small original code-drawn creature glyph (not tracing any copyrighted art —
-// simple geometric mascot per creature 'shape' key) centered at cx,cy with given radius
-function drawCreatureGlyph(shapeKey, cx, cy, r, color) {
+// ---- creature art ----------------------------------------------------------------------
+// Every creature is drawn in a unit box (x/y roughly -1..1, feet near y=0.85) that drawCreatureGlyph
+// scales to the requested radius. Same look as the hero portraits and super-jumper.html: rounded
+// ellipse bodies, dark soft outlines, warm tropical palette and one big readable silhouette cue per
+// creature (hat, board, antenna, cannon...) so it still reads at ~14px. `up` = upgraded variant:
+// each has its own extra art (crown, armour, flames, glow...) plus a small gold star pip.
+const CG = { lw: 0.09 };
+const CG_SHADE_CACHE = {};
+function cgShade(hex, f) {
+  const key = hex + f;
+  if (CG_SHADE_CACHE[key]) return CG_SHADE_CACHE[key];
+  const n = parseInt(hex.slice(1), 16);
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const tgt = f < 0 ? 0 : 255, p = Math.abs(f);
+  r = Math.round(r + (tgt - r) * p); g = Math.round(g + (tgt - g) * p); b = Math.round(b + (tgt - b) * p);
+  return (CG_SHADE_CACHE[key] = 'rgb(' + r + ',' + g + ',' + b + ')');
+}
+function cgEll(x, y, rx, ry, fill, rot, noStroke) {
+  ctx.fillStyle = fill; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, rot || 0, 0, Math.PI * 2); ctx.fill();
+  if (!noStroke) ctx.stroke();
+}
+function cgPoly(pts, fill, noStroke) {
+  ctx.fillStyle = fill; ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.closePath(); ctx.fill(); if (!noStroke) ctx.stroke();
+}
+function cgRR(x, y, w, h, rad, fill, noStroke) {
+  roundRect(x, y, w, h, rad); ctx.fillStyle = fill; ctx.fill(); if (!noStroke) ctx.stroke();
+}
+function cgLine(x1, y1, x2, y2, col, w) {
+  ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.restore();
+}
+function cgEyes(x, y, gap, rx, ry, col, glint) {
+  for (const s of [-1, 1]) {
+    cgEll(x + s * gap, y, rx, ry, col || '#1a1208', 0, true);
+    if (glint) cgEll(x + s * gap - rx * 0.25, y - ry * 0.3, rx * 0.35, rx * 0.35, '#fff', 0, true);
+  }
+}
+function cgStar(x, y, rad, fill) {
+  ctx.fillStyle = fill; ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? rad * 0.45 : rad;
+    ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+}
+function cgSmile(x, y, w, col) {
+  ctx.save(); ctx.strokeStyle = col || '#5a2d14'; ctx.lineWidth = CG.lw * 0.9; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(x, y, w, 0.3, Math.PI - 0.3); ctx.stroke(); ctx.restore();
+}
+function cgFlame(x, y, s, inner, outer) {
+  for (const [k, col] of [[1, outer], [0.55, inner]]) {
+    ctx.fillStyle = col; ctx.beginPath();
+    ctx.moveTo(x - 0.5 * s * k, y);
+    ctx.quadraticCurveTo(x - 0.6 * s * k, y - 0.6 * s * k, x, y - 1.3 * s * k);
+    ctx.quadraticCurveTo(x + 0.6 * s * k, y - 0.6 * s * k, x + 0.5 * s * k, y);
+    ctx.closePath(); ctx.fill();
+  }
+}
+
+// ---------- OHANA ----------
+function cgScout(c, up) {
+  const hat = up ? '#2a9d8f' : '#5aa845';
+  cgLine(0.66, -0.7, 0.66, 0.86, '#8a5a2b', 0.1);                       // spear
+  cgPoly(up ? [[0.66, -1.0], [0.86, -0.66], [0.66, -0.74], [0.46, -0.66]] : [[0.66, -0.94], [0.78, -0.7], [0.54, -0.7]], up ? '#f1f5f9' : '#d6d3d1');
+  cgEll(-0.2, 0.74, 0.17, 0.12, cgShade(c, -0.3)); cgEll(0.2, 0.74, 0.17, 0.12, cgShade(c, -0.3));
+  cgEll(0, 0.3, 0.5, 0.48, c);                                           // sandy body
+  if (up) cgPoly([[-0.46, 0.1], [-0.3, -0.02], [0.46, 0.5], [0.3, 0.62]], '#ef5b4d');      // coral sash
+  else cgLine(-0.46, 0.4, 0.46, 0.4, '#b08a4e', 0.09);
+  cgEll(-0.52, 0.28, 0.13, 0.2, cgShade(c, -0.12), 0.3); cgEll(0.44, 0.22, 0.13, 0.2, cgShade(c, -0.12), -0.5);
+  cgEll(0, -0.3, 0.44, 0.4, cgShade(c, 0.12));                           // head
+  cgEyes(-0.0, -0.28, 0.17, 0.07, 0.09, '#1a1208', true);
+  cgSmile(0, -0.2, 0.13);
+  cgPoly([[-0.62, -0.42], [0, -1.06], [0.62, -0.42], [0.22, -0.52], [-0.22, -0.52]], hat);  // big leaf scout hat
+  cgLine(0, -1.02, 0, -0.5, cgShade(hat, -0.35), 0.05);
+  if (up) { cgEll(0.32, -0.6, 0.12, 0.06, '#fb7185', 0.5); cgEll(-0.32, -0.6, 0.12, 0.06, '#fb7185', -0.5); }
+}
+function cgDancer(c, up) {
+  const skirt = up ? '#f97316' : '#4caf50';
+  for (const s of [-1, 1]) {                                            // arms up in a wave
+    ctx.save(); ctx.translate(s * 0.4, -0.05); ctx.rotate(s * -0.9);
+    cgEll(0, -0.34, 0.11, 0.36, cgShade(c, -0.08)); ctx.restore();
+  }
+  if (up) for (const s of [-1, 1]) cgFlame(s * 0.86, -0.42, 0.26, '#fde047', '#f97316'); // fire torches
+  cgEll(0, 0.02, 0.32, 0.4, c);                                          // torso
+  for (let i = -3; i <= 3; i++) {                                        // grass skirt fringe
+    ctx.save(); ctx.translate(i * 0.13, 0.32); ctx.rotate(i * 0.1);
+    cgEll(0, 0.24, 0.07, 0.34, i % 2 ? skirt : cgShade(skirt, 0.15), 0, false); ctx.restore();
+  }
+  cgLine(-0.46, 0.34, 0.46, 0.34, '#fde047', 0.1);
+  cgEll(0, -0.5, 0.33, 0.32, cgShade(c, 0.1));                           // head
+  cgEyes(0, -0.5, 0.13, 0.06, 0.08, '#1a1208', true);
+  cgSmile(0, -0.42, 0.1, '#8a2f4f');
+  cgEll(0, -0.74, 0.34, 0.2, '#2a1a12');                                 // dark hair
+  for (let i = 0; i < 5; i++) {                                          // hibiscus
+    const a = i / 5 * Math.PI * 2;
+    cgEll(0.3 + Math.cos(a) * 0.1, -0.74 + Math.sin(a) * 0.1, 0.09, 0.09, up ? '#fde047' : '#ffffff', 0, true);
+  }
+  cgEll(0.3, -0.74, 0.05, 0.05, '#ef4444', 0, true);
+  cgEll(-0.36, 0.1, 0.05, 0.05, '#fde047', 0, true);
+}
+function cgSurfer(c, up) {
+  if (up) { ctx.fillStyle = 'rgba(56,189,248,0.75)'; ctx.beginPath(); ctx.moveTo(-1, 0.9); ctx.quadraticCurveTo(-0.9, 0.1, -0.2, 0.3); ctx.quadraticCurveTo(-0.7, 0.55, -0.5, 0.9); ctx.closePath(); ctx.fill(); }
+  cgEll(0.08, 0.82, 0.96, 0.16, up ? '#facc15' : '#fb923c', -0.08);      // surfboard
+  cgLine(-0.7, 0.8, 0.86, 0.72, up ? '#ef4444' : '#fff7ed', 0.06);
+  ctx.fillStyle = '#2e8fd6'; ctx.beginPath();                            // wave curl
+  ctx.moveTo(-1, 0.95); ctx.quadraticCurveTo(-0.9, 0.55, -0.4, 0.68); ctx.quadraticCurveTo(-0.6, 0.88, -0.3, 0.95); ctx.closePath(); ctx.fill();
+  cgEll(-0.2, 0.55, 0.13, 0.13, '#f0dcae', 0, true); cgEll(0.36, 0.55, 0.13, 0.13, '#f0dcae', 0, true); // feet
+  cgEll(0.08, 0.05, 0.36, 0.5, c);                                       // body (wetsuit)
+  cgPoly([[-0.2, 0.0], [0.36, 0.0], [0.4, 0.2], [-0.24, 0.2]], cgShade(c, -0.25), true);
+  cgEll(-0.55, -0.05, 0.11, 0.3, cgShade(c, 0.1), 0.9); cgEll(0.7, -0.15, 0.11, 0.3, cgShade(c, 0.1), -0.9);  // arms out for balance
+  cgEll(0.08, -0.56, 0.3, 0.29, '#f0c9a0');                              // head
+  cgEll(0.08, -0.76, 0.32, 0.17, up ? '#7c2d12' : '#f4c95d');            // hair
+  if (up) { cgRR(-0.22, -0.62, 0.6, 0.15, 0.06, '#111827'); cgLine(0.38, -0.56, 0.5, -0.5, '#111827', 0.05); }    // shades
+  else cgEyes(0.08, -0.55, 0.12, 0.05, 0.07, '#1a1208', true);
+  cgSmile(0.08, -0.5, 0.11);
+  if (up) cgLine(-0.4, -0.05, 0.6, -0.05, '#f8fafc', 0.05);
+}
+function cgShaman(c, up) {
+  const cloak = up ? '#15803d' : '#4d7c0f';
+  cgLine(0.7, -0.75, 0.7, 0.88, '#7c4a1f', 0.1);                        // staff
+  const orbC = up ? '#fde047' : '#bef264';
+  ctx.fillStyle = up ? 'rgba(253,224,71,0.35)' : 'rgba(190,242,100,0.3)'; ctx.beginPath(); ctx.arc(0.7, -0.82, 0.34, 0, 7); ctx.fill();
+  cgEll(0.7, -0.82, 0.2, 0.2, orbC);
+  cgEll(0.64, -0.88, 0.06, 0.06, '#fff', 0, true);
+  ctx.fillStyle = cloak; ctx.beginPath();                                // leaf cloak
+  ctx.moveTo(-0.62, 0.86); ctx.quadraticCurveTo(-0.7, -0.05, 0, -0.1); ctx.quadraticCurveTo(0.7, -0.05, 0.62, 0.86); ctx.closePath(); ctx.fill(); ctx.stroke();
+  for (let i = -2; i <= 2; i++) cgEll(i * 0.22, 0.75, 0.09, 0.15, cgShade(cloak, 0.2), i * 0.15, true);
+  cgEll(0, 0.28, 0.32, 0.5, c);                                          // body
+  cgEll(0, -0.4, 0.42, 0.44, up ? '#7c4a1f' : '#8a5a2b');                // coconut head
+  cgEll(0, -0.5, 0.36, 0.3, up ? '#9a6a3b' : '#a87343', 0, true);
+  cgEll(-0.14, -0.42, 0.07, 0.09, '#1f130a', 0, true); cgEll(0.14, -0.42, 0.07, 0.09, '#1f130a', 0, true);
+  cgEll(0, -0.24, 0.07, 0.08, '#1f130a', 0, true);                       // coconut face holes
+  if (up) {                                                              // feather headdress + beard
+    for (let i = -2; i <= 2; i++) { ctx.save(); ctx.translate(i * 0.16, -0.72); ctx.rotate(i * 0.32); cgEll(0, -0.2, 0.08, 0.26, i % 2 ? '#f8fafc' : '#ef4444'); ctx.restore(); }
+    cgPoly([[-0.2, -0.16], [0.2, -0.16], [0, 0.14]], '#f1f5f9');
+  } else {
+    for (let i = -1; i <= 1; i++) { ctx.save(); ctx.translate(i * 0.16, -0.8); ctx.rotate(i * 0.35); cgEll(0, -0.12, 0.07, 0.18, '#65a30d'); ctx.restore(); }
+  }
+}
+function cgGuardian(c, up) {
+  cgEll(0, 0.88, 0.7, 0.1, 'rgba(0,0,0,0.25)', 0, true);
+  cgRR(-0.62, -0.06, 1.24, 0.94, 0.24, cgShade(c, -0.2));                // stone-wood torso
+  cgRR(-0.42, 0.05, 0.84, 0.75, 0.16, c);
+  for (const s of [-1, 1]) cgEll(s * 0.66, 0.05, 0.22, 0.24, cgShade(c, -0.1));   // shoulders
+  cgEll(-0.66, 0.5, 0.13, 0.13, cgShade(c, 0.2));
+  cgLine(0.72, -0.9, 0.72, 0.8, '#7c4a1f', 0.09);                        // spear
+  cgPoly([[0.72, -1.05], [0.86, -0.78], [0.58, -0.78]], '#e5e7eb');
+  cgRR(-0.4, -0.78, 0.8, 0.72, 0.24, cgShade(c, 0.05));                  // tiki head block
+  cgRR(-0.44, -0.84, 0.88, 0.16, 0.06, cgShade(c, -0.3));                // brow
+  cgEyes(0, -0.52, 0.19, 0.1, 0.09, '#2b1a05'); cgEyes(0, -0.52, 0.19, 0.04, 0.04, up ? '#38bdf8' : '#fde047', 0);
+  cgRR(-0.2, -0.3, 0.4, 0.14, 0.05, '#2b1a05'); cgLine(-0.1, -0.29, -0.1, -0.17, '#f8fafc', 0.05); cgLine(0.1, -0.29, 0.1, -0.17, '#f8fafc', 0.05);
+  cgEll(-0.58, -0.86, 0.14, 0.1, '#4caf50', 0, true); cgEll(0.58, -0.86, 0.14, 0.1, '#4caf50', 0, true);
+  ctx.save(); ctx.translate(-0.4, 0.4);                                  // hibiscus shield
+  cgEll(0, 0, 0.34, 0.42, up ? '#0f766e' : '#9f1239');
+  for (let i = 0; i < 5; i++) { ctx.save(); ctx.rotate(i / 5 * Math.PI * 2); cgEll(0, -0.14, 0.08, 0.13, up ? '#5eead4' : '#fb7185', 0, true); ctx.restore(); }
+  cgEll(0, 0, 0.06, 0.06, '#fde047', 0, true); ctx.restore();
+  if (up) {                                                              // golden laurel crown + glowing shield rim
+    ctx.strokeStyle = '#fde047'; ctx.lineWidth = CG.lw * 1.6; ctx.beginPath(); ctx.arc(0, -0.5, 0.56, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = CG.lw;
+    for (const s of [-1, 1]) cgEll(s * 0.5, -0.86, 0.13, 0.07, '#fde047', s * 0.6);
+    cgStar(0, -0.98, 0.16, '#fde047');
+  }
+}
+
+// ---------- FEDERATION ----------
+function cgCadet(c, up) {
+  const suit = up ? '#334155' : cgShade(c, -0.15);
+  cgEll(-0.2, 0.74, 0.17, 0.12, '#475569'); cgEll(0.2, 0.74, 0.17, 0.12, '#475569');
+  cgEll(0, 0.3, 0.46, 0.46, up ? suit : c);                              // armour torso
+  cgRR(-0.12, 0.05, 0.24, 0.32, 0.06, up ? '#fde047' : '#e2e8f0', true);
+  if (up) { ctx.fillStyle = '#334155'; cgEll(-0.5, 0.05, 0.2, 0.16, '#475569'); cgEll(0.5, 0.05, 0.2, 0.16, '#475569'); cgPoly([[0.02, 0.06], [-0.06, 0.22], [0.02, 0.2], [-0.02, 0.36], [0.1, 0.16], [0.02, 0.16]], '#fde047', true); }
+  cgRR(0.3, 0.14, 0.7, 0.2, 0.06, '#64748b');                            // blaster
+  cgEll(0.34, 0.26, 0.11, 0.11, '#e2e8f0');
+  cgEll(0, -0.34, 0.46, 0.44, up ? '#1e3a8a' : c);                       // helmet
+  cgRR(-0.34, -0.5, 0.68, 0.32, 0.14, '#0f172a');                        // visor
+  cgLine(-0.24, -0.42, 0.0, -0.46, up ? '#fde047' : '#7dd3fc', 0.06);
+  cgLine(0.42, -0.72, 0.42, -1.0, '#94a3b8', 0.06); cgEll(0.42, -1.0, 0.07, 0.07, up ? '#fde047' : '#f87171', 0, true);   // antenna
+}
+function cgBlaster(c, up) {
+  cgEll(-0.24, 0.74, 0.18, 0.12, '#1e293b'); cgEll(0.2, 0.74, 0.18, 0.12, '#1e293b');
+  cgEll(-0.05, 0.28, 0.5, 0.5, cgShade(c, -0.1));
+  cgPoly([[-0.4, 0.08], [0.3, 0.08], [0.24, 0.5], [-0.34, 0.5]], '#e2e8f0', true);
+  cgLine(-0.4, 0.3, 0.28, 0.3, c, 0.07);
+  for (const s of [-1, 1]) cgEll(-0.05 + s * 0.52, 0.02, 0.2, 0.17, '#cbd5e1');
+  // long rifle
+  cgRR(0.05, 0.05, 1.0, 0.26, 0.08, up ? '#0e7490' : '#334155');
+  cgRR(0.85, 0.1, 0.2, 0.16, 0.05, '#e2e8f0');
+  if (up) for (let i = 0; i < 3; i++) cgEll(0.25 + i * 0.22, 0.18, 0.07, 0.07, '#67e8f9', 0, true);
+  if (up) { ctx.fillStyle = 'rgba(103,232,249,0.45)'; ctx.beginPath(); ctx.arc(1.05, 0.18, 0.2, 0, 7); ctx.fill(); }
+  cgEll(-0.05, -0.36, 0.46, 0.44, c);
+  cgRR(-0.4, -0.52, 0.7, 0.32, 0.14, '#0f172a');
+  cgLine(-0.3, -0.44, 0.15, -0.44, up ? '#67e8f9' : '#fca5a5', 0.07);
+  cgPoly([[-0.05, -0.8], [-0.1, -1.0], [0.0, -0.9], [0.1, -1.0], [0.05, -0.8]], up ? '#67e8f9' : '#e2e8f0'); // crest
+}
+function cgDroid(c, up) {
+  if (up) { cgRR(-0.7, -0.06, 0.32, 0.62, 0.14, '#64748b'); cgRR(0.38, -0.06, 0.32, 0.62, 0.14, '#64748b'); cgEll(-0.54, 0.62, 0.1, 0.1, '#ef4444', 0, true); cgEll(0.54, 0.62, 0.1, 0.1, '#ef4444', 0, true); } // twin cannons
+  cgEll(0, 0.8, 0.34, 0.1, '#475569');                                   // hover ring
+  ctx.fillStyle = 'rgba(125,211,252,0.4)'; ctx.beginPath(); ctx.ellipse(0, 0.9, 0.24, 0.07, 0, 0, 7); ctx.fill();
+  cgEll(0, 0.3, 0.5, 0.46, c);                                           // body
+  cgLine(-0.4, 0.3, 0.4, 0.3, '#94a3b8', 0.05);
+  cgEll(0, -0.3, 0.52, 0.5, cgShade(c, 0.08));                           // head
+  if (up) { ctx.strokeStyle = '#475569'; ctx.lineWidth = CG.lw * 1.5; ctx.beginPath(); ctx.arc(0, -0.3, 0.52, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); ctx.lineWidth = CG.lw; }
+  cgEll(0, -0.3, 0.3, 0.3, '#0f172a');                                   // big camera eye
+  cgEll(0, -0.3, 0.19, 0.19, up ? '#ef4444' : '#38bdf8', 0, true);
+  cgEll(-0.06, -0.37, 0.06, 0.06, '#fff', 0, true);
+  cgLine(0.3, -0.7, 0.5, -1.0, '#94a3b8', 0.06);                         // antenna dish
+  cgEll(0.5, -1.0, 0.13, 0.08, up ? '#ef4444' : '#e2e8f0', 0.5);
+}
+function cgOfficer(c, up) {
+  if (up) cgPoly([[-0.5, 0.0], [0.5, 0.0], [0.8, 0.88], [-0.8, 0.88]], '#b91c1c');                          // cape
+  cgEll(-0.18, 0.76, 0.16, 0.11, '#0f172a'); cgEll(0.18, 0.76, 0.16, 0.11, '#0f172a');
+  cgRR(-0.4, -0.02, 0.8, 0.78, 0.22, c);                                 // uniform
+  cgPoly([[-0.14, 0.0], [0.14, 0.0], [0.0, 0.5]], '#f8fafc', true);       // white collar V
+  for (let i = 0; i < 3; i++) cgEll(0, 0.16 + i * 0.16, 0.035, 0.035, '#fde047', 0, true);
+  cgEll(-0.46, 0.28, 0.12, 0.3, cgShade(c, 0.05), 0.15); cgEll(0.46, 0.28, 0.12, 0.3, cgShade(c, 0.05), -0.15);
+  cgEll(-0.56, 0.5, 0.1, 0.1, '#f0c9a0', 0, true);
+  if (up) for (const s of [-1, 1]) cgRR(s * 0.5 - 0.15, -0.08, 0.3, 0.12, 0.05, '#fde047');
+  cgLine(0.66, 0.15, 0.66, 0.85, '#94a3b8', 0.07); cgEll(0.66, 0.1, 0.09, 0.09, '#67e8f9');                   // baton
+  cgEll(0, -0.38, 0.32, 0.32, '#f0c9a0');                                // head
+  cgEyes(0, -0.36, 0.13, 0.05, 0.07, '#1a1208', true);
+  cgLine(-0.09, -0.24, 0.09, -0.24, '#7a4426', 0.05);
+  cgRR(-0.4, -0.72, 0.8, 0.22, 0.1, '#0f172a');                          // peaked cap
+  cgRR(-0.3, -0.98, 0.6, 0.34, 0.12, up ? '#1e3a8a' : '#1e40af');
+  cgRR(-0.5, -0.56, 0.8, 0.08, 0.03, '#020617', true);
+  cgEll(0, -0.8, up ? 0.14 : 0.1, up ? 0.14 : 0.1, '#fde047');
+  if (up) cgLine(-0.28, -0.7, 0.28, -0.7, '#fde047', 0.05);
+}
+function cgEnforcer(c, up) {
+  cgEll(0, 0.88, 0.72, 0.1, 'rgba(0,0,0,0.28)', 0, true);
+  cgEll(-0.3, 0.72, 0.24, 0.16, '#1e293b'); cgEll(0.3, 0.72, 0.24, 0.16, '#1e293b');
+  cgEll(0, 0.2, 0.68, 0.6, c);                                           // huge torso
+  cgEll(0, 0.35, 0.44, 0.36, cgShade(c, 0.18), 0, true);
+  for (const s of [-1, 1]) { cgEll(s * 0.72, 0.05, 0.24, 0.22, up ? '#b91c1c' : cgShade(c, -0.15)); cgEll(s * 0.78, 0.4, 0.15, 0.24, cgShade(c, 0.05), s * 0.1); }
+  cgRR(0.64, 0.25, 0.52, 0.28, 0.08, '#475569'); cgEll(1.14, 0.39, 0.11, 0.11, up ? '#67e8f9' : '#f87171');   // arm cannon
+  if (up) { ctx.fillStyle = 'rgba(103,232,249,0.4)'; ctx.beginPath(); ctx.arc(1.14, 0.39, 0.22, 0, 7); ctx.fill(); for (let i = 0; i < 3; i++) cgEll(-0.2 + i * 0.2, 0.18, 0.05, 0.05, '#fde047', 0, true); }
+  cgEll(0, -0.5, 0.52, 0.42, cgShade(c, 0.05));                          // hammer-shaped head
+  cgEll(-0.4, -0.52, 0.2, 0.14, cgShade(c, 0.05)); cgEll(0.4, -0.52, 0.2, 0.14, cgShade(c, 0.05));
+  cgEll(0, -0.72, 0.18, 0.2, cgShade(c, 0.12), 0, true);
+  cgEyes(-0.0, -0.5, 0.3, 0.09, 0.07, '#fde047', false); cgEyes(0, -0.5, 0.3, 0.035, 0.05, '#7f1d1d', false);
+  cgLine(-0.3, -0.62, -0.16, -0.56, '#0f172a', 0.07); cgLine(0.3, -0.62, 0.16, -0.56, '#0f172a', 0.07);
+  cgRR(-0.24, -0.3, 0.48, 0.1, 0.04, '#0f172a');
+  for (let i = -2; i <= 2; i++) cgPoly([[i * 0.1 - 0.04, -0.3], [i * 0.1 + 0.04, -0.3], [i * 0.1, -0.22]], '#f8fafc', true);  // shark teeth
+  if (up) { cgStar(0, -1.0, 0.13, '#fde047'); }
+}
+
+// ---------- EXPERIMENTS ----------
+function cgLarva(c, up) {
+  if (up) { ctx.strokeStyle = '#fef08a'; ctx.lineWidth = CG.lw * 1.2; for (const [x, y] of [[-0.9, -0.3], [0.9, -0.2], [0.5, 0.75]]) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x * 0.85 + 0.1, y - 0.14); ctx.lineTo(x * 0.8 - 0.05, y + 0.05); ctx.lineTo(x * 0.7 + 0.1, y - 0.1); ctx.stroke(); } ctx.lineWidth = CG.lw; }
+  for (let i = 0; i < 4; i++) {                                          // segmented grub, head on the right
+    const x = -0.72 + i * 0.36, y = 0.42 - Math.sin(i * 1.0) * 0.14 - i * 0.02;
+    cgEll(x, y, 0.3 - i * 0.02, 0.3 - i * 0.02, i % 2 ? c : cgShade(c, -0.12));
+    cgEll(x, y + 0.34, 0.09, 0.09, '#7c2d12', 0, true);
+  }
+  cgEll(0.68, 0.16, 0.36, 0.36, cgShade(c, 0.12));
+  cgEyes(0.68, 0.1, 0.13, 0.09, 0.1, '#1a1208', false); cgEyes(0.7, 0.08, 0.13, 0.03, 0.03, '#fff', false);
+  cgSmile(0.68, 0.22, 0.1, '#7c2d12');
+  cgPoly([[0.62, -0.18], [0.86, -0.58], [0.72, -0.5], [0.94, -0.94], [0.66, -0.46], [0.78, -0.42]], up ? '#f97316' : '#fde047');   // spark antenna
+  if (up) cgStar(0.9, -0.96, 0.13, '#f97316');
+}
+function cgCrawler(c, up) {
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  for (const s of [-1, 1]) for (let i = 0; i < 3; i++) {                 // six legs
+    const yy = 0.05 + i * 0.22;
+    cgLine(s * 0.3, yy, s * (0.8 + (i === 1 ? 0.15 : 0)), yy + 0.1 + (i - 1) * 0.06, cgShade(c, -0.25), 0.12);
+    cgLine(s * (0.8 + (i === 1 ? 0.15 : 0)), yy + 0.1 + (i - 1) * 0.06, s * (0.95 + (i === 1 ? 0.12 : 0)), 0.85, cgShade(c, -0.25), 0.1);
+  }
+  cgEll(0, 0.28, 0.66, 0.5, c);                                          // bulbous body
+  for (let i = -2; i <= 2; i++) cgPoly([[i * 0.2 - 0.09, -0.12 + Math.abs(i) * 0.06], [i * 0.2, up ? -0.5 + Math.abs(i) * 0.1 : -0.34 + Math.abs(i) * 0.08], [i * 0.2 + 0.09, -0.12 + Math.abs(i) * 0.06]], up ? '#fb923c' : cgShade(c, 0.35));   // back spikes
+  cgEll(0, 0.42, 0.42, 0.28, cgShade(c, 0.22), 0, true);
+  if (up) { cgLine(-0.5, 0.28, 0.5, 0.28, '#fb923c', 0.07); cgLine(-0.44, 0.14, 0.44, 0.14, '#fb923c', 0.06); }
+  for (const [x, y, s] of [[-0.24, 0.02, 0.13], [0.24, 0.02, 0.13], [0, -0.08, 0.1]]) { cgEll(x, y, s, s, '#fef9c3'); cgEll(x, y, s * 0.5, s * 0.5, up ? '#f97316' : '#111827', 0, true); }   // many eyes
+  cgRR(-0.22, 0.34, 0.44, 0.13, 0.05, '#2a0a30', true);
+  for (const s of [-1, 1]) cgPoly([[s * 0.16 - 0.05, 0.34], [s * 0.16 + 0.05, 0.34], [s * 0.16, 0.5]], '#f8fafc', true);
+}
+function cgClone(c, up) {
+  cgEll(-0.22, 0.76, 0.18, 0.11, cgShade(c, -0.3)); cgEll(0.22, 0.76, 0.18, 0.11, cgShade(c, -0.3));
+  cgEll(0, 0.34, 0.48, 0.48, c);                                         // plump body
+  cgEll(0, 0.42, 0.3, 0.3, cgShade(c, 0.35), 0, true);
+  cgEll(-0.36, -0.42, 0.24, 0.3, c, -0.3); cgEll(0.36, -0.42, 0.24, 0.3, c, 0.3);   // big round ears
+  cgEll(-0.36, -0.42, 0.12, 0.18, '#fda4af', -0.3, true); cgEll(0.36, -0.42, 0.12, 0.18, '#fda4af', 0.3, true);
+  cgEll(0, -0.24, 0.42, 0.4, cgShade(c, 0.08));                          // head
+  cgEyes(0, -0.32, 0.16, 0.08, 0.1, '#fff'); cgEyes(0, -0.32, 0.16, 0.035, 0.05, '#1a1208');
+  cgEll(0, -0.16, 0.14, 0.09, '#7c2d12');                                // nose
+  cgEll(0, -0.02, 0.22, 0.1, '#7f1d1d'); cgRR(-0.14, -0.06, 0.28, 0.05, 0.02, '#f8fafc', true);       // grin
+  // sandwich
+  cgEll(0.5, 0.42, 0.34, 0.11, '#f1c27d'); cgEll(0.5, 0.52, 0.32, 0.06, '#4ade80', 0, true); cgEll(0.5, 0.58, 0.3, 0.06, '#ef4444', 0, true); cgEll(0.5, 0.68, 0.34, 0.11, '#f1c27d');
+  if (up) {                                                              // headband + shades + shine
+    cgRR(-0.44, -0.5, 0.88, 0.11, 0.04, '#dc2626'); cgPoly([[0.44, -0.48], [0.78, -0.62], [0.68, -0.4]], '#dc2626');
+    cgRR(-0.3, -0.38, 0.6, 0.14, 0.06, '#111827', true);
+    cgStar(0.7, 0.24, 0.13, '#fde047');
+  }
+}
+function cgSongstress(c, up) {
+  ctx.fillStyle = up ? 'rgba(192,132,252,0.35)' : 'rgba(244,114,182,0.28)';
+  ctx.beginPath(); ctx.arc(0, 0.05, 0.86, 0, 7); ctx.fill();
+  for (const s of [-1, 1]) { ctx.save(); ctx.translate(s * 0.34, 0.1); ctx.rotate(s * 0.6); cgEll(0, -0.2, up ? 0.3 : 0.2, up ? 0.5 : 0.36, up ? '#e9d5ff' : '#fbcfe8'); ctx.restore(); }   // wings
+  cgEll(0, 0.4, 0.34, 0.4, c);
+  cgEll(0, 0.5, 0.2, 0.26, cgShade(c, 0.4), 0, true);
+  cgEll(-0.14, 0.82, 0.13, 0.09, cgShade(c, -0.3)); cgEll(0.14, 0.82, 0.13, 0.09, cgShade(c, -0.3));
+  cgEll(0, -0.2, 0.46, 0.42, cgShade(c, 0.1));                           // head
+  for (const s of [-1, 1]) { cgLine(s * 0.22, -0.55, s * 0.5, -0.92, cgShade(c, -0.2), 0.07); cgEll(s * 0.5, -0.94, 0.11, 0.11, up ? '#fde047' : '#fb7185'); }    // antennae
+  cgEyes(0, -0.28, 0.17, 0.07, 0.1, '#1a1208', true);
+  cgEll(0, -0.08, 0.13, 0.1, '#831843');                                 // singing mouth
+  cgEll(0.55, 0.05, 0.12, 0.09, up ? '#fde047' : '#fda4af'); cgLine(0.55, 0.05, 0.62, -0.3, '#831843', 0.05);   // notes
+  cgEll(-0.55, -0.15, 0.1, 0.08, up ? '#fde047' : '#fda4af'); cgLine(-0.55, -0.15, -0.48, -0.5, '#831843', 0.05);
+  if (up) { for (const r0 of [0.72, 0.95]) { ctx.strokeStyle = 'rgba(216,180,254,0.9)'; ctx.lineWidth = CG.lw * 0.8; ctx.beginPath(); ctx.arc(0.1, -0.1, r0, -0.6, 0.6); ctx.stroke(); } ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = CG.lw; cgStar(0, -0.72, 0.13, '#fde047'); }
+}
+function cgExp626(c, up) {
+  cgEll(0, 0.9, 0.6, 0.08, 'rgba(0,0,0,0.25)', 0, true);
+  if (up) for (let i = -2; i <= 2; i++) cgPoly([[i * 0.15 - 0.07, 0.0], [i * 0.15, -0.3 - (2 - Math.abs(i)) * 0.06], [i * 0.15 + 0.07, 0.0]], '#a855f7');   // dorsal spines
+  for (const s of [-1, 1]) { ctx.save(); ctx.translate(s * 0.34, -0.5); ctx.rotate(s * 0.8); cgEll(0, -0.34, 0.16, 0.5, c); cgEll(0, -0.3, 0.07, 0.34, '#f9a8d4', 0, true); ctx.restore(); }   // huge ears
+  cgEll(-0.24, 0.76, 0.2, 0.12, c); cgEll(0.24, 0.76, 0.2, 0.12, c);
+  cgEll(0, 0.34, 0.52, 0.48, c);
+  cgEll(0, 0.42, 0.34, 0.34, '#bfdbfe', 0, true);
+  for (const s of [-1, 1]) { ctx.save(); ctx.translate(s * 0.5, 0.2); ctx.rotate(s * (up ? -0.6 : -0.3)); cgEll(0, 0.08, 0.13, 0.32, c); ctx.restore(); if (up) for (let i = 0; i < 3; i++) cgLine(s * (0.62 + i * 0.06), -0.06 + i * 0.03, s * (0.78 + i * 0.05), -0.16 + i * 0.03, '#fde047', 0.05); }
+  cgEll(0, -0.28, 0.48, 0.4, c);
+  cgEll(0, -0.16, 0.3, 0.2, '#bfdbfe', 0, true);
+  cgEyes(0, -0.32, 0.19, 0.11, 0.15, '#0b1020', false);
+  if (up) { for (const s of [-1, 1]) cgEll(s * 0.19, -0.32, 0.07, 0.1, '#f43f5e', 0, true); }
+  else cgEyes(0, -0.36, 0.19, 0.035, 0.035, '#fff', false);
+  ctx.strokeStyle = '#0b1020'; ctx.lineWidth = CG.lw; ctx.beginPath(); ctx.arc(0, -0.08, 0.2, 0.35, Math.PI - 0.35); ctx.stroke();
+  cgPoly([[-0.08, -0.05], [-0.04, 0.03], [0.0, -0.05]], '#f8fafc', true); cgPoly([[0.0, -0.05], [0.04, 0.03], [0.08, -0.05]], '#f8fafc', true);
+}
+
+// ---------- HAMSTERVIEL'S LEGION ----------
+function cgDrone(c, up) {
+  cgEll(-0.2, 0.74, 0.16, 0.11, '#57534e'); cgEll(0.2, 0.74, 0.16, 0.11, '#57534e');
+  cgEll(0, 0.3, 0.5, 0.48, c);                                           // chubby hamster body
+  cgEll(0, 0.4, 0.3, 0.32, '#e7e5e4', 0, true);
+  cgEll(-0.5, 0.25, 0.1, 0.17, cgShade(c, -0.1), 0.4); cgEll(0.5, 0.25, 0.1, 0.17, cgShade(c, -0.1), -0.4);
+  for (let i = 0; i < 8; i++) { ctx.save(); ctx.translate(0.0, 0.38); ctx.rotate(i / 8 * Math.PI * 2); ctx.fillStyle = '#475569'; ctx.fillRect(-0.03, -0.17, 0.06, 0.06); ctx.restore(); }
+  ctx.strokeStyle = '#475569'; ctx.lineWidth = CG.lw * 1.4; ctx.beginPath(); ctx.arc(0, 0.38, 0.11, 0, 7); ctx.stroke(); ctx.lineWidth = CG.lw;   // cog badge
+  cgEll(0, -0.3, 0.44, 0.4, cgShade(c, 0.1));                            // head
+  cgEll(-0.3, -0.62, 0.13, 0.13, c); cgEll(0.3, -0.62, 0.13, 0.13, c);   // round ears
+  cgEyes(0, -0.32, 0.16, 0.06, 0.09, '#dc2626', false);
+  cgEll(0, -0.16, 0.06, 0.05, '#fda4af', 0, true);
+  cgRR(-0.06, -0.12, 0.05, 0.13, 0.015, '#fff', false); cgRR(0.01, -0.12, 0.05, 0.13, 0.015, '#fff', false);   // buck teeth
+  ctx.fillStyle = up ? '#7f1d1d' : '#6b7280';                            // metal helmet
+  ctx.beginPath(); ctx.ellipse(0, -0.5, 0.5, 0.36, 0, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+  cgLine(-0.5, -0.5, 0.5, -0.5, '#374151', 0.09);
+  if (up) { cgPoly([[-0.08, -0.86], [0, -1.12], [0.08, -0.86]], '#e5e7eb'); cgPoly([[-0.34, -0.8], [-0.36, -1.0], [-0.2, -0.86]], '#e5e7eb'); cgPoly([[0.34, -0.8], [0.36, -1.0], [0.2, -0.86]], '#e5e7eb'); cgLine(-0.4, 0.05, 0.4, 0.5, '#dc2626', 0.1); }
+  else cgLine(0, -0.86, 0, -0.98, '#374151', 0.06);
+}
+function cgLeroy(c, up) {
+  const plate = up ? '#7f1d1d' : '#1f2937';
+  cgEll(-0.22, 0.76, 0.18, 0.11, cgShade(c, -0.35)); cgEll(0.22, 0.76, 0.18, 0.11, cgShade(c, -0.35));
+  for (const s of [-1, 1]) { ctx.save(); ctx.translate(s * 0.36, -0.44); ctx.rotate(s * 0.6); cgEll(0, -0.3, 0.13, 0.4, c); cgEll(0, -0.28, 0.05, 0.26, '#fca5a5', 0, true); ctx.restore(); }   // ears
+  cgEll(0, 0.34, 0.48, 0.46, c);
+  cgEll(0, 0.4, 0.3, 0.3, cgShade(c, 0.35), 0, true);
+  cgRR(-0.3, 0.06, 0.6, 0.5, 0.14, plate);                               // armour chest plate
+  cgLine(-0.18, 0.2, 0.18, 0.2, '#dc2626', 0.06); cgLine(-0.18, 0.34, 0.18, 0.34, '#dc2626', 0.06);
+  for (const s of [-1, 1]) { ctx.save(); ctx.translate(s * 0.52, 0.16); ctx.rotate(s * -0.35); cgEll(0, 0.1, 0.11, 0.3, c); ctx.restore(); }
+  if (up) { cgRR(0.6, 0.1, 0.34, 0.16, 0.05, '#475569'); cgRR(-0.94, 0.1, 0.34, 0.16, 0.05, '#475569'); cgEll(0.94, 0.18, 0.05, 0.05, '#f87171', 0, true); cgEll(-0.94, 0.18, 0.05, 0.05, '#f87171', 0, true); }
+  cgEll(0, -0.26, 0.44, 0.38, c);
+  cgRR(-0.4, -0.42, 0.8, 0.2, 0.09, '#111827');                          // dark visor band
+  cgEyes(0, -0.32, 0.2, 0.06, 0.06, '#ef4444', false);
+  ctx.strokeStyle = '#111827'; ctx.lineWidth = CG.lw; ctx.beginPath(); ctx.arc(0, -0.05, 0.16, 0.3, Math.PI - 0.3); ctx.stroke();
+  for (let i = -2; i <= 2; i++) cgPoly([[i * 0.06 - 0.03, -0.05 + Math.abs(i) * 0.005], [i * 0.06 + 0.03, -0.05], [i * 0.06, 0.03]], '#f8fafc', true);
+  if (up) { cgStar(0, -0.98, 0.15, '#fbbf24'); cgLine(-0.4, -0.24, 0.4, -0.24, '#fbbf24', 0.05); }
+}
+function cgRobot(c, up) {
+  cgRR(-0.5, 0.66, 0.36, 0.2, 0.06, '#27272a'); cgRR(0.14, 0.66, 0.36, 0.2, 0.06, '#27272a');
+  cgRR(-0.5, -0.1, 1.0, 0.78, 0.14, c);                                  // boxy torso
+  cgRR(-0.36, 0.06, 0.72, 0.36, 0.06, cgShade(c, -0.25), true);
+  for (let i = 0; i < 3; i++) cgEll(-0.2 + i * 0.2, 0.24, 0.05, 0.05, i === 1 ? '#ef4444' : '#a1a1aa', 0, true);
+  if (up) { cgRR(-0.56, -0.16, 1.12, 0.14, 0.05, '#52525b'); cgLine(-0.4, 0.55, 0.4, 0.55, '#ef4444', 0.06); }
+  cgRR(0.42, 0.02, 0.64, 0.3, 0.1, '#3f3f46'); cgEll(1.06, 0.17, 0.12, 0.12, '#ef4444');   // arm cannon
+  if (up) { cgRR(-1.06, 0.02, 0.64, 0.3, 0.1, '#3f3f46'); cgEll(-1.06, 0.17, 0.12, 0.12, '#ef4444'); }
+  cgRR(-0.4, -0.66, 0.8, 0.5, 0.14, cgShade(c, 0.1));                    // head
+  cgRR(-0.3, -0.52, 0.6, 0.2, 0.08, '#18181b');
+  cgRR(-0.2, -0.47, 0.4, 0.1, 0.04, '#ef4444', true);
+  cgLine(0.3, -0.66, 0.3, -0.98, '#a1a1aa', 0.06); cgEll(0.3, -0.98, 0.07, 0.07, '#ef4444', 0, true);
+  if (up) { cgLine(-0.3, -0.66, -0.3, -0.98, '#a1a1aa', 0.06); cgEll(-0.3, -0.98, 0.07, 0.07, '#ef4444', 0, true); }
+}
+function cgWalker(c, up) {
+  const leg = cgShade(c, -0.3);
+  for (const [x, dx] of [[-0.55, -0.2], [-0.2, -0.08], [0.2, 0.08], [0.55, 0.2]]) {   // four long legs
+    cgLine(x * 0.7, 0.05, x + dx, 0.55, leg, 0.13); cgLine(x + dx, 0.55, x + dx * 1.5, 0.9, leg, 0.11); cgEll(x + dx * 1.5, 0.9, 0.12, 0.06, '#1c1917');
+  }
+  cgRR(-0.64, -0.34, 1.28, 0.6, 0.22, c);                                // slab hull
+  cgRR(-0.5, -0.24, 1.0, 0.16, 0.06, cgShade(c, 0.25), true);
+  cgEll(-0.6, -0.02, 0.07, 0.07, '#fbbf24', 0, true); cgEll(-0.45, 0.1, 0.07, 0.07, '#fbbf24', 0, true);
+  cgRR(0.5, -0.32, 0.5, 0.44, 0.12, cgShade(c, -0.1)); cgRR(0.86, -0.22, 0.24, 0.2, 0.04, '#27272a'); cgEll(0.94, -0.12, 0.06, 0.06, '#f87171', 0, true);   // cockpit head with eye slit
+  cgRR(-0.32, -0.62, 0.7, 0.32, 0.08, '#292524');                       // siege cannon
+  cgRR(0.28, -0.56, 0.76, 0.18, 0.05, '#44403c'); cgEll(1.06, -0.47, 0.11, 0.11, '#f97316');
+  if (up) { cgRR(-0.3, -0.84, 0.36, 0.28, 0.1, '#7f1d1d'); cgLine(0.0, -0.84, 0.0, -1.06, '#a8a29e', 0.06); cgPoly([[-0.6, -0.34], [-0.5, -0.56], [-0.4, -0.34]], '#e5e7eb'); cgPoly([[0.4, -0.34], [0.5, -0.56], [0.6, -0.34]], '#e5e7eb'); cgLine(-0.6, 0.12, 0.6, 0.12, '#f97316', 0.05); }
+}
+function cgWarbot(c, up) {
+  cgEll(0, 0.9, 0.78, 0.09, 'rgba(0,0,0,0.3)', 0, true);
+  if (up) cgPoly([[-0.6, -0.1], [0.6, -0.1], [0.94, 0.9], [-0.94, 0.9]], '#b91c1c');   // crimson cape
+  cgRR(-0.34, 0.6, 0.3, 0.3, 0.08, '#1f2937'); cgRR(0.04, 0.6, 0.3, 0.3, 0.08, '#1f2937');
+  cgRR(-0.56, -0.12, 1.12, 0.8, 0.22, c);                                // armoured torso
+  cgEll(0, 0.28, 0.24, 0.24, up ? '#ef4444' : '#7f1d1d'); cgEll(0, 0.28, 0.12, 0.12, up ? '#fde047' : '#f87171', 0, true);   // reactor core
+  for (const s of [-1, 1]) {
+    cgEll(s * 0.7, -0.02, 0.24, 0.22, '#374151');
+    for (let i = 0; i < 6; i++) { ctx.save(); ctx.translate(s * 0.7, -0.02); ctx.rotate(i / 6 * Math.PI * 2); ctx.fillStyle = up ? '#fbbf24' : '#9ca3af'; ctx.fillRect(-0.03, -0.31, 0.06, 0.1); ctx.restore(); }
+    cgEll(s * 0.78, 0.5, 0.19, 0.19, '#374151');                          // big fist
+    cgLine(s * 0.72, 0.1, s * 0.78, 0.4, '#1f2937', 0.14);
+  }
+  ctx.fillStyle = 'rgba(186,230,253,0.5)'; ctx.beginPath(); ctx.ellipse(0, -0.34, 0.42, 0.36, 0, Math.PI, Math.PI * 2); ctx.rect(-0.42, -0.34, 0.84, 0.16); ctx.fill(); ctx.stroke();   // cockpit dome
+  cgEll(0, -0.34, 0.26, 0.2, '#f5f5f4');                                 // tiny white hamster pilot
+  cgEyes(0, -0.36, 0.1, 0.05, 0.05, '#dc2626', false);
+  cgEll(-0.16, -0.52, 0.07, 0.07, '#f5f5f4', 0, true); cgEll(0.16, -0.52, 0.07, 0.07, '#f5f5f4', 0, true);
+  cgRR(-0.5, -0.2, 1.0, 0.1, 0.04, '#111827', true);
+  if (up) { for (let i = -2; i <= 2; i++) { ctx.save(); ctx.translate(i * 0.19, -0.78 + Math.abs(i) * 0.06); ctx.rotate(i * 0.12); cgPoly([[-0.07, 0], [0, -0.26 + Math.abs(i) * 0.03], [0.07, 0]], '#fbbf24'); ctx.restore(); } cgLine(-0.5, -0.12, 0.5, -0.12, '#fbbf24', 0.06); }
+}
+
+const CG_DRAW = {
+  scout: cgScout, dancer: cgDancer, surfer: cgSurfer, shaman: cgShaman, guardian: cgGuardian,
+  trooper: cgCadet, blaster: cgBlaster, droid: cgDroid, officer: cgOfficer, gantu: cgEnforcer,
+  larva: cgLarva, crawler: cgCrawler, clone: cgClone, songstress: cgSongstress, exp626: cgExp626,
+  drone: cgDrone, leroy: cgLeroy, robot: cgRobot, walker: cgWalker, warbot: cgWarbot,
+};
+// bigger tiers fill more of the cell so the silhouettes size-sort at a glance
+const CG_SCALE = { scout: 0.78, dancer: 0.84, surfer: 0.88, shaman: 0.92, guardian: 1.0,
+  trooper: 0.78, blaster: 0.84, droid: 0.88, officer: 0.92, gantu: 1.0,
+  larva: 0.74, crawler: 0.84, clone: 0.88, songstress: 0.92, exp626: 1.0,
+  drone: 0.76, leroy: 0.84, robot: 0.88, walker: 0.94, warbot: 1.0 };
+
+// draws a code-drawn creature (original art, no traced/copyrighted assets) centred at cx,cy that
+// fits a radius r; `upgraded` selects the visibly different upgraded variant
+function drawCreatureGlyph(shapeKey, cx, cy, r, color, upgraded) {
+  const fn = CG_DRAW[shapeKey];
   ctx.save();
   ctx.translate(cx, cy);
-  ctx.fillStyle = color;
-  ctx.strokeStyle = 'rgba(0,0,0,0.35)';
-  ctx.lineWidth = Math.max(1, r * 0.08);
-  switch (shapeKey) {
-    case 'scout': case 'dancer': case 'surfer': case 'shaman': case 'guardian':
-    case 'songstress': case 'clone': case 'larva': case 'crawler': case 'exp626':
-    case 'trooper': case 'officer': case 'gantu': case 'droid':
-    case 'drone': case 'leroy': case 'robot': case 'walker': case 'warbot': {
-      // body: rounded blob head + simple limb marks, varied by silhouette bias
-      ctx.beginPath(); ctx.ellipse(0, r * 0.15, r * 0.62, r * 0.72, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(0, -r * 0.5, r * 0.42, r * 0.4, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = 'rgba(0,0,0,0.55)';
-      ctx.beginPath(); ctx.arc(-r * 0.14, -r * 0.52, r * 0.07, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(r * 0.14, -r * 0.52, r * 0.07, 0, Math.PI * 2); ctx.fill();
-      break;
-    }
-    default: {
-      ctx.beginPath(); ctx.arc(0, 0, r * 0.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    }
+  if (!fn) {
+    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(0, 0, r * 0.6, 0, Math.PI * 2); ctx.fill();
+    ctx.restore(); return;
   }
+  const s = r * (CG_SCALE[shapeKey] || 1);
+  const up = !!upgraded;
+  ctx.scale(s, s);
+  ctx.translate(0, 0.05);
+  CG.lw = Math.max(1.1 / s, 0.075);
+  ctx.lineWidth = CG.lw; ctx.strokeStyle = 'rgba(20,10,0,0.55)'; ctx.lineJoin = 'round'; ctx.lineCap = 'butt';
+  if (up) {                                                              // golden aura marks the upgraded form
+    const g = ctx.createRadialGradient(0, 0, 0.1, 0, 0, 1.15);
+    g.addColorStop(0, 'rgba(253,224,71,0.0)'); g.addColorStop(0.75, 'rgba(253,224,71,0.28)'); g.addColorStop(1, 'rgba(253,224,71,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 1.15, 0, Math.PI * 2); ctx.fill();
+  }
+  fn(color, up);
+  if (up && s > 9) cgStar(0.78, -0.82, 0.19, '#fde047');
+  else if (up) cgStar(0.78, -0.78, 0.26, '#fde047');
   ctx.restore();
 }
 
@@ -2887,43 +3571,50 @@ function renderModeSelect() {
   const topBar = chromeMetrics().topBar;
   drawIslandBackdrop();
   ctx.fillStyle = '#f4c95d';
-  ctx.font = '900 ' + Math.min(40, W * 0.08) + 'px sans-serif';
+  ctx.font = '900 ' + Math.min(W > H && H < 560 ? 34 : 40, W * 0.08) + 'px sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 8;
-  ctx.fillText(t('gameTitle'), W / 2, topBar + Math.max(50, H * 0.12));
+  const shortLand = W > H && H < 560;
+  const titleY = shortLand ? topBar + 30 : topBar + Math.max(50, H * 0.12);
+  ctx.fillText(t('gameTitle'), W / 2, titleY);
   ctx.shadowBlur = 0;
   ctx.font = '700 16px sans-serif'; ctx.fillStyle = '#ead9b8';
-  ctx.fillText(t('modeSelectTitle'), W / 2, topBar + Math.max(50, H * 0.12) + 34);
+  ctx.fillText(t('modeSelectTitle'), W / 2, titleY + (shortLand ? 30 : 34));
 
-  const cardW = Math.min(420, W * 0.86);
-  const cardH = 110;
-  const gap = 20;
-  const startY = topBar + Math.max(50, H * 0.12) + 70;
-  const cx = W / 2 - cardW / 2;
+  // short landscape screens (phones on their side): titles tighten and the two mode cards sit
+  // side by side so everything — including Resume — stays on screen
+  const land = W > H && H < 560;
+  const cardW = land ? Math.min(360, (W - 60) / 2) : Math.min(420, W * 0.86);
+  const cardH = land ? 96 : 110;
+  const gap = land ? 20 : 20;
+  const startY = land ? topBar + 96 : topBar + Math.max(50, H * 0.12) + 70;
+  const cx = land ? W / 2 - cardW - gap / 2 : W / 2 - cardW / 2;
+  const cx2 = land ? W / 2 + gap / 2 : cx;
+  const y2 = land ? startY : startY + cardH + gap;
 
   drawPanel(cx, startY, cardW, cardH, { fill: 'rgba(20,60,30,0.85)', stroke: '#4ade80' });
   ctx.fillStyle = '#fff'; ctx.font = '900 20px sans-serif';
-  ctx.fillText('🌴 ' + t('modeDuel'), W / 2, startY + 38);
+  ctx.fillText('🌴 ' + t('modeDuel'), cx + cardW / 2, startY + 34);
   ctx.font = '600 12px sans-serif'; ctx.fillStyle = '#d4f5df';
-  wrapText(t('modeDuelSub'), W / 2, startY + 66, cardW - 30, 15);
+  wrapText(t('modeDuelSub'), cx + cardW / 2, startY + 62, cardW - 30, 15);
   addButton(cx, startY, cardW, cardH, () => { initAudio(); game.mode = 'duel'; startSetupFlow(); });
 
-  const y2 = startY + cardH + gap;
-  drawPanel(cx, y2, cardW, cardH, { fill: 'rgba(60,40,70,0.75)', stroke: '#c084fc' });
+  drawPanel(cx2, y2, cardW, cardH, { fill: 'rgba(60,40,70,0.75)', stroke: '#c084fc' });
   ctx.fillStyle = '#fff'; ctx.font = '900 20px sans-serif';
-  ctx.fillText('📜 ' + t('modeCampaign'), W / 2, y2 + 38);
+  ctx.fillText('📜 ' + t('modeCampaign'), cx2 + cardW / 2, y2 + 34);
   ctx.font = '600 12px sans-serif'; ctx.fillStyle = '#e9d5ff';
-  wrapText(t('modeCampaignSub'), W / 2, y2 + 66, cardW - 30, 15);
-  addButton(cx, y2, cardW, cardH, () => { initAudio(); sfx.click(); game.mode = 'campaign'; game.screen = 'missionSelect'; });
+  wrapText(t('modeCampaignSub'), cx2 + cardW / 2, y2 + 62, cardW - 30, 15);
+  addButton(cx2, y2, cardW, cardH, () => { initAudio(); sfx.click(); game.mode = 'campaign'; game.screen = 'missionSelect'; });
 
   const savedExists = !!loadSavedGame();
   if (savedExists) {
-    const y3 = y2 + cardH + gap;
-    drawButton(cx, y3, cardW, 48, t('resumeGame'), '#38bdf8', '#0284c7', () => {
+    const y3 = land ? startY + cardH + 14 : y2 + cardH + gap;
+    const rw = land ? cardW * 2 + gap : cardW;
+    drawButton(W / 2 - rw / 2, y3, rw, land ? 42 : 48, t('resumeGame'), '#38bdf8', '#0284c7', () => {
       initAudio();
       game.mode = 'duel';
       const data = loadSavedGame();
-      if (data && deserializeGame(data)) { game.screen = 'adventure'; }
+      if (data && deserializeGame(data)) { game.screen = 'adventure'; showNextLevelUp(); }
     });
   }
 }
@@ -3050,6 +3741,7 @@ function setupMission(missionIdx, bonusId) {
   game.players[1].fog = makeFogGrid();
   game.turn = { playerIdx: 0, day: 1, week: 1 };
   game.victor = null;
+  game.stats = { heroesDefeated: [0, 0] };
   game.combat = null;
   game.selectedHeroId = null;
 
@@ -3129,6 +3821,7 @@ function setupMission(missionIdx, bonusId) {
   }
 
   applyStartBonus(hero0, game.players[0], bonusId, m);
+  rememberHeroes();
 
   for (let i = 0; i < 2; i++) recomputeFog(i);
   game.screen = 'adventure';
@@ -3355,102 +4048,320 @@ function renderMissionSelect() {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillStyle = '#f4c95d'; ctx.font = '900 ' + Math.min(30, W * 0.065) + 'px sans-serif';
   ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 8;
-  ctx.fillText(t('missionSelectTitle'), W / 2, topBar + 34);
+  const land = W > H && H < 560;
+  ctx.fillText(t('missionSelectTitle'), W / 2, topBar + (land ? 24 : 34));
   ctx.shadowBlur = 0;
 
-  const cardW = Math.min(520, W * 0.92), cardH = 84, gap = 12;
-  const startY = topBar + 60;
-  const cx = W / 2 - cardW / 2;
+  const cols = land ? 2 : 1;
+  const gapX = 14, gap = land ? 8 : 12;
+  const cardW = land ? Math.min(400, (W - 40 - gapX) / 2) : Math.min(520, W * 0.92);
+  const cardH = land ? 72 : 84;
+  const startY = topBar + (land ? 46 : 60);
+  const gridW = cols * cardW + (cols - 1) * gapX;
   MISSIONS.forEach((m, i) => {
-    const y = startY + i * (cardH + gap);
+    const col = i % cols, row = Math.floor(i / cols);
+    const cx = W / 2 - gridW / 2 + col * (cardW + gapX);
+    const y = startY + row * (cardH + gap);
     const unlocked = !!campaignProgress.unlocked[i];
     const completed = !!campaignProgress.completed[i];
     drawPanel(cx, y, cardW, cardH, { fill: unlocked ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)', stroke: completed ? '#4ade80' : (unlocked ? '#c9a35c' : '#555') });
-    ctx.textAlign = 'left';
-    ctx.fillStyle = unlocked ? '#fff' : '#888'; ctx.font = '800 16px sans-serif';
-    ctx.fillText((i + 1) + '. ' + t(m.nameKey), cx + 16, y + 26);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = unlocked ? '#fff' : '#888'; ctx.font = '800 ' + (land ? 14 : 16) + 'px sans-serif';
+    ctx.fillText((i + 1) + '. ' + t(m.nameKey), cx + 14, y + (land ? 20 : 26), cardW - 28 - 80);
     ctx.font = '600 12px sans-serif'; ctx.fillStyle = unlocked ? '#ead9b8' : '#777';
-    wrapText(t(m.objKey, { n: m.podCount || m.surviveTurns || 0 }), cx + 16 + (cardW - 32) / 2, y + 52, cardW - 32, 15);
+    ctx.textAlign = 'center';
+    wrapText(t(m.objKey, { n: m.podCount || m.surviveTurns || 0 }), cx + cardW / 2, y + (land ? 44 : 52), cardW - 32, 15);
     ctx.textAlign = 'right';
     ctx.font = '800 11px sans-serif';
     ctx.fillStyle = completed ? '#4ade80' : (unlocked ? '#fde68a' : '#888');
-    ctx.fillText(completed ? t('missionCompleted') : (unlocked ? t('missionAvailable') : t('missionLocked')), cx + cardW - 14, y + 20);
+    ctx.fillText(completed ? t('missionCompleted') : (unlocked ? t('missionAvailable') : t('missionLocked')), cx + cardW - 12, y + 18);
     if (unlocked) {
       addButton(cx, y, cardW, cardH, () => { initAudio(); sfx.click(); game.pendingMissionBonus = null; game.campaignMissionIdx = i; game.screen = 'missionIntro'; });
     }
     ctx.textAlign = 'center';
   });
-  const backY = startY + MISSIONS.length * (cardH + gap) + 6;
-  drawButton(W / 2 - 100, backY, 200, 42, t('backToModes'), '#94a3b8', '#475569', () => { game.screen = 'modeSelect'; });
+  const rowsN = Math.ceil(MISSIONS.length / cols);
+  const backY = startY + rowsN * (cardH + gap) + (land ? 2 : 6);
+  drawButton(W / 2 - 100, backY, 200, land ? 38 : 42, t('backToModes'), '#94a3b8', '#475569', () => { game.screen = 'modeSelect'; });
 }
 
 function renderMissionIntro() {
   ctx.fillStyle = '#1a1408'; ctx.fillRect(0, 0, W, H);
   const topBar = chromeMetrics().topBar;
   const m = MISSIONS[game.campaignMissionIdx];
+  const land = W > H && H < 560;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#f4c95d'; ctx.font = '900 22px sans-serif';
-  ctx.fillText(t(m.nameKey), W / 2, topBar + 28);
-  ctx.font = '600 13px sans-serif'; ctx.fillStyle = '#ead9b8';
-  const storyW = Math.min(560, W * 0.9);
-  wrapText(t(m.storyKey), W / 2, topBar + 60, storyW, 17);
+  ctx.fillStyle = '#f4c95d'; ctx.font = '900 ' + (land ? 20 : 22) + 'px sans-serif';
+  let y = topBar + (land ? 20 : 28);
+  ctx.fillText(t(m.nameKey), W / 2, y, W - 20);
+  y += land ? 24 : 32;
+  // story: wrapped to however many lines it really needs, so nothing below it is ever overlapped
+  const storyLh = land ? 15 : 17;
+  ctx.font = '600 ' + (land ? 12 : 13) + 'px sans-serif'; ctx.fillStyle = '#ead9b8';
+  const storyLines = wrapLines(t(m.storyKey), Math.min(640, W * 0.9));
+  storyLines.forEach((l, i) => ctx.fillText(l, W / 2, y + i * storyLh));
+  y += storyLines.length * storyLh + (land ? 6 : 12);
   ctx.font = '800 13px sans-serif'; ctx.fillStyle = '#fde68a';
-  const objY = topBar + 60 + 17 * 6;
-  ctx.fillText(t('missionObjectiveLabel') + ': ' + t(m.objKey, { n: m.podCount || m.surviveTurns || 0 }), W / 2, objY);
+  ctx.fillText(t('missionObjectiveLabel') + ': ' + t(m.objKey, { n: m.podCount || m.surviveTurns || 0 }), W / 2, y, W - 20);
+  y += land ? 20 : 34;
 
   ctx.font = '700 14px sans-serif'; ctx.fillStyle = '#fff';
-  ctx.fillText(t('chooseBonus'), W / 2, objY + 34);
-  const bonusW = Math.min(170, (W - 60) / 3), bonusH = 92, gap = 12;
+  ctx.fillText(t('chooseBonus'), W / 2, y);
+  y += land ? 12 : 18;
+  const bonusW = Math.min(170, (W - 60) / 3), bonusH = land ? 74 : 92, gap = 12;
   const totalW = 3 * bonusW + 2 * gap;
-  const bx = W / 2 - totalW / 2, by = objY + 52;
+  const bx = W / 2 - totalW / 2, by = y;
   START_BONUSES.forEach((bid, i) => {
     const x = bx + i * (bonusW + gap);
     const selected = game.pendingMissionBonus === bid;
     drawPanel(x, by, bonusW, bonusH, { fill: selected ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.06)', stroke: selected ? '#4ade80' : '#c9a35c' });
     ctx.font = '800 12px sans-serif'; ctx.fillStyle = '#fff';
-    wrapText(t('bonus' + bid.charAt(0).toUpperCase() + bid.slice(1) + 'Name'), x + bonusW / 2, by + 22, bonusW - 14, 14);
+    wrapText(t('bonus' + bid.charAt(0).toUpperCase() + bid.slice(1) + 'Name'), x + bonusW / 2, by + (land ? 16 : 22), bonusW - 14, 14);
     ctx.font = '600 10px sans-serif'; ctx.fillStyle = '#ccc';
-    wrapText(t('bonus' + bid.charAt(0).toUpperCase() + bid.slice(1) + 'Desc'), x + bonusW / 2, by + 60, bonusW - 14, 12);
+    wrapText(t('bonus' + bid.charAt(0).toUpperCase() + bid.slice(1) + 'Desc'), x + bonusW / 2, by + (land ? 40 : 60), bonusW - 14, 12);
     addButton(x, by, bonusW, bonusH, () => { sfx.click(); game.pendingMissionBonus = bid; });
   });
 
-  const beginY = by + bonusH + 20;
-  drawButton(W / 2 - 90, beginY, 180, 46, t('beginMission'), '#4ade80', '#16a34a', () => {
-    initAudio();
-    const bonus = game.pendingMissionBonus || START_BONUSES[0];
-    setupMission(game.campaignMissionIdx, bonus);
-  });
-  drawButton(W / 2 - 90, beginY + 56, 180, 40, t('back'), '#94a3b8', '#475569', () => { game.screen = 'missionSelect'; });
-}
-
-function renderMissionOutro() {
-  ctx.fillStyle = '#0f1a12'; ctx.fillRect(0, 0, W, H);
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#4ade80'; ctx.font = '900 26px sans-serif';
-  ctx.fillText(t('missionVictoryTitle'), W / 2, H / 2 - 50);
-  ctx.font = '600 13px sans-serif'; ctx.fillStyle = '#ead9b8';
-  wrapText(t('missionVictorySub'), W / 2, H / 2 - 14, Math.min(480, W * 0.85), 16);
-  const idx = game.campaignMissionIdx;
-  if (idx + 1 < MISSIONS.length) {
-    drawButton(W / 2 - 100, H / 2 + 30, 200, 46, t('nextMission'), '#4ade80', '#16a34a', () => {
-      sfx.click(); game.pendingMissionBonus = null; game.campaignMissionIdx = idx + 1; game.screen = 'missionIntro';
-    });
+  const start = () => { initAudio(); const bonus = game.pendingMissionBonus || START_BONUSES[0]; setupMission(game.campaignMissionIdx, bonus); };
+  const back = () => { game.screen = 'missionSelect'; };
+  const beginY = by + bonusH + (land ? 10 : 20);
+  if (land) {
+    // BEGIN and BACK share one row on short screens
+    drawButton(W / 2 - 190, beginY, 180, 42, t('beginMission'), '#4ade80', '#16a34a', start);
+    drawButton(W / 2 + 10, beginY, 180, 42, t('back'), '#94a3b8', '#475569', back);
+  } else {
+    drawButton(W / 2 - 90, beginY, 180, 46, t('beginMission'), '#4ade80', '#16a34a', start);
+    drawButton(W / 2 - 90, beginY + 56, 180, 40, t('back'), '#94a3b8', '#475569', back);
   }
-  drawButton(W / 2 - 100, H / 2 + 84, 200, 42, t('backToMissions'), '#94a3b8', '#475569', () => { game.screen = 'missionSelect'; });
 }
 
-function renderMissionDefeat() {
-  ctx.fillStyle = '#1a0f0f'; ctx.fillRect(0, 0, W, H);
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#f87171'; ctx.font = '900 26px sans-serif';
-  ctx.fillText(t('missionDefeatTitle'), W / 2, H / 2 - 40);
-  ctx.font = '600 13px sans-serif'; ctx.fillStyle = '#ead9b8';
-  wrapText(t('missionDefeatSub'), W / 2, H / 2 - 6, Math.min(480, W * 0.85), 16);
-  drawButton(W / 2 - 100, H / 2 + 30, 200, 46, t('tryAgain'), '#fbbf24', '#b45309', () => {
-    sfx.click(); game.screen = 'missionIntro';
-  });
-  drawButton(W / 2 - 100, H / 2 + 84, 200, 42, t('backToMissions'), '#94a3b8', '#475569', () => { game.screen = 'missionSelect'; });
+// ============================================================
+// FINALE — victory / mission complete / defeat presentation
+// ============================================================
+// One code-drawn celebration shared by the duel victory, the campaign outro and the defeat screen:
+// the winning faction's crest on a rising banner, the hero's portrait, a short congratulation,
+// final stats and a confetti / sunburst flourish (ash + dusk for a defeat). Everything is a pure
+// function of the time since the screen opened, so a tap anywhere just fast-forwards the clock.
+const FINALE_KIND = { victory: 'duel', missionOutro: 'mission', missionDefeat: 'defeat' };
+const finale = { screen: null, t0: 0 };
+function finaleSkip() { finale.t0 = Math.min(finale.t0, Date.now() - 4000); }
+function finaleHero(idx) {
+  const p = game.players[idx];
+  const h = p && p.heroes[0];
+  if (h) return { name: h.name, portrait: h.portrait };
+  const known = game.heroInfo && game.heroInfo[idx];
+  if (known) return known;
+  const fac = factionById(p ? p.factionId : 'ohana');
+  return { name: fac.heroes[0].name, portrait: fac.heroes[0].portrait };
 }
+function rememberHeroes() {
+  game.heroInfo = game.players.map(p => p.heroes[0] ? { name: p.heroes[0].name, portrait: p.heroes[0].portrait } : null);
+}
+function finaleFract(x) { return x - Math.floor(x); }
+function finaleEase(x) { x = Math.max(0, Math.min(1, x)); return 1 - Math.pow(1 - x, 3); }
+function finaleBack(x) { x = Math.max(0, Math.min(1, x)); const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); }
+function fitFont(text, weight, maxPx, maxW) {
+  let px = maxPx;
+  ctx.font = weight + ' ' + px + 'px sans-serif';
+  while (px > 10 && ctx.measureText(text).width > maxW) { px -= 1; ctx.font = weight + ' ' + px + 'px sans-serif'; }
+  return px;
+}
+function drawFinaleConfetti(t, colors, y0) {
+  const n = 80;
+  for (let i = 0; i < n; i++) {
+    const r1 = finaleFract(Math.sin(i * 12.9898) * 43758.5453), r2 = finaleFract(Math.sin(i * 78.233) * 12345.678), r3 = finaleFract(Math.sin(i * 39.346) * 9876.54);
+    const start = 0.15 + r1 * 0.9;
+    if (t < start) continue;
+    const speed = 60 + r2 * 120, size = 5 + r3 * 6, span = H - y0 + 40;
+    const x = r1 * W + Math.sin(t * 1.6 + i) * 16;
+    const y = y0 - 20 + (((t - start) * speed + r3 * span) % span);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(t * (1.5 + r2 * 3) + i);
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.globalAlpha = 0.92;
+    ctx.fillRect(-size / 2, -size * 0.3, size, size * 0.6);
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+function drawFinaleAsh(t, y0) {
+  for (let i = 0; i < 34; i++) {
+    const r1 = finaleFract(Math.sin(i * 12.9898) * 43758.5453), r2 = finaleFract(Math.sin(i * 78.233) * 12345.678), r3 = finaleFract(Math.sin(i * 39.346) * 9876.54);
+    const span = H - y0 + 30;
+    const x = r1 * W + Math.sin(t * 0.8 + i) * 20;
+    const y = y0 - 10 + ((t * (18 + r2 * 26) + r3 * span) % span);
+    ctx.fillStyle = 'rgba(203,213,225,' + (0.12 + r3 * 0.28) + ')';
+    ctx.beginPath(); ctx.arc(x, y, 1.5 + r2 * 2.5, 0, Math.PI * 2); ctx.fill();
+  }
+}
+function drawFinaleBanner(cx, top, bw, fac, hero, win, t) {
+  const crestR = bw * 0.34, heroR = bw * 0.3;
+  const crestCY = top + 20 + crestR * 1.05;
+  const heroCY = crestCY + crestR + 12 + heroR;
+  const nameY = heroCY + heroR + 15;
+  const bh = nameY + 24 - top;
+  const rise = 1 - finaleEase(t / 0.9);
+  const sway = Math.sin(t * 1.8) * 0.018 * (win ? 1 : 0.4);
+  ctx.save();
+  ctx.translate(cx, top + rise * (bh + 60)); ctx.rotate(sway); ctx.translate(-cx, -top);
+  const half = bw / 2;
+  // cloth with swallow-tail bottom
+  const g = ctx.createLinearGradient(cx - half, top, cx + half, top);
+  g.addColorStop(0, cgShade(fac.primary, -0.25)); g.addColorStop(0.5, fac.primary); g.addColorStop(1, cgShade(fac.primary, -0.3));
+  ctx.fillStyle = win ? g : cgShade(fac.primary, -0.5);
+  ctx.beginPath();
+  ctx.moveTo(cx - half, top + 6); ctx.lineTo(cx + half, top + 6); ctx.lineTo(cx + half, top + bh);
+  ctx.lineTo(cx, top + bh - 22); ctx.lineTo(cx - half, top + bh); ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = win ? '#fde68a' : '#94a3b8'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(cx - half + 7, top + 14); ctx.lineTo(cx + half - 7, top + 14); ctx.lineTo(cx + half - 7, top + bh - 12); ctx.lineTo(cx, top + bh - 30); ctx.lineTo(cx - half + 7, top + bh - 12); ctx.closePath(); ctx.stroke();
+  // rod + finials
+  ctx.fillStyle = '#8a5a2b'; roundRect(cx - half - 12, top, bw + 24, 10, 5); ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = '#fde047';
+  ctx.beginPath(); ctx.arc(cx - half - 12, top + 5, 6, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(cx + half + 12, top + 5, 6, 0, 7); ctx.fill();
+  drawFactionCrest(fac, cx, crestCY, crestR);
+  // hero medallion
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.arc(cx, heroCY, heroR + 5, 0, 7); ctx.fill();
+  ctx.strokeStyle = win ? '#fde047' : '#94a3b8'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(cx, heroCY, heroR + 3, 0, 7); ctx.stroke();
+  drawHeroPortrait(hero.portrait, cx, heroCY, heroR);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
+  fitFont(hero.name, 800, 13, bw - 14);
+  ctx.fillText(hero.name, cx, nameY, bw - 12);
+  ctx.restore();
+  return bh;
+}
+function renderFinale() {
+  const kind = FINALE_KIND[game.screen];
+  if (finale.screen !== game.screen) { finale.screen = game.screen; finale.t0 = Date.now(); }
+  const tm = (Date.now() - finale.t0) / 1000;
+  const win = kind !== 'defeat';
+  const topBar = chromeMetrics().topBar;
+  const idx = kind === 'duel' ? (game.victor == null ? 0 : game.victor) : 0;
+  const player = game.players[idx];
+  const fac = factionById(player ? player.factionId : 'ohana');
+  const hero = finaleHero(idx);
+  const land = W > H && H < 560;
+  const btnRowH = 64, areaTop = topBar + 6, areaBot = H - btnRowH;
+
+  // ---- backdrop
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  if (win) { bg.addColorStop(0, '#0f2f4a'); bg.addColorStop(0.55, '#1f5d6b'); bg.addColorStop(1, '#8a5a2b'); }
+  else { bg.addColorStop(0, '#120c14'); bg.addColorStop(0.6, '#2a1a24'); bg.addColorStop(1, '#141018'); }
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  const bwMax = land ? 150 : 170;
+  const bcx = land ? W * 0.23 : W / 2;
+  if (win) {
+    // slowly turning sunburst behind the banner
+    ctx.save(); ctx.translate(bcx, areaTop + (areaBot - areaTop) * 0.35); ctx.rotate(tm * 0.12);
+    const R = Math.max(W, H);
+    for (let i = 0; i < 16; i++) {
+      ctx.fillStyle = i % 2 ? 'rgba(253,224,71,0.09)' : 'rgba(253,224,71,0.02)';
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, R, i / 16 * Math.PI * 2, (i + 1) / 16 * Math.PI * 2); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  } else {
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0, 0, W, H);
+  }
+
+  // ---- banner (rises in), then title + text + stats
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, topBar, W, areaBot - topBar + 8); ctx.clip();
+  const avail = areaBot - areaTop - 6;
+  const bw = Math.max(90, Math.min(bwMax, land ? avail / 1.75 : Math.min(W * 0.44, avail * 0.4 / 0.98)));
+  const bannerH = drawFinaleBanner(bcx, areaTop + 4, bw, fac, hero, win, tm);
+
+  const colX = land ? W * 0.44 : 10, colW = land ? W * 0.54 : W - 20, colCX = colX + colW / 2;
+  let ty = land ? areaTop + 14 : areaTop + 4 + bannerH + 18;
+  const titleKey = kind === 'duel' ? 'victoryTitle' : (kind === 'mission' ? 'missionVictoryTitle' : 'missionDefeatTitle');
+  const titleAlpha = finaleEase((tm - 0.45) / 0.35);
+  const pop = win ? finaleBack((tm - 0.45) / 0.5) : 1;
+  const title = t(titleKey);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.save(); ctx.globalAlpha = titleAlpha; ctx.translate(colCX, ty + 16); ctx.scale(0.6 + 0.4 * pop, 0.6 + 0.4 * pop);
+  fitFont(title, 900, land ? 30 : Math.min(34, W * 0.085), colW - 10);
+  ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 8;
+  ctx.fillStyle = win ? '#fde047' : '#fca5a5';
+  ctx.fillText(title, 0, 0);
+  ctx.restore();
+  ty += 40;
+  // subtitle lines
+  const m = MISSIONS[game.campaignMissionIdx];
+  const lines = [];
+  if (kind === 'duel') lines.push({ text: fac.name, color: '#f4c95d', px: 15, w: 800 }, { text: t('finaleCongrats', { n: idx + 1 }), color: '#ffffff', px: 13, w: 600 });
+  else if (kind === 'mission') lines.push({ text: m ? t(m.nameKey) : '', color: '#f4c95d', px: 15, w: 800 }, { text: t('finaleMissionCongrats', { name: hero.name }), color: '#ffffff', px: 13, w: 600 }, { text: t('missionVictorySub'), color: '#cbd5e1', px: 11, w: 600 });
+  else lines.push({ text: m ? t(m.nameKey) : '', color: '#f4c95d', px: 15, w: 800 }, { text: t('finaleDefeatLine'), color: '#ffffff', px: 13, w: 600 }, { text: t('missionDefeatSub'), color: '#cbd5e1', px: 11, w: 600 });
+  ctx.save(); ctx.globalAlpha = finaleEase((tm - 0.7) / 0.4);
+  for (const ln of lines) {
+    if (!ln.text) continue;
+    ctx.font = ln.w + ' ' + ln.px + 'px sans-serif'; ctx.fillStyle = ln.color;
+    const wrapped = wrapLines(ln.text, colW - 16);
+    for (const w of wrapped) { ctx.fillText(w, colCX, ty); ty += ln.px + 4; }
+    ty += 4;
+  }
+  ctx.restore();
+  ty += 4;
+  // stats
+  const stats = [
+    { icon: '📅', label: t('finaleDay'), value: game.turn.day },
+    { icon: '🏰', label: t('finaleCastles'), value: player ? player.castles.length : 0 },
+    { icon: '⚔️', label: t('finaleHeroes'), value: game.stats ? game.stats.heroesDefeated[idx] : 0 },
+  ];
+  const sgap = 8, sw = (colW - sgap * 2) / 3, sh = 60;
+  const sy = Math.min(ty, areaBot - sh - 2);
+  stats.forEach((st, i) => {
+    const local = (tm - 1.0 - i * 0.15) / 0.5;
+    const a = finaleEase(local);
+    const x = colX + i * (sw + sgap);
+    ctx.save(); ctx.globalAlpha = a; ctx.translate(0, (1 - a) * 14);
+    drawPanel(x, sy, sw, sh, { fill: 'rgba(0,0,0,0.38)', stroke: win ? '#c9a35c' : '#64748b', r: 12 });
+    ctx.fillStyle = win ? '#fde047' : '#e2e8f0'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '900 21px sans-serif';
+    ctx.fillText(st.icon + ' ' + Math.round(st.value * Math.min(1, Math.max(0, local * 1.3))), x + sw / 2, sy + 22, sw - 8);
+    ctx.font = '700 10.5px sans-serif'; ctx.fillStyle = '#e2e8f0';
+    const lab = wrapLines(st.label, sw - 10);
+    lab.slice(0, 2).forEach((l, k) => ctx.fillText(l, x + sw / 2, sy + 42 + k * 11, sw - 8));
+    ctx.restore();
+  });
+  ctx.restore();
+
+  // ---- flourish on top of everything
+  if (win) {
+    drawFinaleConfetti(tm, [fac.primary, fac.secondary, '#fde047', '#f472b6', '#4fc3f7', '#ffffff', '#a3e635'], topBar);
+    // a few starbursts
+    for (let b = 0; b < 3; b++) {
+      const cyc = (tm * 0.55 + b * 0.37) % 1.4, bx = W * (0.2 + 0.3 * b) + Math.sin(b * 7) * 20, by = topBar + (areaBot - topBar) * (0.2 + 0.12 * ((b * 5) % 3));
+      if (tm < 0.9 || cyc > 1) continue;
+      ctx.save(); ctx.translate(bx, by); ctx.strokeStyle = 'rgba(253,224,71,' + (1 - cyc) + ')'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; ctx.beginPath(); ctx.moveTo(Math.cos(a) * cyc * 34, Math.sin(a) * cyc * 34); ctx.lineTo(Math.cos(a) * (cyc * 34 + 10), Math.sin(a) * (cyc * 34 + 10)); ctx.stroke(); }
+      ctx.restore();
+    }
+  } else {
+    drawFinaleAsh(tm, topBar);
+  }
+
+  // ---- buttons (canvas screens); the duel victory button is the DOM one in #victoryModal
+  const cont = tm > 2.6 ? 0 : 1;
+  if (kind === 'mission') {
+    const idxM = game.campaignMissionIdx, hasNext = idxM + 1 < MISSIONS.length;
+    const bwid = Math.min(220, (W - 30) / (hasNext ? 2 : 1)), by = H - 54, gap = 10;
+    let bx = W / 2 - (hasNext ? bwid + gap / 2 : bwid / 2);
+    if (hasNext) { drawButton(bx, by, bwid, 44, t('nextMission'), '#4ade80', '#16a34a', () => { sfx.click(); game.pendingMissionBonus = null; game.campaignMissionIdx = idxM + 1; game.screen = 'missionIntro'; }); bx += bwid + gap; }
+    drawButton(bx, by, bwid, 44, t('backToMissions'), '#94a3b8', '#475569', () => { game.screen = 'missionSelect'; }, { fontSize: 13 });
+  } else if (kind === 'defeat') {
+    const bwid = Math.min(220, (W - 30) / 2), by = H - 54, gap = 10;
+    let bx = W / 2 - bwid - gap / 2;
+    drawButton(bx, by, bwid, 44, t('tryAgain'), '#fbbf24', '#b45309', () => { sfx.click(); game.screen = 'missionIntro'; });
+    drawButton(bx + bwid + gap, by, bwid, 44, t('backToMissions'), '#94a3b8', '#475569', () => { game.screen = 'missionSelect'; }, { fontSize: 13 });
+  }
+  if (cont) {
+    ctx.globalAlpha = 0.75 * (1 - tm / 2.6);
+    ctx.font = '600 10.5px sans-serif'; ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(t('finaleTapSkip'), W / 2, areaBot - 2 - (kind === 'duel' ? 0 : 0));
+    ctx.globalAlpha = 1;
+  }
+}
+function renderMissionOutro() { renderFinale(); }
+function renderMissionDefeat() { renderFinale(); }
 
 // ============================================================
 // SCREEN: SETUP FLOW (faction + hero pick for each player)
@@ -3522,7 +4433,7 @@ function renderHeroPick() {
     ctx.fillText(statsLine2, tx, y + cardH * 0.68);
     ctx.fillStyle = '#fde68a';
     const skillLvlName = [t('basic'), t('advanced'), t('expert')][(heroDef.skill.level || 1) - 1];
-    ctx.fillText(SKILL_DEFS[heroDef.skill.id].name + ' (' + skillLvlName + ')', tx, y + cardH * 0.86);
+    ctx.fillText(skillName(heroDef.skill.id) + ' (' + skillLvlName + ')', tx, y + cardH * 0.86);
     addButton(x, y, cardW, cardH, () => { initAudio(); sfx.click(); pickHeroForPlayer(i); });
   });
   const backY = startY + n * (cardH + gap) + 4;
@@ -3925,7 +4836,7 @@ function renderHeroScreen() {
   if (hero.skills.length === 0) ctx.fillText('—', leftX + 12, y + 38);
   hero.skills.forEach((s, i) => {
     const lvlName = [t('basic'), t('advanced'), t('expert')][s.level - 1];
-    ctx.fillText(SKILL_DEFS[s.id].name + ' (' + lvlName + ')', leftX + 12, y + 38 + i * 18, colW - 20);
+    ctx.fillText(skillName(s.id) + ' (' + lvlName + ')', leftX + 12, y + 38 + i * 18, colW - 20);
   });
 
   // right column: army — every stack shows its stats and ranged/melee (with ammo)
@@ -3943,7 +4854,7 @@ function renderHeroScreen() {
     drawPanel(sx, sy, slotW, slotH, { fill: selected ? 'rgba(253,224,71,0.18)' : 'rgba(255,255,255,0.06)', stroke: selected ? '#fde047' : '#8a7a5c' });
     if (stack) {
       const cd = creatureRef(stack);
-      drawCreatureGlyph(cd.shape, sx + 26, sy + 24, 16, creatureColor(stack));
+      drawCreatureGlyph(cd.shape, sx + 26, sy + 25, 21, creatureColor(stack), stack.upgraded);
       ctx.textAlign = 'center'; ctx.fillStyle = '#cbd5e1'; ctx.font = '700 11px sans-serif';
       ctx.fillText('x' + stack.count, sx + 26, sy + slotH - 10, 44);
       const tx = sx + 50, tw = slotW - 56;
@@ -3964,7 +4875,7 @@ function renderHeroScreen() {
   // spellbook
   const sbY = topBar + 90 + rowsN * (slotH + 6) + 6;
   ctx.textAlign = 'left'; ctx.fillStyle = '#fde68a'; ctx.font = '800 13px sans-serif';
-  ctx.fillText(t('spellbook') + ': ' + (hero.spells.length ? hero.spells.map(id => spellDef(id).name).join(', ') : '—'), rightX + 12, sbY + 8, rightW - 24);
+  ctx.fillText(t('spellbook') + ': ' + (hero.spells.length ? hero.spells.map(id => spellName(id)).join(', ') : '—'), rightX + 12, sbY + 8, rightW - 24);
 }
 
 function onHeroArmySlotTap(hero, i) {
@@ -4021,14 +4932,25 @@ function wrapLines(text, maxW) {
   return lines;
 }
 function buildingLabel(def, fac) {
-  if (!def.tier) return def.name;
+  if (!def.tier) return t('bld' + def.id.charAt(0).toUpperCase() + def.id.slice(1));
   const cdef = fac.creatures[def.tier - 1];
-  return (def.upgrade ? 'Upgrade: ' : '') + (def.upgrade ? cdef.upgrade : cdef.name) + (def.upgrade ? '' : ' Dwelling');
+  return def.upgrade ? t('bldUpgrade', { name: cdef.upgrade }) : t('bldDwelling', { name: cdef.name });
+}
+// "Atk +1, Def +1, Dmg 1-3, HP +2 ..." — only the stats an upgrade actually improves
+function upgradeDeltaText(cd) {
+  const u = cd.upDef, out = [];
+  if (u.atk > cd.atk) out.push(t('statAtk') + ' +' + (u.atk - cd.atk));
+  if (u.def > cd.def) out.push(t('statDef') + ' +' + (u.def - cd.def));
+  if (u.dmg[0] !== cd.dmg[0] || u.dmg[1] !== cd.dmg[1]) out.push(t('statDmg') + ' ' + u.dmg[0] + '-' + u.dmg[1]);
+  if (u.hp > cd.hp) out.push(t('statHp') + ' +' + (u.hp - cd.hp));
+  if (u.speed > cd.speed) out.push(t('statSpeed') + ' +' + (u.speed - cd.speed));
+  if (cd.ranged && u.ammo > cd.ammo) out.push('🏹 +' + (u.ammo - cd.ammo));
+  return out.join(', ');
 }
 function buildingDescText(def, fac) {
   if (def.tier) {
     const cdef = fac.creatures[def.tier - 1];
-    if (def.upgrade) return t('descUpgrade', { up: cdef.upgrade, name: cdef.name });
+    if (def.upgrade) return t('descUpgrade', { up: cdef.upgrade, name: cdef.name }) + ' ' + t('upgradeBonus', { list: upgradeDeltaText(cdef) });
     return t(cdef.ranged ? 'descDwellingR' : 'descDwellingM', { name: cdef.name, ammo: cdef.ammo, growth: cdef.growth });
   }
   const inc = def.incomePerLevel || [];
@@ -4084,7 +5006,9 @@ function renderCastle() {
   ctx.fillText(t('buildings') + (castle.builtThisTurn ? ' — ' + t('alreadyBuiltThisTurn') : ''), L.x + 12, L.y + 18, L.w - 24);
   const view = { x: L.x + 4, y: L.y + 32, w: L.w - 8, h: L.h - 36 };
   castleListRect = view;
-  const rowW = view.w - 12, btnW = 62;
+  // Build button grows to fit its label ("Construiește" in Romanian is wider than "Build")
+  ctx.font = '800 11px sans-serif';
+  const rowW = view.w - 12, btnW = Math.max(62, Math.ceil(ctx.measureText(t('build')).width) + 18);
   // measure pass
   const rows = [];
   let total = 0;
@@ -4174,8 +5098,9 @@ function renderCastle() {
     const cdef = fac.creatures[tier - 1];
     const name = upgraded ? cdef.upgrade : cdef.name;
     drawPanel(R.x + 8, ry, R.w - 16, 40, { fill: 'rgba(255,255,255,0.05)', stroke: '#8a7a5c' });
+    drawCreatureGlyph(cdef.shape, R.x + 30, ry + 21, 17, cdef.color, upgraded);
     ctx.fillStyle = '#fff'; ctx.font = '700 12px sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(name + ' (' + avail + ')', R.x + 16, ry + 20, R.w - 16 - recruitBtnW - 16);
+    ctx.fillText(name + ' (' + avail + ')', R.x + 52, ry + 20, R.w - 52 - recruitBtnW - 16);
     // button sized to fit the full (untruncated) label so its drawn geometry always
     // matches its registered hit rect — a too-narrow button was the earlier symptom here
     const rbx = R.x + R.w - 8 - recruitBtnW, rby = ry + 3, rbh = 34;
@@ -4192,7 +5117,7 @@ function openLearnSpellsModal(castle, hero, guildLvl) {
   const maxLvl = Math.min(guildLvl, heroMaxSpellLevel(hero));
   const learnable = SPELL_DEFS.filter(s => s.level <= maxLvl && !hero.spells.includes(s.id));
   showListModal(t('spellbook'), hero.name, learnable.map(s => ({
-    label: s.name + ' (Lv' + s.level + ', ' + s.cost + ' SP)',
+    label: spellName(s.id) + ' (Lv' + s.level + ', ' + s.cost + ' SP)',
     onClick: () => { hero.spells.push(s.id); hideListModal(); sfx.spell(); saveGame(); },
   })), [{ label: t('close') }]);
 }
@@ -4205,10 +5130,11 @@ function openRecruitModal(castle, tier) {
   const fac = factionById(castle.factionId);
   const cd = fac.creatures[tier - 1];
   const upgraded = !!castle.buildings['dwelling' + tier + 'up'];
+  const shown = upgraded ? cd.upDef : cd;
   const sub = (hero ? hero.name : t('recruitToGarrison')) + '\n' +
     (upgraded ? cd.upgrade : cd.name) + '\n' +
-    creatureStatLine1(cd) + ' · ' + creatureStatLine2(cd) + '\n' +
-    creatureRangeLabel(cd) + '\n' +
+    creatureStatLine1(shown) + ' · ' + creatureStatLine2(shown) + '\n' +
+    creatureRangeLabel(shown) + '\n' +
     t('costEach') + ': ' + costText(cd.cost);
   const doRecruit = (count) => {
     const ok = hero ? recruitFromCastle(castle, hero, tier, count) : recruitIntoGarrison(castle, tier, count);
@@ -4226,188 +5152,316 @@ function openRecruitModal(castle, tier) {
 // SCREEN: COMBAT
 // ============================================================
 let combatCellSize = 30;
-const COMBAT_HEADER_H = 78; // room for round counter + active stack name + turn order row
-function combatOrigin() {
+let combatLay = null; // layout cache, rebuilt every renderCombat() (ignored if the viewport changed since)
+function combatLayCur() { return (combatLay && combatLay.sig === W + 'x' + H) ? combatLay : combatLayout(); }
+const COMBAT_HEADER_H = 78; // room for round counter + active stack name + turn order row (stacked layout)
+// two layouts: a right-hand control panel on short landscape screens (so the grid gets the full
+// height and cells stay big enough to read counts / HP / ranged badges), a stacked column otherwise
+function combatLayout() {
   const topBar = chromeMetrics().topBar;
-  const gridW = COMBAT_W * combatCellSize, gridH = COMBAT_H * combatCellSize;
-  return { x: W / 2 - gridW / 2, y: topBar + COMBAT_HEADER_H + (H - topBar - COMBAT_HEADER_H - 120 - gridH) / 2 };
+  if (W > H && H < 560) {
+    const panelW = Math.max(196, Math.min(270, W * 0.3));
+    const availH = H - topBar - 10;
+    const cell = Math.max(14, Math.min(44, availH / COMBAT_H, (W - panelW - 34) / COMBAT_W));
+    const gridW = cell * COMBAT_W, gridH = cell * COMBAT_H;
+    const gx = Math.max(8, (W - (gridW + 14 + panelW)) / 2);
+    const gy = topBar + 5 + (availH - gridH) / 2;
+    return { sig: W + 'x' + H, side: true, cell, gx, gy, panel: { x: gx + gridW + 14, y: topBar + 6, w: panelW, h: H - topBar - 12 } };
+  }
+  const cols = W < 560 ? 3 : 5;
+  const barH = cols === 3 ? 84 : 38;
+  const tail = 12 + barH + 8 + 3 * 14 + 6;
+  const usableH = H - topBar - COMBAT_HEADER_H - tail - 8;
+  const cell = Math.max(14, Math.min(60, (W - 20) / COMBAT_W, usableH / COMBAT_H));
+  const gridH = cell * COMBAT_H;
+  const top = topBar + Math.max(2, (H - topBar - (COMBAT_HEADER_H + gridH + tail)) / 2);
+  return { sig: W + 'x' + H, side: false, cell, cols, barH, headerY: top, gx: W / 2 - cell * COMBAT_W / 2, gy: top + COMBAT_HEADER_H, barY: top + COMBAT_HEADER_H + gridH + 12 };
 }
-function computeCombatCellSize() {
-  const topBar = chromeMetrics().topBar;
-  const usableW = W - 20, usableH = H - topBar - COMBAT_HEADER_H - 120;
-  return Math.max(14, Math.min(40, Math.min(usableW / COMBAT_W, usableH / COMBAT_H)));
-}
+function combatOrigin() { const L = combatLayCur(); return { x: L.gx, y: L.gy }; }
+function computeCombatCellSize() { return combatLayCur().cell; }
 function combatCellToScreen(x, y) {
-  const o = combatOrigin();
-  return { x: o.x + x * combatCellSize, y: o.y + y * combatCellSize };
+  const o = combatOrigin(), cs = computeCombatCellSize();
+  return { x: o.x + x * cs, y: o.y + y * cs };
 }
 function combatScreenToCell(px, py) {
-  const o = combatOrigin();
-  return { x: Math.floor((px - o.x) / combatCellSize), y: Math.floor((py - o.y) / combatCellSize) };
+  const o = combatOrigin(), cs = computeCombatCellSize();
+  return { x: Math.floor((px - o.x) / cs), y: Math.floor((py - o.y) / cs) };
 }
 
 // ranged marker: a small gold bow-and-arrow on a dark pill in the top-left of the stack's cell,
-// with the remaining ammo beside it (grey bow + red 0 once the stack is out of ammo)
+// with the remaining ammo beside it (grey bow + red 0 once the stack is out of ammo). On very small
+// cells the pill shrinks to just the bow so it never spills into the neighbouring cell.
 function drawRangedBadge(cx, cy, cs, ammo) {
-  const r = Math.max(4, cs * 0.17);
+  const out = ammo <= 0;
+  const compact = cs < 26;
+  const r = compact ? Math.max(3, cs * 0.16) : Math.max(4, cs * 0.17);
   const fontPx = Math.max(9, Math.round(cs * 0.3));
   ctx.save();
   ctx.font = '800 ' + fontPx + 'px sans-serif';
   const label = String(ammo);
-  const pillW = r * 2 + 4 + ctx.measureText(label).width + 3, pillH = Math.max(r * 2 + 2, fontPx + 2);
-  ctx.fillStyle = 'rgba(0,0,0,0.78)';
+  const pillW = compact ? r * 2 + 4 : r * 2 + 4 + ctx.measureText(label).width + 3;
+  const pillH = compact ? r * 2 + 3 : Math.max(r * 2 + 2, fontPx + 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.82)';
   roundRect(cx + 1, cy + 1, pillW, pillH, pillH / 2); ctx.fill();
   const bx = cx + 3 + r * 0.7, by = cy + 1 + pillH / 2;
-  const out = ammo <= 0;
   ctx.strokeStyle = out ? '#9ca3af' : '#fde047'; ctx.lineWidth = Math.max(1.2, cs * 0.05);
   ctx.beginPath(); ctx.arc(bx - r * 0.2, by, r, -Math.PI * 0.42, Math.PI * 0.42); ctx.stroke(); // bow
   ctx.beginPath(); ctx.moveTo(bx - r * 0.2 + r * Math.cos(Math.PI * 0.42), by - r * Math.sin(Math.PI * 0.42));
   ctx.lineTo(bx - r * 0.2 + r * Math.cos(Math.PI * 0.42), by + r * Math.sin(Math.PI * 0.42)); ctx.stroke(); // string
   ctx.beginPath(); ctx.moveTo(bx - r * 0.9, by); ctx.lineTo(bx + r * 1.1, by); ctx.stroke(); // arrow
-  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillStyle = out ? '#f87171' : '#fff';
-  ctx.fillText(label, cx + 3 + r * 2 + 2, by + 1);
+  if (!compact) {
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = out ? '#f87171' : '#fff';
+    ctx.fillText(label, cx + 3 + r * 2 + 2, by + 1);
+  } else if (out) {
+    ctx.strokeStyle = '#f87171'; ctx.beginPath(); ctx.moveTo(cx + 2, cy + pillH); ctx.lineTo(cx + pillW, cy + 2); ctx.stroke();
+  }
   ctx.restore();
 }
 
+// stone wall down the WALL_X column with towers, and an open dirt gate — see makeSiegeWalls()
+function drawSiegeWalls(c, cs) {
+  const w = c.walls;
+  const defStack = c.stacks.find(s => s.side === 'defender');
+  const flag = defStack ? factionById(defStack.factionId).primary : '#c9a35c';
+  // dirt road through the gate
+  for (const gy of w.gateRows) {
+    const s = combatCellToScreen(w.gateX, gy);
+    ctx.fillStyle = '#a98a5a'; ctx.fillRect(s.x, s.y, cs - 1, cs - 1);
+    ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(s.x + cs * 0.2, s.y + cs * 0.35, cs * 0.18, cs * 0.1); ctx.fillRect(s.x + cs * 0.6, s.y + cs * 0.65, cs * 0.16, cs * 0.1);
+  }
+  for (const cell of w.cells) {
+    const s = combatCellToScreen(cell.x, cell.y);
+    const x0 = s.x + cs * 0.14, ww = cs * 0.72;
+    ctx.fillStyle = '#8f7e68'; ctx.fillRect(x0, s.y, ww, cs);             // wall slab (cells join into one wall)
+    ctx.fillStyle = '#b3a288'; ctx.fillRect(x0, s.y, ww * 0.34, cs);      // lit face
+    ctx.strokeStyle = 'rgba(40,28,14,0.45)'; ctx.lineWidth = 1;
+    for (let k = 1; k < 4; k++) { ctx.beginPath(); ctx.moveTo(x0, s.y + cs * k / 4); ctx.lineTo(x0 + ww, s.y + cs * k / 4); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(40,28,14,0.7)'; ctx.strokeRect(x0, s.y, ww, cs);
+    if (cell.tower) {                                                     // round tower: merlon ring, dark roof, faction pennant
+      const tx = s.x + cs / 2, ty = s.y + cs / 2, tr = cs * 0.47;
+      ctx.fillStyle = '#7d6c58'; ctx.beginPath(); ctx.arc(tx, ty, tr, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#b3a288';
+      for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; ctx.fillRect(tx + Math.cos(a) * tr * 0.82 - cs * 0.06, ty + Math.sin(a) * tr * 0.82 - cs * 0.06, cs * 0.12, cs * 0.12); }
+      ctx.fillStyle = '#5b4d3d'; ctx.beginPath(); ctx.arc(tx, ty, tr * 0.6, 0, 7); ctx.fill();
+      ctx.strokeStyle = '#2b1d0e'; ctx.lineWidth = Math.max(1, cs * 0.05);
+      ctx.beginPath(); ctx.moveTo(tx, ty + tr * 0.3); ctx.lineTo(tx, ty - tr * 0.75); ctx.stroke();
+      ctx.fillStyle = flag; ctx.beginPath(); ctx.moveTo(tx, ty - tr * 0.75); ctx.lineTo(tx + tr * 0.7, ty - tr * 0.5); ctx.lineTo(tx, ty - tr * 0.25); ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else {                                                              // battlement teeth on both faces
+      ctx.fillStyle = '#6f5f4b';
+      for (let k = 0; k < 2; k++) { ctx.fillRect(x0 - cs * 0.06, s.y + cs * (0.12 + k * 0.5), cs * 0.1, cs * 0.26); ctx.fillRect(x0 + ww - cs * 0.04, s.y + cs * (0.12 + k * 0.5), cs * 0.1, cs * 0.26); }
+    }
+  }
+  // gate: two open wooden door leaves + a lintel beam so the opening reads as a gate
+  const g0 = combatCellToScreen(w.gateX, w.gateRows[0]), g1 = combatCellToScreen(w.gateX, w.gateRows[w.gateRows.length - 1]);
+  ctx.fillStyle = '#6b4423'; ctx.strokeStyle = 'rgba(30,15,0,0.8)'; ctx.lineWidth = 1;
+  ctx.fillRect(g0.x + cs * 0.1, g0.y - cs * 0.02, cs * 0.8, cs * 0.14); ctx.strokeRect(g0.x + cs * 0.1, g0.y - cs * 0.02, cs * 0.8, cs * 0.14);
+  ctx.fillRect(g1.x + cs * 0.1, g1.y + cs - cs * 0.14, cs * 0.8, cs * 0.14); ctx.strokeRect(g1.x + cs * 0.1, g1.y + cs - cs * 0.14, cs * 0.8, cs * 0.14);
+  ctx.fillStyle = '#e5c07b';
+  for (const yy of [g0.y + cs * 0.03, g1.y + cs - cs * 0.11]) for (const xx of [0.24, 0.5, 0.76]) ctx.fillRect(g0.x + cs * xx - 1, yy, 2, 2);
+}
+
+function drawCombatButtonRows(list, x, y, w, cols, btnH, gap, fontSize) {
+  const rows = [];
+  for (let i = 0; i < list.length; i += cols) rows.push(list.slice(i, i + cols));
+  const bw = (w - gap * (cols - 1)) / cols;
+  rows.forEach((row, ri) => {
+    const rw = row.length * bw + (row.length - 1) * gap;
+    let bx = x + (w - rw) / 2;
+    const by = y + ri * (btnH + gap);
+    for (const b of row) {
+      drawButton(bx, by, bw, btnH, b.label, b.top, b.bot, b.onClick, { disabled: b.disabled, fontSize });
+      bx += bw + gap;
+    }
+  });
+  return rows.length * (btnH + gap) - gap;
+}
+
 function renderCombat() {
-  combatCellSize = computeCombatCellSize();
+  combatLay = combatLayout();
+  const L = combatLay;
+  combatCellSize = L.cell;
+  const cs = combatCellSize;
   ctx.fillStyle = '#0f1a12'; ctx.fillRect(0, 0, W, H);
   const topBar = chromeMetrics().topBar;
   const c = game.combat;
   if (!c) { game.screen = 'adventure'; return; }
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#f4c95d'; ctx.font = '900 15px sans-serif';
-  ctx.fillText(t('combatRound') + ' ' + c.round, W / 2, topBar + 15);
-
   const o = combatOrigin();
   const activeStack = currentActorStack();
-  const reach = (activeStack && !combatSideIsAI(activeStack.side)) ? combatReachable(activeStack) : new Map();
+  const isHumanTurn = !!(activeStack && !combatSideIsAI(activeStack.side));
+  const reach = (isHumanTurn && !c.targeting) ? combatReachable(activeStack) : new Map();
+  const tg = c.targeting;
+  if (tg && (!isHumanTurn || c.result)) c.targeting = null;
 
-  // active stack name — readable status line
-  if (activeStack) {
-    ctx.font = '700 12px sans-serif';
-    ctx.fillStyle = activeStack.side === 'attacker' ? '#93c5fd' : '#fca5a5';
+  // ---- status text: round, active stack (or the targeting hint), turn-order chips
+  const statusText = () => {
+    if (c.targeting) return { text: t('spellPickTarget', { spell: spellName(c.targeting.spellId) }), color: '#fde047' };
+    if (!activeStack) return null;
     const acd = creatureRef(activeStack);
     const rangeNote = acd.ranged ? (activeStack.ammo > 0 ? '🏹 ' + t('shotsLabel', { n: activeStack.ammo }) : t('noAmmo')) : '⚔️ ' + t('meleeLabel');
-    ctx.fillText(t('stackTurn', { name: creatureDisplayName(activeStack) }) + ' — ' + rangeNote, W / 2, topBar + 33, W - 16);
-  }
-  // initiative / turn order row
+    return { text: t('stackTurn', { name: creatureDisplayName(activeStack) }) + ' — ' + rangeNote, color: activeStack.side === 'attacker' ? '#93c5fd' : '#fca5a5' };
+  };
   const aliveOrder = c.order.map(id => c.stacks.find(s => s.id === id)).filter(s => s && s.alive);
-  if (aliveOrder.length) {
-    const chip = 20, chipGap = 4;
-    const rowW = aliveOrder.length * (chip + chipGap) - chipGap;
-    let ox = W / 2 - Math.min(rowW, W - 20) / 2;
-    const maxChips = Math.max(1, Math.floor((W - 20) / (chip + chipGap)));
-    aliveOrder.slice(0, maxChips).forEach((s) => {
-      const isCur = activeStack && s.id === activeStack.id;
-      ctx.fillStyle = isCur ? 'rgba(253,224,71,0.9)' : 'rgba(255,255,255,0.14)';
-      roundRect(ox, topBar + 46, chip, chip, 5); ctx.fill();
-      if (isCur) { ctx.strokeStyle = '#fde047'; ctx.lineWidth = 1.5; ctx.stroke(); }
-      drawCreatureGlyph(creatureRef(s).shape, ox + chip / 2, topBar + 46 + chip / 2, chip * 0.34, creatureColor(s));
-      ox += chip + chipGap;
-    });
+  const drawChips = (x0, y0, maxW, center) => {
+    const chip = 20, gap = 4, per = Math.max(1, Math.floor((maxW + gap) / (chip + gap)));
+    let rowsUsed = 0;
+    for (let i = 0; i < aliveOrder.length; i += per) {
+      const row = aliveOrder.slice(i, i + per);
+      const rowW = row.length * (chip + gap) - gap;
+      let ox = center ? x0 + (maxW - rowW) / 2 : x0;
+      const oy = y0 + rowsUsed * (chip + gap);
+      row.forEach(s => {
+        const isCur = activeStack && s.id === activeStack.id;
+        ctx.fillStyle = isCur ? 'rgba(253,224,71,0.9)' : 'rgba(255,255,255,0.14)';
+        roundRect(ox, oy, chip, chip, 5); ctx.fill();
+        ctx.strokeStyle = isCur ? '#fde047' : (s.side === 'attacker' ? '#60a5fa' : '#f87171'); ctx.lineWidth = isCur ? 1.5 : 1; ctx.stroke();
+        drawCreatureGlyph(creatureRef(s).shape, ox + chip / 2, oy + chip / 2, chip * 0.5, creatureColor(s), s.upgraded);
+        ox += chip + gap;
+      });
+      rowsUsed++;
+    }
+    return rowsUsed * (chip + gap) - gap;
+  };
+  const actorSide = activeStack ? activeStack.side : 'attacker';
+  const actorHero = actorSide === 'attacker' ? combatAttackerHero() : combatDefenderHero();
+  const canCast = isHumanTurn && actorHero && actorHero.spells.some(id => spellDef(id).school === 'combat') && !c.sideCast[actorSide] && !c.targeting;
+  const canFlee = isHumanTurn && actorHero && !c.targeting;
+  const buttons = [
+    c.targeting
+      ? { label: t('spellCancel'), top: '#f87171', bot: '#b91c1c', onClick: combatCancelTargeting }
+      : { label: t('castSpell'), top: '#a78bfa', bot: '#6d28d9', onClick: canCast ? (() => openCombatSpellModal(actorSide, actorHero)) : null, disabled: !canCast },
+    { label: t('defend'), top: '#38bdf8', bot: '#0284c7', onClick: isHumanTurn && !c.targeting ? humanDefend : null, disabled: !isHumanTurn || !!c.targeting },
+    { label: t('wait'), top: '#94a3b8', bot: '#475569', onClick: isHumanTurn && !c.targeting ? humanWait : null, disabled: !isHumanTurn || !!c.targeting },
+    { label: t('flee'), top: '#fbbf24', bot: '#b45309', onClick: canFlee ? (() => combatFlee(actorSide)) : null, disabled: !canFlee },
+    { label: t('surrender'), top: '#f87171', bot: '#b91c1c', onClick: canFlee ? (() => combatSurrender(actorSide)) : null, disabled: !canFlee },
+  ];
+  const logLines = c.log.slice(-3);
+
+  if (L.side) {
+    const P = L.panel;
+    drawPanel(P.x, P.y, P.w, P.h, { fill: 'rgba(0,0,0,0.35)', stroke: 'rgba(201,163,92,0.5)', lineWidth: 1.5 });
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#f4c95d'; ctx.font = '900 14px sans-serif';
+    ctx.fillText(t('combatRound') + ' ' + c.round, P.x + P.w / 2, P.y + 14);
+    let py = P.y + 34;
+    const st = statusText();
+    if (st) {
+      ctx.font = '700 11px sans-serif'; ctx.fillStyle = st.color;
+      const lines = wrapLines(st.text, P.w - 14).slice(0, 3);
+      lines.forEach((l, i) => ctx.fillText(l, P.x + P.w / 2, py + i * 13));
+      py += lines.length * 13 + 2;
+    }
+    py += drawChips(P.x + 8, py, P.w - 16, true) + 8;
+    py += drawCombatButtonRows(buttons, P.x + 8, py, P.w - 16, 2, 30, 5, 10) + 8;
+    ctx.textAlign = 'left'; ctx.font = '600 10.5px sans-serif'; ctx.fillStyle = '#d1fae5';
+    logLines.forEach((l, i) => { if (py + 12 + i * 13 < P.y + P.h) ctx.fillText(l, P.x + 8, py + 6 + i * 13, P.w - 14); });
+  } else {
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#f4c95d'; ctx.font = '900 15px sans-serif';
+    ctx.fillText(t('combatRound') + ' ' + c.round, W / 2, L.headerY + 15);
+    const st = statusText();
+    if (st) { ctx.font = '700 12px sans-serif'; ctx.fillStyle = st.color; ctx.fillText(st.text, W / 2, L.headerY + 33, W - 16); }
+    drawChips(10, L.headerY + 46, W - 20, true);
   }
+
+  // ---- grid
   for (let y = 0; y < COMBAT_H; y++) {
     for (let x = 0; x < COMBAT_W; x++) {
       const s = combatCellToScreen(x, y);
-      const k = x + ',' + y;
       ctx.fillStyle = (x + y) % 2 === 0 ? '#3a6b3f' : '#356338';
-      if (reach.has(k)) ctx.fillStyle = '#5b8fd6';
-      ctx.fillRect(s.x, s.y, combatCellSize - 1, combatCellSize - 1);
+      ctx.fillRect(s.x, s.y, cs - 1, cs - 1);
+      if (reach.has(x + ',' + y)) { ctx.fillStyle = 'rgba(96,152,232,0.62)'; ctx.fillRect(s.x, s.y, cs - 1, cs - 1); }
     }
   }
-  // stacks
+  if (c.walls) drawSiegeWalls(c, cs);
+
+  // ---- stacks
+  const tgIds = c.targeting ? c.targeting.valid : null;
+  const pulse = 0.55 + 0.45 * Math.sin(Date.now() / 170);
   for (const st of c.stacks) {
     if (!st.alive) continue;
     const s = combatCellToScreen(st.x, st.y);
     const isActive = activeStack && activeStack.id === st.id;
-    if (isActive) { ctx.strokeStyle = '#fde047'; ctx.lineWidth = 3; ctx.strokeRect(s.x + 1, s.y + 1, combatCellSize - 3, combatCellSize - 3); }
-    drawCreatureGlyph(creatureRef(st).shape, s.x + combatCellSize / 2, s.y + combatCellSize / 2 - 2, combatCellSize * 0.36, creatureColor(st));
+    if (isActive && !c.targeting) { ctx.fillStyle = 'rgba(253,224,71,0.22)'; ctx.fillRect(s.x, s.y, cs - 1, cs - 1); ctx.strokeStyle = '#fde047'; ctx.lineWidth = Math.max(2, cs * 0.07); ctx.strokeRect(s.x + 1, s.y + 1, cs - 3, cs - 3); }
+    drawCreatureGlyph(creatureRef(st).shape, s.x + cs / 2, s.y + cs * 0.47, cs * 0.5, creatureColor(st), st.upgraded);
+    // side pip
     ctx.fillStyle = st.side === 'attacker' ? '#60a5fa' : '#f87171';
-    ctx.beginPath(); ctx.arc(s.x + combatCellSize - 6, s.y + 6, 3, 0, Math.PI * 2); ctx.fill();
-    // creature count — outlined for legibility over any background/colour
-    ctx.font = '800 ' + Math.max(10, Math.round(combatCellSize * 0.32)) + 'px sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const countLabel = String(st.count);
-    const countY = s.y + combatCellSize - 9;
-    ctx.lineWidth = Math.max(2, combatCellSize * 0.09);
-    ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-    ctx.strokeText(countLabel, s.x + combatCellSize / 2, countY);
-    ctx.fillStyle = '#fff';
-    ctx.fillText(countLabel, s.x + combatCellSize / 2, countY);
-    // HP bar for the stack
+    ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(s.x + cs - Math.max(4, cs * 0.14), s.y + Math.max(4, cs * 0.14), Math.max(2.5, cs * 0.09), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    // HP bar along the bottom
     const hpFrac = Math.max(0, Math.min(1, st.hpMax ? st.hp / st.hpMax : 1));
-    const barW = combatCellSize - 6, barH = Math.max(2, combatCellSize * 0.09);
-    const barX = s.x + 3, barY = s.y + combatCellSize - barH - 2;
-    ctx.fillStyle = 'rgba(0,0,0,0.65)';
-    ctx.fillRect(barX, barY, barW, barH);
+    const barH = Math.max(3, cs * 0.1), barW = cs - 4;
+    const barX = s.x + 2, barY = s.y + cs - barH - 2;
+    ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
     ctx.fillStyle = hpFrac > 0.5 ? '#4ade80' : (hpFrac > 0.25 ? '#fbbf24' : '#f87171');
     ctx.fillRect(barX, barY, Math.max(0, barW * hpFrac), barH);
-    if (creatureRanged(st)) drawRangedBadge(s.x, s.y, combatCellSize, st.ammo);
-    addButton(s.x, s.y, combatCellSize, combatCellSize, () => { humanActOnTile(st.x, st.y); });
+    // creature count in a dark pill (bottom-right, just above the bar) — legible on any colour
+    const fontPx = Math.max(9, Math.min(14, Math.round(cs * 0.3)));
+    ctx.font = '800 ' + fontPx + 'px sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    const label = String(st.count), tw = ctx.measureText(label).width;
+    const pillH = fontPx + 2, pillW = tw + 6, px = s.x + cs - 2 - pillW, py = barY - 1 - pillH;
+    ctx.fillStyle = 'rgba(0,0,0,0.8)'; roundRect(px, py, pillW, pillH, pillH / 2); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.fillText(label, px + pillW - 3, py + pillH / 2 + 0.5);
+    if (creatureRanged(st)) drawRangedBadge(s.x, s.y, cs, st.ammo);
+    // spell targeting: pulse the valid stacks, dim everything else
+    if (tgIds) {
+      if (tgIds.includes(st.id)) {
+        const heal = spellDef(c.targeting.spellId).kind === 'heal';
+        ctx.fillStyle = heal ? 'rgba(74,222,128,0.28)' : 'rgba(248,113,113,0.28)'; ctx.fillRect(s.x, s.y, cs - 1, cs - 1);
+        ctx.strokeStyle = (heal ? 'rgba(134,239,172,' : 'rgba(253,224,71,') + pulse + ')'; ctx.lineWidth = Math.max(2.5, cs * 0.1);
+        ctx.strokeRect(s.x + 1.5, s.y + 1.5, cs - 4, cs - 4);
+      } else { ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(s.x, s.y, cs - 1, cs - 1); }
+    }
+    addButton(s.x, s.y, cs, cs, () => { if (c.targeting) combatTapSpellTarget(st); else humanActOnTile(st.x, st.y); });
   }
-  // empty tile taps
+  // empty tile taps (wall cells swallow the tap; no movement onto them)
   for (let y = 0; y < COMBAT_H; y++) {
     for (let x = 0; x < COMBAT_W; x++) {
       if (c.stacks.some(st => st.alive && st.x === x && st.y === y)) continue;
       const s = combatCellToScreen(x, y);
-      addButton(s.x, s.y, combatCellSize, combatCellSize, () => { humanActOnTile(x, y); });
+      if (c.walls && combatIsWall(x, y)) { addButton(s.x, s.y, cs, cs, () => {}); continue; }
+      addButton(s.x, s.y, cs, cs, () => { if (!c.targeting) humanActOnTile(x, y); });
     }
   }
   // floaters
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (let i = c.floaters.length - 1; i >= 0; i--) {
     const f = c.floaters[i];
     const s = combatCellToScreen(f.x, f.y);
-    ctx.fillStyle = '#fca5a5'; ctx.font = '800 13px sans-serif';
-    ctx.fillText(f.text, s.x + combatCellSize / 2, s.y - f.t * 0.6);
+    ctx.font = '800 ' + Math.max(12, Math.round(cs * 0.4)) + 'px sans-serif';
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    ctx.strokeText(f.text, s.x + cs / 2, s.y - f.t * 0.6);
+    ctx.fillStyle = f.text.charAt(0) === '+' ? '#86efac' : '#fca5a5';
+    ctx.fillText(f.text, s.x + cs / 2, s.y - f.t * 0.6);
     f.t++;
     if (f.t > 40) c.floaters.splice(i, 1);
   }
+  // transient notice (e.g. "No wounded allies to heal")
+  if (c.notice && Date.now() < c.notice.until) {
+    ctx.font = '800 13px sans-serif';
+    const nw = Math.min(W - 20, ctx.measureText(c.notice.text).width + 28);
+    ctx.fillStyle = 'rgba(0,0,0,0.85)'; roundRect(o.x + cs * COMBAT_W / 2 - nw / 2, o.y + cs * COMBAT_H / 2 - 16, nw, 32, 10); ctx.fill();
+    ctx.fillStyle = '#fde68a'; ctx.textAlign = 'center'; ctx.fillText(c.notice.text, o.x + cs * COMBAT_W / 2, o.y + cs * COMBAT_H / 2, nw - 12);
+  }
 
-  // action bar
-  const barY = o.y + COMBAT_H * combatCellSize + 14;
-  const isHumanTurn = activeStack && !combatSideIsAI(activeStack.side);
-  const btnW = Math.min(100, (W - 40) / 5), btnH = 38, gap = 8;
-  const totalW = btnW * 5 + gap * 4;
-  let bx = W / 2 - totalW / 2;
-  const side = activeStack ? activeStack.side : 'attacker';
-  const hero = side === 'attacker' ? combatAttackerHero() : combatDefenderHero();
-  const canCast = isHumanTurn && hero && hero.spells.length > 0 && !game.combat.sideCast[side];
-  drawButton(bx, barY, btnW, btnH, t('castSpell'), '#a78bfa', '#6d28d9', canCast ? (() => openCombatSpellModal(side, hero)) : null, { disabled: !canCast, fontSize: 11 });
-  bx += btnW + gap;
-  drawButton(bx, barY, btnW, btnH, t('defend'), '#38bdf8', '#0284c7', isHumanTurn ? humanDefend : null, { disabled: !isHumanTurn, fontSize: 11 });
-  bx += btnW + gap;
-  drawButton(bx, barY, btnW, btnH, t('wait'), '#94a3b8', '#475569', isHumanTurn ? humanWait : null, { disabled: !isHumanTurn, fontSize: 11 });
-  bx += btnW + gap;
-  const canFlee = isHumanTurn && (side === 'attacker' ? combatAttackerHero() : combatDefenderHero());
-  drawButton(bx, barY, btnW, btnH, t('flee'), '#fbbf24', '#b45309', canFlee ? (() => combatFlee(side)) : null, { disabled: !canFlee, fontSize: 11 });
-  bx += btnW + gap;
-  drawButton(bx, barY, btnW, btnH, t('surrender'), '#f87171', '#b91c1c', canFlee ? (() => combatSurrender(side)) : null, { disabled: !canFlee, fontSize: 11 });
-
-  // log
-  ctx.textAlign = 'left'; ctx.font = '600 11px sans-serif'; ctx.fillStyle = '#d1fae5';
-  const logLines = c.log.slice(-3);
-  logLines.forEach((l, i) => ctx.fillText(l, 10, barY + btnH + 16 + i * 14));
+  if (!L.side) {
+    // action bar + log below the grid
+    const bh = L.cols === 3 ? 38 : 38;
+    drawCombatButtonRows(buttons, 10, L.barY, W - 20, L.cols, bh, 6, 11);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = '600 11px sans-serif'; ctx.fillStyle = '#d1fae5';
+    logLines.forEach((l, i) => ctx.fillText(l, 10, L.barY + L.barH + 12 + i * 14, W - 20));
+  }
 }
 
 function openCombatSpellModal(side, hero) {
-  const items = hero.spells.map(id => {
+  // only battle spells show here (Town Portal is an adventure-map spell)
+  const items = hero.spells.filter(id => spellDef(id).school === 'combat').map(id => {
     const def = spellDef(id);
     const canAfford = hero.spellPts >= def.cost;
     return {
-      label: def.name + ' (' + def.cost + ' SP)' + (canAfford ? '' : ' ✕'),
+      label: spellName(id) + ' (' + def.cost + ' SP)' + (canAfford ? '' : ' ✕'),
       disabled: !canAfford,
-      onClick: () => {
-        hideListModal();
-        if (def.kind === 'buff' || def.kind === 'debuff' || (def.kind === 'damage' && def.aoe)) {
-          combatCastSpell(side, id, null);
-        } else {
-          // pick a target stack: damage single-target or heal — target first valid enemy/ally
-          const targets = def.kind === 'heal' ? combatAliveStacks().filter(s => s.side === side) : combatAliveStacks().filter(s => s.side !== side);
-          if (targets.length) combatCastSpell(side, id, targets[0].id);
-        }
-      },
+      onClick: () => { hideListModal(); combatBeginSpell(side, id); },
     };
   });
   showListModal(t('castSpell'), hero.name + ' — ' + Math.round(hero.spellPts) + ' SP', items, [{ label: t('close') }]);
@@ -4451,15 +5505,13 @@ function render() {
     case 'heroPick': renderHeroPick(); break;
     case 'missionSelect': renderMissionSelect(); break;
     case 'missionIntro': renderMissionIntro(); break;
-    case 'missionOutro': renderMissionOutro(); break;
-    case 'missionDefeat': renderMissionDefeat(); break;
+    case 'missionOutro': case 'missionDefeat': case 'victory': renderFinale(); break;
     case 'adventure': renderAdventure(); break;
     case 'castle': renderCastle(); break;
     case 'heroScreen': renderHeroScreen(); break;
     case 'combat': renderCombat(); break;
     case 'combatResult': renderCombatResult(); break;
     case 'passDevice': ctx.fillStyle = '#08131f'; ctx.fillRect(0, 0, W, H); break;
-    case 'victory': ctx.fillStyle = '#08131f'; ctx.fillRect(0, 0, W, H); break;
     default: ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
   }
   lastScreenForModals = game.screen;
@@ -4485,6 +5537,7 @@ function onDown(px, py) {
   lastPointerX = px; lastPointerY = py;
   const btn = hitButton(px, py);
   if (btn) { btn.onClick(); return; }
+  if (FINALE_KIND[game.screen]) { finaleSkip(); return; }
   if (game.screen === 'adventure') adventurePointerDown(px, py);
   else if (game.screen === 'castle') castleScrollDown(px, py);
 }
