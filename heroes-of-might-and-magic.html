@@ -64,7 +64,7 @@
     max-height: 86vh; overflow-y: auto;
   }
   .panel-title { font-size: 22px; font-weight: 900; color: #f4c95d; text-shadow: 0 2px 4px rgba(0,0,0,0.6); }
-  .panel-sub { font-size: 14px; color: #ead9b8; line-height: 1.4; }
+  .panel-sub { font-size: 14px; color: #ead9b8; line-height: 1.4; white-space: pre-line; }
   .panel-btn {
     font-size: 15px; font-weight: 800; padding: 12px 18px; border-radius: 10px; border: none;
     cursor: pointer; transition: transform 0.1s ease; outline: none;
@@ -179,6 +179,21 @@ const TEXT = {
     cannotAfford: 'Not enough resources',
     alreadyBuiltThisTurn: 'Only one building per castle per turn',
     needsPrereq: 'Requires a lower dwelling first',
+    needsBuilding: 'Build {name} first',
+    needMore: 'Not enough resources — need {list}',
+    bldReady: 'Ready to build',
+    bldLevel: 'Level {n}/{max}',
+    descTownHall: 'Pays gold every day: +{a} at level 1, +{b} at level 2, +{c} at level 3.',
+    descTavern: 'A cosy meeting place. It has no effect on the game yet.',
+    descMageGuild: 'Your hero can learn spells up to the guild level. Higher levels teach stronger spells.',
+    descCityWalls: 'Defenders get +3 Defense when enemies attack this castle.',
+    descStatue: 'A proud statue that brings +250 gold every day.',
+    descDwellingR: 'Recruit {name} here (ranged, {ammo} shots). +{growth} more every week.',
+    descDwellingM: 'Recruit {name} here (melee). +{growth} more every week.',
+    descUpgrade: 'New recruits will be {up}, the upgraded form of {name}.',
+    statAtk: 'Atk', statDef: 'Def', statDmg: 'Dmg', statHp: 'HP', statSpeed: 'Speed',
+    rangedLabel: 'Ranged', meleeLabel: 'Melee', shotsLabel: '{n} shots',
+    costEach: 'Cost each',
     recruitTitle: 'Recruit Creatures',
     recruitHowMany: 'How many?',
     recruitToGarrison: 'No hero is at the castle — new troops join the garrison.',
@@ -306,6 +321,21 @@ const TEXT = {
     cannotAfford: 'Resurse insuficiente',
     alreadyBuiltThisTurn: 'O singură clădire pe castel pe rând',
     needsPrereq: 'Necesită întâi o locuință inferioară',
+    needsBuilding: 'Construiește mai întâi {name}',
+    needMore: 'Resurse insuficiente — mai ai nevoie de {list}',
+    bldReady: 'Gata de construit',
+    bldLevel: 'Nivel {n}/{max}',
+    descTownHall: 'Plătește aur în fiecare zi: +{a} la nivelul 1, +{b} la nivelul 2, +{c} la nivelul 3.',
+    descTavern: 'Un loc primitor de întâlnire. Încă nu are niciun efect în joc.',
+    descMageGuild: 'Eroul tău poate învăța vrăji până la nivelul breslei. Nivelurile mai mari oferă vrăji mai puternice.',
+    descCityWalls: 'Apărătorii primesc +3 Apărare când inamicii atacă acest castel.',
+    descStatue: 'O statuie mândră care aduce +250 aur în fiecare zi.',
+    descDwellingR: 'Recrutează aici {name} (la distanță, {ammo} proiectile). +{growth} în plus în fiecare săptămână.',
+    descDwellingM: 'Recrutează aici {name} (corp la corp). +{growth} în plus în fiecare săptămână.',
+    descUpgrade: 'Noii recruți vor fi {up}, forma îmbunătățită a lui {name}.',
+    statAtk: 'Atc', statDef: 'Apăr', statDmg: 'Dăun', statHp: 'Viață', statSpeed: 'Viteză',
+    rangedLabel: 'La distanță', meleeLabel: 'Corp la corp', shotsLabel: '{n} proiectile',
+    costEach: 'Cost per bucată',
     recruitTitle: 'Recrutează Creaturi',
     recruitHowMany: 'Câte?',
     recruitToGarrison: 'Niciun erou nu e la castel — trupele noi se alătură garnizoanei.',
@@ -619,19 +649,21 @@ const FACTIONS = [
 function factionById(id) { return FACTIONS.find(f => f.id === id); }
 
 // ---- Buildings ----
-// dwelling buildings map to creature tier; upgrade buildings unlock the tier-4/5 upgrade
+// dwelling buildings map to creature tier; upgrade buildings unlock the tier-4/5 upgrade.
+// descKey -> bilingual TEXT entry shown on the castle screen (dwellings/upgrades build theirs
+// from the creature data in buildingDescText); cost/incomePerLevel are shown from this data too.
 const BUILDING_DEFS = [
-  { id: 'townHall', name: 'Town Hall', maxLevel: 3, cost: [{ gold: 0 }, { gold: 1000, wood: 5 }, { gold: 2000, ore: 5, crystal: 2 }], incomePerLevel: [250, 500, 1000] },
-  { id: 'tavern', name: 'Tavern', maxLevel: 1, cost: [{ gold: 500, wood: 5 }] },
-  { id: 'mageGuild', name: 'Mage Guild', maxLevel: 5, cost: [
+  { id: 'townHall', name: 'Town Hall', descKey: 'descTownHall', maxLevel: 3, cost: [{ gold: 0 }, { gold: 1000, wood: 5 }, { gold: 2000, ore: 5, crystal: 2 }], incomePerLevel: [250, 500, 1000] },
+  { id: 'tavern', name: 'Tavern', descKey: 'descTavern', maxLevel: 1, cost: [{ gold: 500, wood: 5 }] },
+  { id: 'mageGuild', name: 'Mage Guild', descKey: 'descMageGuild', maxLevel: 5, cost: [
     { gold: 2000, wood: 5, ore: 5 },
     { gold: 1000, ore: 5, crystal: 5 },
     { gold: 1500, crystal: 5, plasma: 2 },
     { gold: 2000, crystal: 5, plasma: 5 },
     { gold: 3000, plasma: 10 },
   ]},
-  { id: 'cityWalls', name: 'City Walls', maxLevel: 1, cost: [{ gold: 1500, ore: 10 }] },
-  { id: 'statue', name: 'Statue', maxLevel: 1, cost: [{ gold: 800, ore: 5 }] },
+  { id: 'cityWalls', name: 'City Walls', descKey: 'descCityWalls', maxLevel: 1, cost: [{ gold: 1500, ore: 10 }] },
+  { id: 'statue', name: 'Statue', descKey: 'descStatue', maxLevel: 1, cost: [{ gold: 800, ore: 5 }] },
   { id: 'dwelling1', name: 'Tier 1 Dwelling', maxLevel: 1, tier: 1, cost: [{ gold: 300, wood: 2 }] },
   { id: 'dwelling2', name: 'Tier 2 Dwelling', maxLevel: 1, tier: 2, cost: [{ gold: 500, wood: 3 }] },
   { id: 'dwelling3', name: 'Tier 3 Dwelling', maxLevel: 1, tier: 3, cost: [{ gold: 800, ore: 4 }] },
@@ -823,6 +855,19 @@ function creatureSpeed(stack) { return creatureRef(stack).speed; }
 function creatureDmg(stack) { return creatureRef(stack).dmg; }
 function creatureRanged(stack) { return creatureRef(stack).ranged; }
 function creatureAmmoMax(stack) { return creatureRef(stack).ammo; }
+// player-facing stat strings, shared by the recruit modal and the hero army list
+function creatureStatLine1(cd) {
+  return t('statAtk') + ' ' + cd.atk + ' · ' + t('statDef') + ' ' + cd.def + ' · ' + t('statDmg') + ' ' + cd.dmg[0] + '-' + cd.dmg[1];
+}
+function creatureStatLine2(cd) {
+  return t('statHp') + ' ' + cd.hp + ' · ' + t('statSpeed') + ' ' + cd.speed;
+}
+function creatureRangeLabel(cd) {
+  return cd.ranged ? '🏹 ' + t('rangedLabel') + ' · ' + t('shotsLabel', { n: cd.ammo }) : '⚔️ ' + t('meleeLabel');
+}
+function costText(cost) {
+  return RESOURCE_KEYS.filter(k => cost[k]).map(k => RESOURCE_ICON[k] + ' ' + cost[k]).join('  ');
+}
 
 function emptyResources() { return { gold: 0, wood: 0, ore: 0, crystal: 0, plasma: 0 }; }
 // HOMM2-style starting stockpile: enough to build a tier-1 dwelling and recruit on day 1
@@ -3595,19 +3640,38 @@ function renderAdventure() {
       if (fogState === 1) { ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(s.x, s.y, size, size); }
     }
   }
-  // objects
+  // objects: static ones stay drawn on explored (fog 1) tiles, dimmed as "remembered, not
+  // currently seen" (HOMM-style). Monster stacks are only shown while in view (fog 2) since
+  // they can be beaten or wander off; enemy heroes (below) are also visible-only.
+  const canDim = typeof ctx.filter === 'string';
   for (const obj of game.objects) {
     if (obj.x < x0 - 1 || obj.x > x1 + 1 || obj.y < y0 - 1 || obj.y > y1 + 1) continue;
-    if (p.fog[obj.y][obj.x] !== 2) continue;
+    const fs = p.fog[obj.y][obj.x];
+    if (fs === 0) continue;
+    if (fs !== 2 && obj.kind === OBJ.MONSTER) continue;
+    const remembered = fs === 1;
     const s = worldToScreen(obj.x, obj.y);
+    // owner colour: castles use ownerIdx, mines use owner (-1 = neutral)
+    const ownerIdx = obj.kind === OBJ.CASTLE ? obj.ownerIdx : (obj.kind === OBJ.MINE ? obj.owner : -1);
+    const ownerColor = ownerIdx === 0 ? '#3b82f6' : (ownerIdx === 1 ? '#dc2626' : '#888');
+    ctx.save();
+    if (remembered) ctx.globalAlpha = 0.72;
     if (obj.kind === OBJ.CASTLE) {
-      const ownerColor = obj.ownerIdx === 0 ? '#3b82f6' : (obj.ownerIdx === 1 ? '#dc2626' : '#888');
       ctx.fillStyle = ownerColor;
       roundRect(s.x + 2, s.y + 2, size - 4, size - 4, 4); ctx.fill();
     }
+    // desaturate only the icon (canvas filter where supported), never the owner colour
+    if (remembered && canDim) ctx.filter = 'grayscale(0.85) brightness(0.8)';
     ctx.font = Math.round(size * 0.6) + 'px sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(objIcon(obj), s.x + size / 2, s.y + size / 2);
+    if (remembered && canDim) ctx.filter = 'none';
+    if (obj.kind === OBJ.MINE && ownerIdx >= 0) {
+      ctx.fillStyle = ownerColor; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(s.x + size - 6, s.y + 6, Math.max(3, size * 0.14), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+    ctx.restore();
+    if (remembered) { ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(s.x, s.y, size, size); }
   }
   // heroes (both players' heroes only shown to owner OR if in visible fog and not stealthed — simplification: show any hero currently on a visible tile)
   for (const pl of game.players) {
@@ -3627,8 +3691,69 @@ function renderAdventure() {
 
   drawResourceBar(p, topBar);
   if (game.mode === 'campaign' && game.objective) drawObjectiveBar(topBar);
+  drawMinimap(p, topBar);
   drawBottomPanel(p, topBar);
   if (game.mode === 'campaign' && Date.now() < game.aiBannerUntil) drawAiTurnBanner();
+}
+
+// ---- minimap: whole 36x36 board, top-right of the MAP area (always below the resource bar
+// and the campaign objective strip, above the bottom panel). Tapping it jumps the camera. ----
+function minimapMetrics(topBar) {
+  const rbH = resourceBarH();
+  const areaH = H - topBar - rbH - 44;
+  let cell = Math.floor(Math.min(W * 0.3, areaH * 0.5) / MAP_SIZE);
+  cell = Math.max(2, Math.min(4, cell));
+  const size = cell * MAP_SIZE;
+  return { cell, size, x: W - size - 6, y: topBar + rbH + 6 };
+}
+function drawMinimap(p, topBar) {
+  const m = minimapMetrics(topBar);
+  const cell = m.cell;
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.fillRect(m.x - 2, m.y - 2, m.size + 4, m.size + 4);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(m.x, m.y, m.size, m.size);
+  for (let y = 0; y < MAP_SIZE; y++) {
+    for (let x = 0; x < MAP_SIZE; x++) {
+      const f = p.fog[y][x];
+      if (f === 0) continue;
+      ctx.fillStyle = TERRAIN[game.terrain[y][x]].color;
+      ctx.fillRect(m.x + x * cell, m.y + y * cell, cell, cell);
+      if (f === 1) { ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(m.x + x * cell, m.y + y * cell, cell, cell); }
+    }
+  }
+  const dot = (tx, ty, color, r) => {
+    ctx.fillStyle = color; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(m.x + (tx + 0.5) * cell, m.y + (ty + 0.5) * cell, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  };
+  for (const o of game.objects) {
+    if (o.kind !== OBJ.CASTLE || p.fog[o.y][o.x] === 0) continue; // own + known enemy/neutral castles
+    dot(o.x, o.y, o.ownerIdx === 0 ? '#3b82f6' : (o.ownerIdx === 1 ? '#dc2626' : '#888'), Math.max(2.5, cell * 0.9));
+  }
+  for (const pl of game.players) {
+    for (const hh of pl.heroes) {
+      if (p.fog[hh.y][hh.x] !== 2) continue; // own heroes always; enemy heroes only while in view
+      dot(hh.x, hh.y, hh.ownerIdx === 0 ? '#93c5fd' : '#fca5a5', Math.max(1.8, cell * 0.6));
+    }
+  }
+  // camera viewport rectangle (clipped to the minimap)
+  const size = mapTileSize || 1;
+  const vw = W / size, vh = (H - topBar - resourceBarH() - 44) / size;
+  const rx0 = Math.max(0, game.camera.x - vw / 2), ry0 = Math.max(0, game.camera.y - vh / 2);
+  const rx1 = Math.min(MAP_SIZE, game.camera.x + vw / 2), ry1 = Math.min(MAP_SIZE, game.camera.y + vh / 2);
+  ctx.strokeStyle = '#fde047'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(m.x + rx0 * cell, m.y + ry0 * cell, Math.max(2, (rx1 - rx0) * cell), Math.max(2, (ry1 - ry0) * cell));
+  ctx.restore();
+  // a tap on the minimap is consumed as a UI button (fires on press, exactly like every other
+  // canvas button), so adventurePointerDown never starts a map drag/tap from it and the later
+  // mouseup finds no press -> no stray hero move.
+  addButton(m.x - 2, m.y - 2, m.size + 4, m.size + 4, () => {
+    const tx = (lastPointerX - m.x) / cell, ty = (lastPointerY - m.y) / cell;
+    centerCameraOn(Math.max(0, Math.min(MAP_SIZE, tx)), Math.max(0, Math.min(MAP_SIZE, ty)));
+    clampCamera();
+    sfx.click();
+  });
 }
 
 // brief, non-blocking "Enemy turn" indicator (BUG 1 fix) — no buttons, no addButton() call,
@@ -3775,8 +3900,12 @@ function renderHeroScreen() {
   ctx.fillStyle = '#f4c95d'; ctx.font = '900 20px sans-serif';
   ctx.fillText(hero.name + '  (Lv ' + hero.level + ')', W / 2, topBar + 26);
 
-  const colW = Math.min(260, W * 0.42);
-  const leftX = 14, rightX = W - colW - 14;
+  // narrow (portrait phone): slim stats column, wider army column; compact (landscape phone):
+  // army slots flow in two columns so all five stacks + their stats still fit the short screen
+  const narrow = W < 600, compact = H < 480;
+  const colW = narrow ? Math.floor(W * 0.36) : Math.min(260, W * 0.42);
+  const rightW = (narrow || compact) ? W - colW - 42 : colW;
+  const leftX = 14, rightX = W - rightW - 14;
   let y = topBar + 56;
   drawPanel(leftX, y, colW, 130, {});
   ctx.textAlign = 'left'; ctx.font = '700 13px sans-serif'; ctx.fillStyle = '#fff';
@@ -3786,7 +3915,7 @@ function renderHeroScreen() {
     [t('movePts'), Math.round(hero.movePts) + '/' + hero.movePtsMax],
     [t('spellPts'), Math.round(hero.spellPts) + '/' + hero.spellPtsMax],
   ];
-  stats.forEach((s, i) => ctx.fillText(s[0] + ': ' + s[1], leftX + 12, y + 18 + i * 19));
+  stats.forEach((s, i) => ctx.fillText(s[0] + ': ' + s[1], leftX + 12, y + 18 + i * 19, colW - 20));
 
   y += 140;
   drawPanel(leftX, y, colW, 110, {});
@@ -3796,36 +3925,46 @@ function renderHeroScreen() {
   if (hero.skills.length === 0) ctx.fillText('—', leftX + 12, y + 38);
   hero.skills.forEach((s, i) => {
     const lvlName = [t('basic'), t('advanced'), t('expert')][s.level - 1];
-    ctx.fillText(SKILL_DEFS[s.id].name + ' (' + lvlName + ')', leftX + 12, y + 38 + i * 18);
+    ctx.fillText(SKILL_DEFS[s.id].name + ' (' + lvlName + ')', leftX + 12, y + 38 + i * 18, colW - 20);
   });
 
-  // right column: army
-  drawPanel(rightX, topBar + 56, colW, H - topBar - 56 - 60, {});
+  // right column: army — every stack shows its stats and ranged/melee (with ammo)
+  const slotH = 64, cols = compact ? 2 : 1, rowsN = Math.ceil(5 / cols);
+  const panelH = Math.max(H - topBar - 56 - 60, 34 + rowsN * (slotH + 6) + 34);
+  drawPanel(rightX, topBar + 56, rightW, panelH, {});
   ctx.fillStyle = '#fde68a'; ctx.font = '800 13px sans-serif';
   ctx.fillText(t('army') + ':', rightX + 12, topBar + 72);
-  const slotH = 52;
+  const slotW = (rightW - 16 - (cols - 1) * 6) / cols;
   for (let i = 0; i < 5; i++) {
-    const sy = topBar + 90 + i * (slotH + 6);
+    const sx = rightX + 8 + (i % cols) * (slotW + 6);
+    const sy = topBar + 90 + Math.floor(i / cols) * (slotH + 6);
     const stack = hero.army[i];
     const selected = heroScreenSelectedSlot === i;
-    drawPanel(rightX + 8, sy, colW - 16, slotH, { fill: selected ? 'rgba(253,224,71,0.18)' : 'rgba(255,255,255,0.06)', stroke: selected ? '#fde047' : '#8a7a5c' });
+    drawPanel(sx, sy, slotW, slotH, { fill: selected ? 'rgba(253,224,71,0.18)' : 'rgba(255,255,255,0.06)', stroke: selected ? '#fde047' : '#8a7a5c' });
     if (stack) {
-      drawCreatureGlyph(creatureRef(stack).shape, rightX + 34, sy + slotH / 2, 18, creatureColor(stack));
+      const cd = creatureRef(stack);
+      drawCreatureGlyph(cd.shape, sx + 26, sy + 24, 16, creatureColor(stack));
+      ctx.textAlign = 'center'; ctx.fillStyle = '#cbd5e1'; ctx.font = '700 11px sans-serif';
+      ctx.fillText('x' + stack.count, sx + 26, sy + slotH - 10, 44);
+      const tx = sx + 50, tw = slotW - 56;
       ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = '700 12px sans-serif';
-      ctx.fillText(creatureDisplayName(stack), rightX + 60, sy + 18);
-      ctx.font = '600 11px sans-serif'; ctx.fillStyle = '#cbd5e1';
-      ctx.fillText('x' + stack.count, rightX + 60, sy + 36);
+      ctx.fillText(creatureDisplayName(stack), tx, sy + 12, tw);
+      ctx.font = '600 10px sans-serif'; ctx.fillStyle = '#cbd5e1';
+      ctx.fillText(creatureStatLine1(cd), tx, sy + 27, tw);
+      ctx.fillText(creatureStatLine2(cd), tx, sy + 40, tw);
+      ctx.fillStyle = cd.ranged ? '#fde047' : '#fca5a5'; ctx.font = '700 10px sans-serif';
+      ctx.fillText(creatureRangeLabel(cd), tx, sy + 54, tw);
     } else {
       ctx.textAlign = 'center'; ctx.fillStyle = '#888'; ctx.font = '600 12px sans-serif';
-      ctx.fillText('—', rightX + colW / 2, sy + slotH / 2);
+      ctx.fillText('—', sx + slotW / 2, sy + slotH / 2);
     }
-    addButton(rightX + 8, sy, colW - 16, slotH, () => onHeroArmySlotTap(hero, i));
+    addButton(sx, sy, slotW, slotH, () => onHeroArmySlotTap(hero, i));
   }
 
   // spellbook
-  const sbY = topBar + 90 + 5 * (slotH + 6) + 6;
+  const sbY = topBar + 90 + rowsN * (slotH + 6) + 6;
   ctx.textAlign = 'left'; ctx.fillStyle = '#fde68a'; ctx.font = '800 13px sans-serif';
-  ctx.fillText(t('spellbook') + ': ' + (hero.spells.length ? hero.spells.map(id => spellDef(id).name).join(', ') : '—'), rightX + 12, sbY + 8);
+  ctx.fillText(t('spellbook') + ': ' + (hero.spells.length ? hero.spells.map(id => spellDef(id).name).join(', ') : '—'), rightX + 12, sbY + 8, rightW - 24);
 }
 
 function onHeroArmySlotTap(hero, i) {
@@ -3849,6 +3988,66 @@ function onHeroArmySlotTap(hero, i) {
 // ============================================================
 // SCREEN: CASTLE SCREEN
 // ============================================================
+// ---- castle building list: descriptions, costs, state; scrolls when it doesn't fit ----
+let castleScroll = 0, castleScrollFor = null;
+const castleDrag = { active: false, startY: 0, startScroll: 0 };
+let castleListRect = null, castleContentH = 0;
+function castleScrollClamp() {
+  const maxS = castleListRect ? Math.max(0, castleContentH - castleListRect.h) : 0;
+  castleScroll = Math.max(0, Math.min(maxS, castleScroll));
+}
+function castleScrollDown(px, py) {
+  const r = castleListRect;
+  if (r && px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) {
+    castleDrag.active = true; castleDrag.startY = py; castleDrag.startScroll = castleScroll;
+  }
+}
+function castleScrollMove(px, py) {
+  if (!castleDrag.active) return;
+  castleScroll = castleDrag.startScroll - (py - castleDrag.startY);
+  castleScrollClamp();
+}
+function castleScrollUp() { castleDrag.active = false; }
+
+function wrapLines(text, maxW) {
+  const words = String(text).split(' ');
+  const lines = []; let line = '';
+  for (const w of words) {
+    const test = line ? line + ' ' + w : w;
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+    else line = test;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+function buildingLabel(def, fac) {
+  if (!def.tier) return def.name;
+  const cdef = fac.creatures[def.tier - 1];
+  return (def.upgrade ? 'Upgrade: ' : '') + (def.upgrade ? cdef.upgrade : cdef.name) + (def.upgrade ? '' : ' Dwelling');
+}
+function buildingDescText(def, fac) {
+  if (def.tier) {
+    const cdef = fac.creatures[def.tier - 1];
+    if (def.upgrade) return t('descUpgrade', { up: cdef.upgrade, name: cdef.name });
+    return t(cdef.ranged ? 'descDwellingR' : 'descDwellingM', { name: cdef.name, ammo: cdef.ammo, growth: cdef.growth });
+  }
+  const inc = def.incomePerLevel || [];
+  return t(def.descKey, { a: inc[0], b: inc[1], c: inc[2] });
+}
+// state of one building row: built / ready / blocked (+ the reason) — mirrors canBuild()
+function buildingState(castle, def, fac) {
+  const curLevel = castle.buildings[def.id] || 0;
+  if (curLevel >= def.maxLevel) return { kind: 'built', curLevel };
+  const cost = def.cost[curLevel];
+  const p = game.players[castle.ownerIdx];
+  const missing = RESOURCE_KEYS.filter(k => cost[k] && (p.resources[k] || 0) < cost[k]);
+  let reason = null;
+  if (def.requires && !castle.buildings[def.requires]) reason = t('needsBuilding', { name: buildingLabel(buildingDef(def.requires), fac) });
+  else if (missing.length) reason = t('needMore', { list: missing.map(k => RESOURCE_ICON[k] + ' ' + (cost[k] - (p.resources[k] || 0))).join(' ') });
+  else if (castle.builtThisTurn) reason = t('alreadyBuiltThisTurn');
+  return { kind: reason ? 'blocked' : 'ready', curLevel, cost, missing, reason };
+}
+
 function renderCastle() {
   ctx.fillStyle = '#1a1408'; ctx.fillRect(0, 0, W, H);
   const topBar = chromeMetrics().topBar;
@@ -3856,67 +4055,136 @@ function renderCastle() {
   if (!castle) { game.screen = 'adventure'; return; }
   const fac = factionById(castle.factionId);
   const p = game.players[castle.ownerIdx];
+  if (castleScrollFor !== castle.id) { castleScrollFor = castle.id; castleScroll = 0; }
   drawButton(10, topBar + 8, 90, 34, t('back'), '#94a3b8', '#475569', () => { game.screen = 'adventure'; });
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillStyle = '#f4c95d'; ctx.font = '900 20px sans-serif';
-  ctx.fillText(castle.name + ' — ' + fac.name, W / 2, topBar + 26);
+  ctx.fillText(castle.name + ' — ' + fac.name, W / 2, topBar + 26, W - 120);
 
-  const colW = Math.min(280, W * 0.46);
-  const leftX = 14, rightX = W - colW - 14;
-  let y = topBar + 56;
-  drawPanel(leftX, y, colW, H - topBar - 56 - 14, {});
-  ctx.textAlign = 'left'; ctx.fillStyle = '#fde68a'; ctx.font = '800 13px sans-serif';
-  ctx.fillText(t('buildings') + (castle.builtThisTurn ? ' — ' + t('alreadyBuiltThisTurn') : ''), leftX + 12, y + 18);
-  let by = y + 40;
-  const rowH = 40;
-  for (const def of BUILDING_DEFS) {
-    const curLevel = castle.buildings[def.id] || 0;
-    const isDwelling = !!def.tier;
-    let label = def.name;
-    if (isDwelling) {
-      const cdef = fac.creatures[def.tier - 1];
-      label = (def.upgrade ? 'Upgrade: ' : '') + (def.upgrade ? cdef.upgrade : cdef.name) + (def.upgrade ? '' : ' Dwelling');
-    }
-    const built = curLevel >= def.maxLevel;
-    const check = canBuild(castle, def.id);
-    drawPanel(leftX + 8, by, colW - 16, rowH - 6, { fill: built ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.05)', stroke: built ? '#4ade80' : '#8a7a5c' });
-    ctx.fillStyle = '#fff'; ctx.font = '700 12px sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(label + (built ? ' ✓' : ''), leftX + 16, by + (rowH - 6) / 2);
-    if (!built) {
-      const btnLabel = check.ok ? t('build') : '✕';
-      drawButton(leftX + colW - 70, by + 3, 56, rowH - 12, btnLabel, check.ok ? '#4ade80' : '#6b6b6b', check.ok ? '#16a34a' : '#444', check.ok ? (() => {
-        if (buildInCastle(castle, def.id)) showMessage(t('build'), label, [{ label: t('ok') }]);
-      }) : null, { disabled: !check.ok, fontSize: 11 });
-    }
-    by += rowH;
-    if (by > H - 70) break;
+  // wide screens: buildings left, recruit right. narrow (portrait): recruit panel on top
+  // (sized to its content), the scrollable buildings list underneath.
+  const narrow = W < 600;
+  const y = topBar + 56;
+  const dwellTiers = [1, 2, 3, 4, 5].filter(tier => castle.buildings['dwelling' + tier]);
+  const guildLvl = castle.buildings.mageGuild || 0;
+  const recruitNeedH = 40 + dwellTiers.length * 46 + (guildLvl > 0 ? 50 : 0) + 6;
+  let L, R;
+  if (narrow) {
+    R = { x: 14, y, w: W - 28, h: recruitNeedH };
+    L = { x: 14, y: y + R.h + 8, w: W - 28, h: H - (y + R.h + 8) - 10 };
+  } else {
+    const lw = Math.min(W * 0.56, 460), rw = Math.min(280, W - lw - 42);
+    L = { x: 14, y, w: lw, h: H - topBar - 56 - 14 };
+    R = { x: W - rw - 14, y, w: rw, h: H - topBar - 56 - 14 };
   }
 
-  // right: recruit + garrison
-  drawPanel(rightX, y, colW, H - topBar - 56 - 14, {});
-  ctx.fillStyle = '#fde68a'; ctx.font = '800 13px sans-serif'; ctx.textAlign = 'left';
-  ctx.fillText(t('recruit') + ':', rightX + 12, y + 18);
-  let ry = y + 40;
-  const recruitBtnW = Math.min(88, colW - 24);
-  for (let tier = 1; tier <= 5; tier++) {
-    if (!castle.buildings['dwelling' + tier]) continue;
+  // ---- buildings panel ----
+  drawPanel(L.x, L.y, L.w, L.h, {});
+  ctx.textAlign = 'left'; ctx.fillStyle = '#fde68a'; ctx.font = '800 13px sans-serif';
+  ctx.fillText(t('buildings') + (castle.builtThisTurn ? ' — ' + t('alreadyBuiltThisTurn') : ''), L.x + 12, L.y + 18, L.w - 24);
+  const view = { x: L.x + 4, y: L.y + 32, w: L.w - 8, h: L.h - 36 };
+  castleListRect = view;
+  const rowW = view.w - 12, btnW = 62;
+  // measure pass
+  const rows = [];
+  let total = 0;
+  for (const def of BUILDING_DEFS) {
+    const st = buildingState(castle, def, fac);
+    const textW = rowW - 16 - (st.kind === 'built' ? 0 : btnW + 6);
+    ctx.font = '600 10.5px sans-serif';
+    const descLines = wrapLines(buildingDescText(def, fac), textW);
+    // cost entries flow onto as many lines as needed
+    ctx.font = '700 11px sans-serif';
+    const costLines = [[]]; let cw = 0;
+    if (st.kind !== 'built') {
+      for (const k of RESOURCE_KEYS) {
+        if (!st.cost[k]) continue;
+        const txt = RESOURCE_ICON[k] + ' ' + st.cost[k];
+        const w = ctx.measureText(txt).width + 12;
+        if (cw + w > textW && costLines[costLines.length - 1].length) { costLines.push([]); cw = 0; }
+        costLines[costLines.length - 1].push({ k, txt, w, lack: st.missing.indexOf(k) >= 0 });
+        cw += w;
+      }
+    }
+    ctx.font = '700 10.5px sans-serif';
+    const stateText = st.kind === 'built' ? '✓ ' + t('built') : (st.kind === 'ready' ? '✔ ' + t('bldReady') : '✕ ' + st.reason);
+    const stateLines = wrapLines(stateText, textW);
+    const nCost = st.kind === 'built' ? 0 : costLines.length;
+    const h = 8 + 16 + descLines.length * 13 + nCost * 15 + stateLines.length * 13 + 6;
+    rows.push({ def, st, descLines, costLines, stateLines, textW, h, y: total });
+    total += h + 6;
+  }
+  castleContentH = total;
+  castleScrollClamp();
+  ctx.save();
+  ctx.beginPath(); ctx.rect(view.x, view.y, view.w, view.h); ctx.clip();
+  for (const r of rows) {
+    const ry = view.y + r.y - castleScroll;
+    if (ry + r.h < view.y || ry > view.y + view.h) continue;
+    const rx = view.x + 2;
+    const { def, st } = r;
+    const built = st.kind === 'built';
+    drawPanel(rx, ry, rowW, r.h, { fill: built ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.05)', stroke: built ? '#4ade80' : (st.kind === 'ready' ? '#86efac' : '#8a7a5c'), lineWidth: 1.5 });
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    ctx.fillStyle = '#fff'; ctx.font = '800 12px sans-serif';
+    const lvlTag = def.maxLevel > 1 ? '  ·  ' + t('bldLevel', { n: st.curLevel, max: def.maxLevel }) : '';
+    ctx.fillText(buildingLabel(def, fac) + lvlTag, rx + 8, ry + 16, r.textW);
+    let ty = ry + 8 + 16;
+    ctx.font = '600 10.5px sans-serif'; ctx.fillStyle = '#cbd5e1';
+    for (const l of r.descLines) { ctx.fillText(l, rx + 8, ty + 6); ty += 13; }
+    ctx.font = '700 11px sans-serif';
+    for (const line of r.costLines) {
+      let cx = rx + 8;
+      for (const e of line) { ctx.fillStyle = e.lack ? '#fca5a5' : '#fde68a'; ctx.fillText(e.txt, cx, ty + 7); cx += e.w; }
+      if (line.length) ty += 15;
+    }
+    ctx.font = '700 10.5px sans-serif';
+    ctx.fillStyle = built ? '#4ade80' : (st.kind === 'ready' ? '#86efac' : '#fb923c');
+    for (const l of r.stateLines) { ctx.fillText(l, rx + 8, ty + 6); ty += 13; }
+    if (!built) {
+      const ok = st.kind === 'ready';
+      const bx = rx + rowW - btnW - 6, by = ry + 6, bh = 30;
+      drawButton(bx, by, btnW, bh, ok ? t('build') : '✕', ok ? '#4ade80' : '#6b6b6b', ok ? '#16a34a' : '#444', null, { disabled: !ok, fontSize: 11 });
+      if (ok) {
+        // hit rect clipped to the visible list so a half-scrolled-away button can't be pressed
+        const cy0 = Math.max(by, view.y), cy1 = Math.min(by + bh, view.y + view.h);
+        if (cy1 - cy0 > 8) addButton(bx, cy0, btnW, cy1 - cy0, () => {
+          if (buildInCastle(castle, def.id)) showMessage(t('build'), buildingLabel(def, fac), [{ label: t('ok') }]);
+        });
+      }
+    }
+  }
+  ctx.restore();
+  if (castleContentH > view.h) { // scroll thumb
+    const th = Math.max(20, view.h * view.h / castleContentH);
+    const tyy = view.y + (view.h - th) * (castleScroll / (castleContentH - view.h));
+    ctx.fillStyle = 'rgba(253,230,138,0.55)';
+    roundRect(view.x + view.w - 4, tyy, 3, th, 1.5); ctx.fill();
+  }
+
+  // ---- recruit + garrison panel ----
+  drawPanel(R.x, R.y, R.w, R.h, {});
+  ctx.fillStyle = '#fde68a'; ctx.font = '800 13px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(t('recruit') + ':', R.x + 12, R.y + 18);
+  let ry = R.y + 40;
+  const recruitBtnW = Math.min(88, R.w - 24);
+  for (const tier of dwellTiers) {
     const avail = castleAvailableToRecruit(castle, tier);
     const upgraded = !!castle.buildings['dwelling' + tier + 'up'];
     const cdef = fac.creatures[tier - 1];
     const name = upgraded ? cdef.upgrade : cdef.name;
-    drawPanel(rightX + 8, ry, colW - 16, 40, { fill: 'rgba(255,255,255,0.05)', stroke: '#8a7a5c' });
+    drawPanel(R.x + 8, ry, R.w - 16, 40, { fill: 'rgba(255,255,255,0.05)', stroke: '#8a7a5c' });
     ctx.fillStyle = '#fff'; ctx.font = '700 12px sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(name + ' (' + avail + ')', rightX + 16, ry + 20);
+    ctx.fillText(name + ' (' + avail + ')', R.x + 16, ry + 20, R.w - 16 - recruitBtnW - 16);
     // button sized to fit the full (untruncated) label so its drawn geometry always
     // matches its registered hit rect — a too-narrow button was the earlier symptom here
-    const rbx = rightX + colW - 8 - recruitBtnW, rby = ry + 3, rbh = 34;
+    const rbx = R.x + R.w - 8 - recruitBtnW, rby = ry + 3, rbh = 34;
     drawButton(rbx, rby, recruitBtnW, rbh, t('recruit'), avail > 0 ? '#4ade80' : '#6b6b6b', avail > 0 ? '#16a34a' : '#444', avail > 0 ? (() => openRecruitModal(castle, tier)) : null, { disabled: avail <= 0, fontSize: 12 });
     ry += 46;
   }
-  const guildLvl = castle.buildings.mageGuild || 0;
   if (guildLvl > 0) {
     const hero = findHeroById(game.selectedHeroId);
-    drawButton(rightX + 8, ry + 8, colW - 16, 38, '📖 ' + t('spellbook'), '#a78bfa', '#6d28d9', hero ? (() => openLearnSpellsModal(castle, hero, guildLvl)) : null, { disabled: !hero });
+    drawButton(R.x + 8, ry + 8, R.w - 16, 38, '📖 ' + t('spellbook'), '#a78bfa', '#6d28d9', hero ? (() => openLearnSpellsModal(castle, hero, guildLvl)) : null, { disabled: !hero });
   }
 }
 
@@ -3934,7 +4202,14 @@ function openRecruitModal(castle, tier) {
   // troops go into the castle garrison instead of silently failing
   const hero = heroAtCastle(castle);
   const avail = castleAvailableToRecruit(castle, tier);
-  const sub = hero ? hero.name : t('recruitToGarrison');
+  const fac = factionById(castle.factionId);
+  const cd = fac.creatures[tier - 1];
+  const upgraded = !!castle.buildings['dwelling' + tier + 'up'];
+  const sub = (hero ? hero.name : t('recruitToGarrison')) + '\n' +
+    (upgraded ? cd.upgrade : cd.name) + '\n' +
+    creatureStatLine1(cd) + ' · ' + creatureStatLine2(cd) + '\n' +
+    creatureRangeLabel(cd) + '\n' +
+    t('costEach') + ': ' + costText(cd.cost);
   const doRecruit = (count) => {
     const ok = hero ? recruitFromCastle(castle, hero, tier, count) : recruitIntoGarrison(castle, tier, count);
     hideListModal();
@@ -3971,6 +4246,30 @@ function combatScreenToCell(px, py) {
   return { x: Math.floor((px - o.x) / combatCellSize), y: Math.floor((py - o.y) / combatCellSize) };
 }
 
+// ranged marker: a small gold bow-and-arrow on a dark pill in the top-left of the stack's cell,
+// with the remaining ammo beside it (grey bow + red 0 once the stack is out of ammo)
+function drawRangedBadge(cx, cy, cs, ammo) {
+  const r = Math.max(4, cs * 0.17);
+  const fontPx = Math.max(9, Math.round(cs * 0.3));
+  ctx.save();
+  ctx.font = '800 ' + fontPx + 'px sans-serif';
+  const label = String(ammo);
+  const pillW = r * 2 + 4 + ctx.measureText(label).width + 3, pillH = Math.max(r * 2 + 2, fontPx + 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.78)';
+  roundRect(cx + 1, cy + 1, pillW, pillH, pillH / 2); ctx.fill();
+  const bx = cx + 3 + r * 0.7, by = cy + 1 + pillH / 2;
+  const out = ammo <= 0;
+  ctx.strokeStyle = out ? '#9ca3af' : '#fde047'; ctx.lineWidth = Math.max(1.2, cs * 0.05);
+  ctx.beginPath(); ctx.arc(bx - r * 0.2, by, r, -Math.PI * 0.42, Math.PI * 0.42); ctx.stroke(); // bow
+  ctx.beginPath(); ctx.moveTo(bx - r * 0.2 + r * Math.cos(Math.PI * 0.42), by - r * Math.sin(Math.PI * 0.42));
+  ctx.lineTo(bx - r * 0.2 + r * Math.cos(Math.PI * 0.42), by + r * Math.sin(Math.PI * 0.42)); ctx.stroke(); // string
+  ctx.beginPath(); ctx.moveTo(bx - r * 0.9, by); ctx.lineTo(bx + r * 1.1, by); ctx.stroke(); // arrow
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = out ? '#f87171' : '#fff';
+  ctx.fillText(label, cx + 3 + r * 2 + 2, by + 1);
+  ctx.restore();
+}
+
 function renderCombat() {
   combatCellSize = computeCombatCellSize();
   ctx.fillStyle = '#0f1a12'; ctx.fillRect(0, 0, W, H);
@@ -3989,7 +4288,9 @@ function renderCombat() {
   if (activeStack) {
     ctx.font = '700 12px sans-serif';
     ctx.fillStyle = activeStack.side === 'attacker' ? '#93c5fd' : '#fca5a5';
-    ctx.fillText(t('stackTurn', { name: creatureDisplayName(activeStack) }), W / 2, topBar + 33);
+    const acd = creatureRef(activeStack);
+    const rangeNote = acd.ranged ? (activeStack.ammo > 0 ? '🏹 ' + t('shotsLabel', { n: activeStack.ammo }) : t('noAmmo')) : '⚔️ ' + t('meleeLabel');
+    ctx.fillText(t('stackTurn', { name: creatureDisplayName(activeStack) }) + ' — ' + rangeNote, W / 2, topBar + 33, W - 16);
   }
   // initiative / turn order row
   const aliveOrder = c.order.map(id => c.stacks.find(s => s.id === id)).filter(s => s && s.alive);
@@ -4043,6 +4344,7 @@ function renderCombat() {
     ctx.fillRect(barX, barY, barW, barH);
     ctx.fillStyle = hpFrac > 0.5 ? '#4ade80' : (hpFrac > 0.25 ? '#fbbf24' : '#f87171');
     ctx.fillRect(barX, barY, Math.max(0, barW * hpFrac), barH);
+    if (creatureRanged(st)) drawRangedBadge(s.x, s.y, combatCellSize, st.ammo);
     addButton(s.x, s.y, combatCellSize, combatCellSize, () => { humanActOnTile(st.x, st.y); });
   }
   // empty tile taps
@@ -4177,22 +4479,28 @@ function pointFromEvent(e) {
   return { x: e.clientX, y: e.clientY };
 }
 
+let lastPointerX = 0, lastPointerY = 0;
 function onDown(px, py) {
   initAudio();
+  lastPointerX = px; lastPointerY = py;
   const btn = hitButton(px, py);
   if (btn) { btn.onClick(); return; }
   if (game.screen === 'adventure') adventurePointerDown(px, py);
+  else if (game.screen === 'castle') castleScrollDown(px, py);
 }
 function onMove(px, py) {
   if (game.screen === 'adventure') adventurePointerMove(px, py);
+  else if (game.screen === 'castle') castleScrollMove(px, py);
 }
 function onUp(px, py) {
   if (game.screen === 'adventure') adventurePointerUp(px, py);
+  castleScrollUp();
 }
 
 canvas.addEventListener('touchstart', e => { e.preventDefault(); const p = pointFromEvent(e); onDown(p.x, p.y); }, { passive: false });
 canvas.addEventListener('touchmove', e => { e.preventDefault(); const p = pointFromEvent(e); onMove(p.x, p.y); }, { passive: false });
 canvas.addEventListener('touchend', e => { e.preventDefault(); const p = pointFromEvent(e); onUp(p.x, p.y); }, { passive: false });
+canvas.addEventListener('wheel', e => { if (game.screen === 'castle') { castleScroll += e.deltaY; e.preventDefault(); } }, { passive: false });
 canvas.addEventListener('mousedown', e => onDown(e.clientX, e.clientY));
 window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
 window.addEventListener('mouseup', e => onUp(e.clientX, e.clientY));
