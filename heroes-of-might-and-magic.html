@@ -1015,7 +1015,7 @@ function makePlayer(idx, factionId) {
     resources: startingResources(),
     heroes: [],
     castles: [],
-    fog: null, // Uint8Array-like 2D array: 0 unseen, 1 explored, 2 visible
+    fog: null, // Uint8Array-like 2D array: 0 unseen, 2 discovered (permanent; 1 is no longer used)
   };
 }
 
@@ -1325,8 +1325,7 @@ const CASTLE_SCOUT_RADIUS = 5;
 function recomputeFog(playerIdx) {
   const p = game.players[playerIdx];
   const fog = p.fog;
-  // downgrade visible->explored (keep explored as explored)
-  for (let y = 0; y < MAP_SIZE; y++) for (let x = 0; x < MAP_SIZE; x++) if (fog[y][x] === 2) fog[y][x] = 1;
+  // permanent reveal: tiles are only ever set to 2, never lowered
   function reveal(cx, cy, r) {
     for (let y = Math.max(0, cy - r); y <= Math.min(MAP_SIZE - 1, cy + r); y++) {
       for (let x = Math.max(0, cx - r); x <= Math.min(MAP_SIZE - 1, cx + r); x++) {
@@ -1339,6 +1338,17 @@ function recomputeFog(playerIdx) {
     const c = game.objects.find(o => o.id === cid);
     if (c) reveal(c.x, c.y, CASTLE_SCOUT_RADIUS);
   }
+}
+
+// is (x,y) inside the current sight radius of any of the player's heroes or castles?
+// (fog is permanent, so enemy heroes / monster stacks need this live test instead)
+function isCurrentlyVisible(x, y, player) {
+  for (const h of player.heroes) if (Math.hypot(x - h.x, y - h.y) <= SCOUT_RADIUS) return true;
+  for (const cid of player.castles) {
+    const c = game.objects.find(o => o.id === cid);
+    if (c && Math.hypot(x - c.x, y - c.y) <= CASTLE_SCOUT_RADIUS) return true;
+  }
+  return false;
 }
 
 // ============ TURN ENGINE ============
@@ -4548,46 +4558,37 @@ function renderAdventure() {
       const s = worldToScreen(x, y);
       ctx.fillStyle = terr.color;
       ctx.fillRect(s.x, s.y, size, size);
-      if (fogState === 1) { ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(s.x, s.y, size, size); }
     }
   }
-  // objects: static ones stay drawn on explored (fog 1) tiles, dimmed as "remembered, not
-  // currently seen" (HOMM-style). Monster stacks are only shown while in view (fog 2) since
-  // they can be beaten or wander off; enemy heroes (below) are also visible-only.
-  const canDim = typeof ctx.filter === 'string';
+  // objects on discovered tiles are drawn normally; monster stacks are only shown while
+  // currently in view (they can be beaten or wander off); enemy heroes (below) likewise.
   for (const obj of game.objects) {
     if (obj.x < x0 - 1 || obj.x > x1 + 1 || obj.y < y0 - 1 || obj.y > y1 + 1) continue;
     const fs = p.fog[obj.y][obj.x];
     if (fs === 0) continue;
-    if (fs !== 2 && obj.kind === OBJ.MONSTER) continue;
-    const remembered = fs === 1;
+    if (obj.kind === OBJ.MONSTER && !isCurrentlyVisible(obj.x, obj.y, p)) continue;
     const s = worldToScreen(obj.x, obj.y);
     // owner colour: castles use ownerIdx, mines use owner (-1 = neutral)
     const ownerIdx = obj.kind === OBJ.CASTLE ? obj.ownerIdx : (obj.kind === OBJ.MINE ? obj.owner : -1);
     const ownerColor = ownerIdx === 0 ? '#3b82f6' : (ownerIdx === 1 ? '#dc2626' : '#888');
     ctx.save();
-    if (remembered) ctx.globalAlpha = 0.72;
     if (obj.kind === OBJ.CASTLE) {
       ctx.fillStyle = ownerColor;
       roundRect(s.x + 2, s.y + 2, size - 4, size - 4, 4); ctx.fill();
     }
-    // desaturate only the icon (canvas filter where supported), never the owner colour
-    if (remembered && canDim) ctx.filter = 'grayscale(0.85) brightness(0.8)';
     ctx.font = Math.round(size * 0.6) + 'px sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(objIcon(obj), s.x + size / 2, s.y + size / 2);
-    if (remembered && canDim) ctx.filter = 'none';
     if (obj.kind === OBJ.MINE && ownerIdx >= 0) {
       ctx.fillStyle = ownerColor; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(s.x + size - 6, s.y + 6, Math.max(3, size * 0.14), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     }
     ctx.restore();
-    if (remembered) { ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(s.x, s.y, size, size); }
   }
   // heroes (both players' heroes only shown to owner OR if in visible fog and not stealthed — simplification: show any hero currently on a visible tile)
   for (const pl of game.players) {
     for (const h of pl.heroes) {
-      if (p.fog[h.y][h.x] !== 2) continue;
+      if (p.fog[h.y][h.x] === 0 || (h.ownerIdx !== p.idx && !isCurrentlyVisible(h.x, h.y, p))) continue;
       const s = worldToScreen(h.x, h.y);
       ctx.fillStyle = h.ownerIdx === 0 ? '#60a5fa' : '#f87171';
       ctx.beginPath(); ctx.arc(s.x + size / 2, s.y + size / 2, size * 0.38, 0, Math.PI * 2); ctx.fill();
@@ -4631,7 +4632,6 @@ function drawMinimap(p, topBar) {
       if (f === 0) continue;
       ctx.fillStyle = TERRAIN[game.terrain[y][x]].color;
       ctx.fillRect(m.x + x * cell, m.y + y * cell, cell, cell);
-      if (f === 1) { ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(m.x + x * cell, m.y + y * cell, cell, cell); }
     }
   }
   const dot = (tx, ty, color, r) => {
@@ -4644,7 +4644,7 @@ function drawMinimap(p, topBar) {
   }
   for (const pl of game.players) {
     for (const hh of pl.heroes) {
-      if (p.fog[hh.y][hh.x] !== 2) continue; // own heroes always; enemy heroes only while in view
+      if (hh.ownerIdx !== p.idx && !isCurrentlyVisible(hh.x, hh.y, p)) continue; // own heroes always; enemy heroes only while in view
       dot(hh.x, hh.y, hh.ownerIdx === 0 ? '#93c5fd' : '#fca5a5', Math.max(1.8, cell * 0.6));
     }
   }
