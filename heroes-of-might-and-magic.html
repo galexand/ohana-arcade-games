@@ -197,6 +197,7 @@ const TEXT = {
     endTurn: 'END TURN',
     day: 'Day',
     week: 'Week',
+    dayShort: 'D', weekShort: 'W',
     gold: 'Gold', wood: 'Wood', ore: 'Ore', crystal: 'Crystal', plasma: 'Plasma',
     movePts: 'Move', spellPts: 'Spell Pts',
     attack: 'Attack', defense: 'Defense', spellPower: 'Spell Power', knowledge: 'Knowledge',
@@ -212,7 +213,7 @@ const TEXT = {
     bldReady: 'Ready to build',
     bldLevel: 'Level {n}/{max}',
     descTownHall: 'Pays gold every day: +{a} at level 1, +{b} at level 2, +{c} at level 3.',
-    descTavern: 'A lively meeting place. Troops defending this castle fight with +2 Morale (fewer lost turns, more chances for an extra action).',
+    descTavern: 'A lively meeting place. Troops defending this castle fight with +2 Morale (fewer lost turns, more chances for an extra action). Lets you hire new heroes.',
     descMageGuild: 'Your hero can learn spells up to the guild level. Higher levels teach stronger spells.',
     descCityWalls: 'When enemies attack, a wall with a gate rises on the battlefield. It blocks movement and ranged fire, so attackers must fight through the gate.',
     descStatue: 'A proud statue that brings +250 gold every day.',
@@ -226,6 +227,17 @@ const TEXT = {
     recruitHowMany: 'How many?',
     recruitToGarrison: 'No hero is at the castle — new troops join the garrison.',
     recruitFailed: 'Could not recruit — not enough resources or no free army slot.',
+    garrison: 'Garrison',
+    noHeroAtCastle: 'No hero is at this castle',
+    cantEmptyHero: 'A hero cannot be left with no troops',
+    toHero: 'To hero',
+    toGarrison: 'To garrison',
+    disband: 'Disband',
+    upgradeUnit: 'Upgrade',
+    upgradeConfirm: 'Upgrade {n}x {from} to {to}?',
+    upgradeCost: 'Cost',
+    upgradeNotAvailable: 'This castle cannot upgrade these troops',
+    disbandConfirm: 'Permanently remove {n}x {name} from the army?',
     max: 'MAX',
     perWeek: '/week',
     chestTitle: 'A Traveler\'s Chest!',
@@ -321,6 +333,12 @@ const TEXT = {
     bldDwelling: '{name} Dwelling', bldUpgrade: 'Upgrade: {name}',
     upgradeBonus: 'Upgraded stats: {list}',
     tavernCheer: '🍻 The Tavern cheers the defenders! (+2 Morale)',
+    hireHero: 'Hire Hero',
+    hireHeroConfirm: 'Hire {name} for {cost}?',
+    tooManyHeroes: 'You already command the maximum number of heroes',
+    noRoomForHero: 'No free tile next to the castle',
+    tavernHeroes: 'Heroes for hire',
+    nextHero: 'Next hero',
     siegeStart: '🏰 Siege! The walls block movement and shots — break through the gate.',
     skillLogistics: 'Logistics', skillWisdom: 'Wisdom', skillLuck: 'Luck', skillLeadership: 'Leadership', skillArchery: 'Archery',
     spellFireball: 'Fireball', spellLightning: 'Lightning Bolt', spellBless: 'Bless', spellHaste: 'Haste', spellCurse: 'Curse', spellSlow: 'Slow', spellHeal: 'Heal', spellTownPortal: 'Town Portal',
@@ -361,6 +379,7 @@ const TEXT = {
     passDeviceBtn: 'Sunt Jucătorul {n} — Pregătit',
     endTurn: 'TERMINĂ RÂNDUL',
     day: 'Ziua', week: 'Săptămâna',
+    dayShort: 'Z', weekShort: 'S',
     gold: 'Aur', wood: 'Lemn', ore: 'Minereu', crystal: 'Cristal', plasma: 'Plasmă',
     movePts: 'Mișcare', spellPts: 'Puncte Magie',
     attack: 'Atac', defense: 'Apărare', spellPower: 'Putere Magică', knowledge: 'Cunoaștere',
@@ -376,7 +395,7 @@ const TEXT = {
     bldReady: 'Gata de construit',
     bldLevel: 'Nivel {n}/{max}',
     descTownHall: 'Plătește aur în fiecare zi: +{a} la nivelul 1, +{b} la nivelul 2, +{c} la nivelul 3.',
-    descTavern: 'Un loc plin de viață. Trupele care apără acest castel luptă cu +2 Moral (mai puține ture pierdute, mai multe șanse la o acțiune în plus).',
+    descTavern: 'Un loc plin de viață. Trupele care apără acest castel luptă cu +2 Moral (mai puține ture pierdute, mai multe șanse la o acțiune în plus). Îți permite să angajezi eroi noi.',
     descMageGuild: 'Eroul tău poate învăța vrăji până la nivelul breslei. Nivelurile mai mari oferă vrăji mai puternice.',
     descCityWalls: 'Când inamicii atacă, pe câmpul de luptă apare un zid cu poartă. Blochează mișcarea și tirul, deci atacatorii trebuie să forțeze poarta.',
     descStatue: 'O statuie mândră care aduce +250 aur în fiecare zi.',
@@ -390,6 +409,17 @@ const TEXT = {
     recruitHowMany: 'Câte?',
     recruitToGarrison: 'Niciun erou nu e la castel — trupele noi se alătură garnizoanei.',
     recruitFailed: 'Recrutare eșuată — resurse insuficiente sau nu mai e loc în armată.',
+    garrison: 'Garnizoană',
+    noHeroAtCastle: 'Niciun erou nu e la acest castel',
+    cantEmptyHero: 'Un erou nu poate rămâne fără trupe',
+    toHero: 'La erou',
+    toGarrison: 'În garnizoană',
+    disband: 'Desființează',
+    upgradeUnit: 'Îmbunătățește',
+    upgradeConfirm: 'Îmbunătățești {n}x {from} în {to}?',
+    upgradeCost: 'Cost',
+    upgradeNotAvailable: 'Acest castel nu poate îmbunătăți aceste trupe',
+    disbandConfirm: 'Elimini definitiv {n}x {name} din armată?',
     max: 'MAX',
     perWeek: '/săptămână',
     chestTitle: 'Un Cufăr de Călător!',
@@ -485,6 +515,12 @@ const TEXT = {
     bldDwelling: 'Locuință: {name}', bldUpgrade: 'Îmbunătățire: {name}',
     upgradeBonus: 'Statistici îmbunătățite: {list}',
     tavernCheer: '🍻 Taverna îi încurajează pe apărători! (+2 Moral)',
+    hireHero: 'Angajează erou',
+    hireHeroConfirm: 'Angajezi {name} pentru {cost}?',
+    tooManyHeroes: 'Ai deja numărul maxim de eroi',
+    noRoomForHero: 'Niciun loc liber lângă castel',
+    tavernHeroes: 'Eroi de angajat',
+    nextHero: 'Următorul erou',
     siegeStart: '🏰 Asediu! Zidurile blochează mișcarea și tirul — forțează poarta.',
     skillLogistics: 'Logistică', skillWisdom: 'Înțelepciune', skillLuck: 'Noroc', skillLeadership: 'Conducere', skillArchery: 'Tir cu arcul',
     spellFireball: 'Minge de foc', spellLightning: 'Fulger', spellBless: 'Binecuvântare', spellHaste: 'Grabă', spellCurse: 'Blestem', spellSlow: 'Încetinire', spellHeal: 'Vindecare', spellTownPortal: 'Portal spre Castel',
@@ -951,6 +987,9 @@ function emptyResources() { return { gold: 0, wood: 0, ore: 0, crystal: 0, plasm
 // HOMM2-style starting stockpile: enough to build a tier-1 dwelling and recruit on day 1
 function startingResources() { return { gold: 6000, wood: 18, ore: 18, crystal: 8, plasma: 8 }; }
 
+const MAX_HEROES_PER_PLAYER = 4;
+const HERO_HIRE_COST = { gold: 2500 };
+
 function makeHero(factionId, heroDef, x, y, ownerIdx) {
   return {
     id: genId(), name: heroDef.name, portrait: heroDef.portrait, factionId, ownerIdx,
@@ -1118,7 +1157,9 @@ function startNewDuel(factionIds, heroIdxs) {
 
 // find a passable, non-castle tile adjacent (or nearby) to (cx,cy) — used to place a
 // starting hero next to its castle instead of directly on top of it
-function findAdjacentFreeTile(cx, cy) {
+function findAdjacentFreeTile(cx, cy, strict) {
+  // strict: also skip tiles already holding a hero or a map object (used when hiring heroes)
+  const taken = (x, y) => strict && (heroAt(x, y) || objectAt(x, y));
   const ring1 = [
     { x: cx + 1, y: cy }, { x: cx - 1, y: cy }, { x: cx, y: cy + 1 }, { x: cx, y: cy - 1 },
     { x: cx + 1, y: cy + 1 }, { x: cx - 1, y: cy - 1 }, { x: cx + 1, y: cy - 1 }, { x: cx - 1, y: cy + 1 },
@@ -1127,6 +1168,7 @@ function findAdjacentFreeTile(cx, cy) {
     if (!inBounds(n.x, n.y)) continue;
     if (movementCost(game.terrain, n.x, n.y) === Infinity) continue;
     if (findCastleAt(n.x, n.y)) continue;
+    if (taken(n.x, n.y)) continue;
     return n;
   }
   for (let r = 2; r <= 5; r++) {
@@ -1137,6 +1179,7 @@ function findAdjacentFreeTile(cx, cy) {
         if (!inBounds(x, y)) continue;
         if (movementCost(game.terrain, x, y) === Infinity) continue;
         if (findCastleAt(x, y)) continue;
+        if (taken(x, y)) continue;
         return { x, y };
       }
     }
@@ -1369,6 +1412,72 @@ function collectIncome(playerIdx) {
   return income;
 }
 
+// ---- tavern: heroes for hire ----
+function randomTavernCandidate(castle, avoidNames) {
+  const pool = factionById(castle.factionId).heroes;
+  // prefer heroes the owner doesn't already command (and that aren't already on offer)
+  const owned = game.players[castle.ownerIdx].heroes.map(h => h.name);
+  const fresh = pool.filter(hd => avoidNames.indexOf(hd.name) < 0 && owned.indexOf(hd.name) < 0);
+  const from = fresh.length ? fresh : pool;
+  return from[Math.floor(Math.random() * from.length)];
+}
+function refreshTavernHeroes(castle) {
+  castle.tavernHeroes = [];
+  for (let i = 0; i < 2; i++) castle.tavernHeroes.push(randomTavernCandidate(castle, castle.tavernHeroes.map(h => h.name)));
+}
+function ensureTavernHeroes(castle) {
+  if (!castle.tavernHeroes || castle.tavernHeroes.length < 2) refreshTavernHeroes(castle);
+  return castle.tavernHeroes;
+}
+function canAffordHeroHire(p) {
+  for (const k in HERO_HIRE_COST) if ((p.resources[k] || 0) < HERO_HIRE_COST[k]) return false;
+  return true;
+}
+// returns the new hero, or null after showing the reason it was refused
+function hireTavernHero(castle, idx) {
+  const p = game.players[castle.ownerIdx];
+  const cands = ensureTavernHeroes(castle);
+  const hd = cands[idx];
+  if (!hd) return null;
+  if (p.heroes.length >= MAX_HEROES_PER_PLAYER) { showMessage(t('hireHero'), t('tooManyHeroes')); return null; }
+  if (!canAffordHeroHire(p)) { showMessage(t('hireHero'), t('cannotAfford')); return null; }
+  const spot = findAdjacentFreeTile(castle.x, castle.y, true);
+  if (!spot) { showMessage(t('hireHero'), t('noRoomForHero')); return null; }
+  for (const k in HERO_HIRE_COST) p.resources[k] -= HERO_HIRE_COST[k];
+  const h = makeHero(castle.factionId, hd, spot.x, spot.y, castle.ownerIdx);
+  h.army[0] = makeCreatureStack(castle.factionId, 1, 4 + Math.floor(Math.random() * 3));
+  h.movePtsMax = heroMovePtsMax(h); h.movePts = h.movePtsMax;
+  h.spellPtsMax = heroSpellPtsMax(h); h.spellPts = h.spellPtsMax;
+  p.heroes.push(h);
+  recomputeFog(castle.ownerIdx);
+  cands[idx] = randomTavernCandidate(castle, cands.map(c => c.name));
+  sfx.recruit();
+  saveGame();
+  return h;
+}
+function openHireHeroModal(castle) {
+  const p = game.players[castle.ownerIdx];
+  const cands = ensureTavernHeroes(castle);
+  const lvls = [t('basic'), t('advanced'), t('expert')];
+  const items = cands.map((hd, i) => ({
+    label: hd.name + '  ·  ' + t('level') + ' 1\n' +
+      t('attack') + ' ' + hd.attack + '  ' + t('defense') + ' ' + hd.defense + '  ' + t('spellPower') + ' ' + hd.spellPower + '  ' + t('knowledge') + ' ' + hd.knowledge + '\n' +
+      (hd.skill ? skillName(hd.skill.id) + ' (' + lvls[(hd.skill.level || 1) - 1] + ')  ·  ' : '') + costText(HERO_HIRE_COST),
+    onClick: () => {
+      hideListModal();
+      showMessage(t('hireHero'), t('hireHeroConfirm', { name: hd.name, cost: costText(HERO_HIRE_COST) }), [
+        { label: t('hireHero'), cls: 'btn-green', onClick: () => {
+          hideMessage();
+          const h = hireTavernHero(castle, i);
+          if (h) { game.selectedHeroId = h.id; openHireHeroModal(castle); }
+        } },
+        { label: t('cancel'), onClick: () => { hideMessage(); openHireHeroModal(castle); } },
+      ]);
+    },
+  }));
+  showListModal(t('tavernHeroes'), costText(HERO_HIRE_COST) + '  ·  ' + t('heroes') + ' ' + p.heroes.length + '/' + MAX_HEROES_PER_PLAYER, items);
+}
+
 function weeklyGrowth() {
   for (const o of game.objects) {
     if (o.kind === OBJ.CASTLE) {
@@ -1379,6 +1488,7 @@ function weeklyGrowth() {
           o.dwellingCounts[tier] = (o.dwellingCounts[tier] || 0) + cdef.growth;
         }
       }
+      if (o.buildings.tavern) refreshTavernHeroes(o);
     }
   }
 }
@@ -1852,6 +1962,12 @@ function castleAvailableToRecruit(castle, tier) {
 // shared by recruitFromCastle (targets a hero standing in the castle) and
 // recruitIntoGarrison (targets the castle's own garrison when no hero is present) —
 // both a hero and the garrison expose the same 5-slot `.army`/`.garrison` shape
+// older saves may lack the garrison array (or hold a short one) — normalise it in place
+function ensureGarrison(castle) {
+  if (!Array.isArray(castle.garrison)) castle.garrison = [];
+  while (castle.garrison.length < 5) castle.garrison.push(null);
+  return castle.garrison;
+}
 function recruitToArmyHolder(castle, armyHolder, tier, count) {
   const upgraded = !!castle.buildings['dwelling' + tier + 'up'];
   const avail = castleAvailableToRecruit(castle, tier);
@@ -1877,11 +1993,17 @@ function recruitFromCastle(castle, hero, tier, count) {
 // silently doing nothing (garrison defends the castle and can be picked up by any
 // visiting friendly hero later)
 function recruitIntoGarrison(castle, tier, count) {
-  return recruitToArmyHolder(castle, { army: castle.garrison }, tier, count);
+  return recruitToArmyHolder(castle, { army: ensureGarrison(castle) }, tier, count);
 }
 // "at/near" the castle: on its tile, or on any of the 8 tiles around it (this is where a
 // freshly-spawned hero stands, since heroes now spawn adjacent to their castle rather than
 // on top of it — see findAdjacentFreeTile)
+// when the selected hero dies, pass the selection to another hero of the same player (if any)
+function reselectAfterHeroLoss(deadHero, p) {
+  if (game.selectedHeroId !== deadHero.id) return;
+  game.selectedHeroId = p.heroes.length ? p.heroes[0].id : null;
+  if (game.selectedHeroId && game.turn.playerIdx === p.idx) centerCameraOnHero(p.heroes[0]);
+}
 function heroAtCastle(castle) {
   const heroes = game.players[castle.ownerIdx].heroes;
   return heroes.find(h => h.x === castle.x && h.y === castle.y) ||
@@ -2396,6 +2518,7 @@ function resolveCombat() {
     if (c.kind === 'hero' && defenderHero) {
       const p = game.players[defenderHero.ownerIdx];
       p.heroes = p.heroes.filter(h => h.id !== defenderHero.id);
+      reselectAfterHeroLoss(defenderHero, p);
       if (attackerHero) game.stats.heroesDefeated[attackerHero.ownerIdx]++;
     }
     sfx.victory();
@@ -2408,6 +2531,7 @@ function resolveCombat() {
     if (attackerHero) {
       const p = game.players[attackerHero.ownerIdx];
       p.heroes = p.heroes.filter(h => h.id !== attackerHero.id);
+      reselectAfterHeroLoss(attackerHero, p);
       if (defenderHero) game.stats.heroesDefeated[defenderHero.ownerIdx]++;
     }
     sfx.defeatSting();
@@ -2489,6 +2613,7 @@ function showListModal(title, sub, items, buttons) {
     const div = document.createElement('div');
     div.className = 'panel-list-item' + (it.disabled ? ' disabled' : '');
     div.textContent = it.label;
+    div.style.whiteSpace = 'pre-line';
     if (!it.disabled && it.onClick) div.addEventListener('click', it.onClick);
     listEl.appendChild(div);
   });
@@ -2598,9 +2723,14 @@ function drawButton(x, y, w, h, label, colorTop, colorBot, onClick, opts) {
   ctx.lineWidth = 1.5;
   ctx.stroke();
   ctx.fillStyle = opts.disabled ? '#ccc' : (opts.textColor || '#2b1a05');
-  ctx.font = (opts.fontWeight || '800') + ' ' + (opts.fontSize || 14) + 'px sans-serif';
+  // fontSize is the starting size: shrink (down to 9px) until the label fits the button, then
+  // let fillText's maxWidth squeeze whatever is left
+  let fs = opts.fontSize || 14;
+  const fw = opts.fontWeight || '800', usable = w - 10;
+  ctx.font = fw + ' ' + fs + 'px sans-serif';
+  while (fs > 9 && ctx.measureText(label).width > usable) { fs -= 0.5; ctx.font = fw + ' ' + fs + 'px sans-serif'; }
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(label, x + w / 2, y + h / 2 + 1);
+  ctx.fillText(label, x + w / 2, y + h / 2 + 1, usable);
   if (!opts.disabled && onClick) addButton(x, y, w, h, onClick);
 }
 function drawPanel(x, y, w, h, opts) {
@@ -2611,6 +2741,31 @@ function drawPanel(x, y, w, h, opts) {
   ctx.strokeStyle = opts.stroke || '#c9a35c';
   ctx.lineWidth = opts.lineWidth || 2;
   ctx.stroke();
+}
+// Screen-header title: centred in the free band [leftEdge, rightEdge] between the buttons on the
+// left (BACK...) and on the right (Disband/Upgrade/Garrison...), never over them. `texts` are
+// candidates from most to least descriptive; the first one that fits at 20px, then 15px, then (last
+// resort) 13px is drawn. If nothing fits in a usable band the title is simply left out (the screens
+// repeat the name elsewhere), rather than drawn on top of a button.
+function drawHeaderTitle(topBar, leftEdge, rightEdge, texts) {
+  const space = rightEdge - leftEdge;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#f4c95d';
+  const tries = [];
+  for (const px of [20, 15]) for (const txt of texts) tries.push([txt, px]);
+  for (const txt of texts) tries.push([txt, 13]);
+  for (const [txt, px] of tries) {
+    ctx.font = '900 ' + px + 'px sans-serif';
+    if (ctx.measureText(txt).width <= space) { ctx.fillText(txt, (leftEdge + rightEdge) / 2, topBar + 26, space); return; }
+  }
+  if (space >= 70) { // squeeze the shortest text into what is left
+    ctx.font = '900 13px sans-serif';
+    ctx.fillText(texts[texts.length - 1], (leftEdge + rightEdge) / 2, topBar + 26, space);
+  }
+}
+// hit rect for a button inside a scrolled/clipped view: only the visible slice can be pressed
+function addClippedButton(x, y, w, h, view, onClick) {
+  const y0 = Math.max(y, view.y), y1 = Math.min(y + h, view.y + view.h);
+  if (y1 - y0 > 8) addButton(x, y0, w, y1 - y0, onClick);
 }
 function creatureColor(stack) { return creatureRef(stack).color; }
 
@@ -3912,7 +4067,7 @@ function missionOnTurnStart(nextIdx) {
   }
   if (obj.type === 'defeatAllHeroes' && obj.lairActive) {
     obj.lairTimer = (obj.lairTimer || 0) + 1;
-    if (obj.lairTimer >= obj.lairInterval && game.players[1].heroes.length < 4) {
+    if (obj.lairTimer >= obj.lairInterval && game.players[1].heroes.length < MAX_HEROES_PER_PLAYER) {
       obj.lairTimer = 0;
       spawnWeakAIHero(obj.lairSpot.x, obj.lairSpot.y, MISSIONS[game.campaignMissionIdx].aiFaction);
     }
@@ -4691,37 +4846,71 @@ function drawObjectiveBar(topBar) {
 
 function drawResourceBar(p, topBar) {
   drawPanel(0, topBar, W, 46, { r: 0, fill: 'rgba(20,14,6,0.92)', stroke: 'rgba(255,255,255,0.1)' });
-  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.font = '700 13px sans-serif';
+  ctx.textBaseline = 'middle';
+  // All 5 resources matter more than the long day text. Measure everything first, then pick the
+  // first layout that fits every resource: long day @13px, short day @13px, long @11px, short @11px
+  // (11px layouts also tighten the gap between resources to 8px).
+  // Only if none fits are resources dropped (right to left), using short day text and 11px font.
+  const dayFont = '800 13px sans-serif', gutter = 10;
+  const texts = RESOURCE_KEYS.map(k => RESOURCE_ICON[k] + ' ' + (p.resources[k] || 0));
+  const dayLong = t('day') + ' ' + game.turn.day + ' · ' + t('week') + ' ' + game.turn.week;
+  const dayShort = t('dayShort') + game.turn.day + ' · ' + t('weekShort') + game.turn.week;
+  ctx.font = dayFont;
+  const dwLong = ctx.measureText(dayLong).width, dwShort = ctx.measureText(dayShort).width;
+  const layouts = [];
+  for (const px of [13, 11]) {
+    ctx.font = '700 ' + px + 'px sans-serif';
+    const lw = texts.map(l => ctx.measureText(l).width), resGap = px === 13 ? 16 : 8;
+    const need = 10 + lw.reduce((a, b) => a + b, 0) + resGap * (lw.length - 1);
+    layouts.push({ px, lw, resGap, need, dayText: dayLong, dw: dwLong }, { px, lw, resGap, need, dayText: dayShort, dw: dwShort });
+  }
+  // order: long13, short13, long11, short11
+  const order = [layouts[0], layouts[1], layouts[2], layouts[3]];
+  let L = order.find(l => l.need <= W - 10 - l.dw - gutter) || order[3];
+  const resourceLimit = W - 10 - L.dw - gutter;
+  ctx.font = '700 ' + L.px + 'px sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#fff';
   let x = 10;
-  for (const k of RESOURCE_KEYS) {
-    ctx.fillStyle = '#fff';
-    const label = RESOURCE_ICON[k] + ' ' + (p.resources[k] || 0);
-    ctx.fillText(label, x, topBar + 23);
-    x += ctx.measureText(label).width + 16;
-    if (x > W - 140) break;
+  for (let i = 0; i < texts.length; i++) {
+    if (x + L.lw[i] > resourceLimit) break;
+    ctx.fillText(texts[i], x, topBar + 23);
+    x += L.lw[i] + L.resGap;
   }
   ctx.textAlign = 'right';
   ctx.fillStyle = '#f4c95d';
-  ctx.font = '800 13px sans-serif';
-  ctx.fillText(t('day') + ' ' + game.turn.day + ' · ' + t('week') + ' ' + game.turn.week, W - 10, topBar + 23);
+  ctx.font = dayFont;
+  ctx.fillText(L.dayText, W - 10, topBar + 23);
 }
 
+function cycleHero(p) {
+  const hs = p.heroes;
+  if (hs.length < 2) return;
+  const cur = hs.findIndex(h => h.id === game.selectedHeroId);
+  const order = hs.map((_, k) => hs[(cur + 1 + k) % hs.length]); // next heroes first, the current one last
+  const next = order.find(h => h.movePts > 0 && h.id !== game.selectedHeroId) || order[0];
+  game.selectedHeroId = next.id;
+  centerCameraOnHero(next);
+  sfx.click();
+}
 function drawBottomPanel(p, topBar) {
   const y = H - 44;
   drawPanel(0, y, W, 44, { r: 0, fill: 'rgba(20,14,6,0.92)', stroke: 'rgba(255,255,255,0.1)' });
   const hero = findHeroById(game.selectedHeroId);
+  const btnW = W < 420 ? 112 : 120;
+  const endX = W - btnW - 10;
+  const multi = p.heroes.length >= 2;
+  const cycW = 44, cycX = endX - cycW - 8;
+  const textRight = multi ? cycX - 6 : endX - 6;
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   if (hero) {
     ctx.fillStyle = '#fff'; ctx.font = '800 13px sans-serif';
-    ctx.fillText('🧝 ' + hero.name + '  Lv' + hero.level + '  ' + t('movePts') + ': ' + Math.round(hero.movePts) + '/' + hero.movePtsMax, 10, y + 22);
-    addButton(0, y, Math.min(220, W * 0.5), 44, () => { game.screen = 'heroScreen'; });
+    ctx.fillText('🧝 ' + hero.name + '  Lv' + hero.level + '  ' + t('movePts') + ': ' + Math.round(hero.movePts) + '/' + hero.movePtsMax, 10, y + 22, textRight - 10);
+    addButton(0, y, Math.min(220, W * 0.5, textRight), 44, () => { game.screen = 'heroScreen'; });
   } else {
     ctx.fillStyle = '#ccc'; ctx.font = '600 12px sans-serif';
-    ctx.fillText(t('selectHero'), 10, y + 22);
+    ctx.fillText(t('selectHero'), 10, y + 22, textRight - 10);
   }
-  const btnW = 120;
-  drawButton(W - btnW - 10, y + 4, btnW, 36, t('endTurn'), '#4ade80', '#16a34a', () => { sfx.turnEnd(); endTurn(); });
+  if (multi) drawButton(cycX, y + 4, cycW, 36, '⟳', '#fcd34d', '#b45309', () => cycleHero(p), { fontSize: 20 });
+  drawButton(endX, y + 4, btnW, 36, t('endTurn'), '#4ade80', '#16a34a', () => { sfx.turnEnd(); endTurn(); });
 }
 
 // ---- input for adventure screen ----
@@ -4807,9 +4996,8 @@ function renderHeroScreen() {
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   drawButton(10, topBar + 8, 90, 34, t('back'), '#94a3b8', '#475569', () => { game.screen = 'adventure'; heroScreenSelectedSlot = null; });
 
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#f4c95d'; ctx.font = '900 20px sans-serif';
-  ctx.fillText(hero.name + '  (Lv ' + hero.level + ')', W / 2, topBar + 26);
+  const heroSel = heroScreenSelectedSlot !== null && !!hero.army[heroScreenSelectedSlot]; // Disband shows in the header's right corner
+  drawHeaderTitle(topBar, 10 + 90 + 10, (heroSel ? W - 14 - 100 : W) - 10, [hero.name + '  (Lv ' + hero.level + ')', hero.name]);
 
   // narrow (portrait phone): slim stats column, wider army column; compact (landscape phone):
   // army slots flow in two columns so all five stacks + their stats still fit the short screen
@@ -4840,8 +5028,10 @@ function renderHeroScreen() {
   });
 
   // right column: army — every stack shows its stats and ranged/melee (with ammo)
-  const slotH = 64, cols = compact ? 2 : 1, rowsN = Math.ceil(5 / cols);
-  const panelH = Math.max(H - topBar - 56 - 60, 34 + rowsN * (slotH + 6) + 34);
+  // slots shrink (down to 40px) on very short screens so the panel, its slots and the spellbook line all fit
+  const cols = compact ? 2 : 1, rowsN = Math.ceil(5 / cols);
+  const slotH = Math.max(40, Math.min(64, Math.floor((H - (topBar + 56) - 10 - 34 - 26) / rowsN) - 6));
+  const panelH = Math.max(H - topBar - 56 - 60, 34 + rowsN * (slotH + 6) + 26);
   drawPanel(rightX, topBar + 56, rightW, panelH, {});
   ctx.fillStyle = '#fde68a'; ctx.font = '800 13px sans-serif';
   ctx.fillText(t('army') + ':', rightX + 12, topBar + 72);
@@ -4849,33 +5039,136 @@ function renderHeroScreen() {
   for (let i = 0; i < 5; i++) {
     const sx = rightX + 8 + (i % cols) * (slotW + 6);
     const sy = topBar + 90 + Math.floor(i / cols) * (slotH + 6);
-    const stack = hero.army[i];
-    const selected = heroScreenSelectedSlot === i;
-    drawPanel(sx, sy, slotW, slotH, { fill: selected ? 'rgba(253,224,71,0.18)' : 'rgba(255,255,255,0.06)', stroke: selected ? '#fde047' : '#8a7a5c' });
-    if (stack) {
-      const cd = creatureRef(stack);
-      drawCreatureGlyph(cd.shape, sx + 26, sy + 25, 21, creatureColor(stack), stack.upgraded);
-      ctx.textAlign = 'center'; ctx.fillStyle = '#cbd5e1'; ctx.font = '700 11px sans-serif';
-      ctx.fillText('x' + stack.count, sx + 26, sy + slotH - 10, 44);
-      const tx = sx + 50, tw = slotW - 56;
-      ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = '700 12px sans-serif';
-      ctx.fillText(creatureDisplayName(stack), tx, sy + 12, tw);
-      ctx.font = '600 10px sans-serif'; ctx.fillStyle = '#cbd5e1';
-      ctx.fillText(creatureStatLine1(cd), tx, sy + 27, tw);
-      ctx.fillText(creatureStatLine2(cd), tx, sy + 40, tw);
-      ctx.fillStyle = cd.ranged ? '#fde047' : '#fca5a5'; ctx.font = '700 10px sans-serif';
-      ctx.fillText(creatureRangeLabel(cd), tx, sy + 54, tw);
-    } else {
-      ctx.textAlign = 'center'; ctx.fillStyle = '#888'; ctx.font = '600 12px sans-serif';
-      ctx.fillText('—', sx + slotW / 2, sy + slotH / 2);
-    }
+    drawArmySlot(hero.army[i], sx, sy, slotW, slotH, heroScreenSelectedSlot === i);
     addButton(sx, sy, slotW, slotH, () => onHeroArmySlotTap(hero, i));
   }
+  if (heroScreenSelectedSlot !== null && !hero.army[heroScreenSelectedSlot]) heroScreenSelectedSlot = null;
+  if (heroScreenSelectedSlot !== null) drawDisbandControl(hero.army, heroScreenSelectedSlot, true, () => { heroScreenSelectedSlot = null; });
 
   // spellbook
+  // (kept inside the army panel: the panel always reserves a line for it under the slots)
   const sbY = topBar + 90 + rowsN * (slotH + 6) + 6;
   ctx.textAlign = 'left'; ctx.fillStyle = '#fde68a'; ctx.font = '800 13px sans-serif';
   ctx.fillText(t('spellbook') + ': ' + (hero.spells.length ? hero.spells.map(id => spellName(id)).join(', ') : '—'), rightX + 12, sbY + 8, rightW - 24);
+}
+
+// one army slot (hero screen + garrison screen): glyph, count, name, stats, ranged/melee.
+// Short slots (< 58px, phone portrait garrison) fold the stats into one line; < 40px is a 2-line mode.
+function drawArmySlot(stack, sx, sy, slotW, slotH, selected) {
+  drawPanel(sx, sy, slotW, slotH, { fill: selected ? 'rgba(253,224,71,0.18)' : 'rgba(255,255,255,0.06)', stroke: selected ? '#fde047' : '#8a7a5c' });
+  if (!stack) {
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#888'; ctx.font = '600 12px sans-serif';
+    ctx.fillText('—', sx + slotW / 2, sy + slotH / 2);
+    return;
+  }
+  const cd = creatureRef(stack), short = slotH < 58;
+  if (slotH < 40) { // tiny screens: count joins the name line, two text lines in total
+    drawCreatureGlyph(cd.shape, sx + 18, sy + slotH / 2, Math.min(12, slotH * 0.38), creatureColor(stack), stack.upgraded);
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = '700 11px sans-serif';
+    const tw0 = slotW - 42;
+    ctx.fillText('x' + stack.count + ' ' + creatureDisplayName(stack) + ' · ' + creatureRangeLabel(cd), sx + 36, sy + slotH * 0.3, tw0);
+    ctx.font = '600 10px sans-serif'; ctx.fillStyle = '#cbd5e1';
+    ctx.fillText(creatureStatLine1(cd) + ' · ' + creatureStatLine2(cd), sx + 36, sy + slotH * 0.72, tw0);
+    return;
+  }
+  drawCreatureGlyph(cd.shape, sx + 26, sy + (short ? 17 : 25), short ? 14 : 21, creatureColor(stack), stack.upgraded);
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center'; ctx.fillStyle = '#cbd5e1'; ctx.font = '700 11px sans-serif';
+  ctx.fillText('x' + stack.count, sx + 26, sy + slotH - (short ? 8 : 10), 44);
+  const tx = sx + 50, tw = slotW - 56;
+  ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = '700 12px sans-serif';
+  ctx.fillText(creatureDisplayName(stack), tx, sy + (short ? 10 : 12), tw);
+  ctx.font = '600 10px sans-serif'; ctx.fillStyle = '#cbd5e1';
+  if (short) {
+    ctx.fillText(creatureStatLine1(cd) + ' · ' + creatureStatLine2(cd), tx, sy + 23, tw);
+  } else {
+    ctx.fillText(creatureStatLine1(cd), tx, sy + 27, tw);
+    ctx.fillText(creatureStatLine2(cd), tx, sy + 40, tw);
+  }
+  ctx.fillStyle = cd.ranged ? '#fde047' : '#fca5a5'; ctx.font = '700 10px sans-serif';
+  ctx.fillText(creatureRangeLabel(cd), tx, sy + (short ? 36 : 54), tw);
+}
+
+// Disband button in the header's top-right corner (shared by hero + garrison screens).
+// `isHero`: a hero's last stack can't be removed — the button is greyed out and says why.
+function heroLastStack(army) { return army.filter(s => s).length <= 1; }
+function drawDisbandControl(army, i, isHero, onDone) {
+  if (!army[i]) return;
+  const topBar = chromeMetrics().topBar;
+  const blocked = isHero && heroLastStack(army);
+  drawButton(W - 14 - 100, topBar + 8, 100, 34, t('disband'), '#f87171', '#b91c1c', () => confirmDisband(army, i, isHero, onDone), { disabled: blocked, fontSize: 12, textColor: '#fff' });
+  if (blocked) {
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fb923c'; ctx.font = '700 10.5px sans-serif';
+    ctx.fillText(t('cantEmptyHero'), W / 2, topBar + 49, W - 28);
+  }
+}
+// ---- upgrading existing stacks in a castle ----
+// DESIGN CHOICE (not derived from data: creatures have no separate upgraded cost): an upgraded
+// unit is priced at base cost x 1.5, rounded up per resource; the price of upgrading is the
+// difference, ceil(base * 1.5) - base per unit (>= 1 gold), times the unit count.
+function upgradeCostFor(stack, count) {
+  const cd = factionById(stack.factionId).creatures[stack.tier - 1];
+  const n = count == null ? stack.count : count;
+  const cost = {};
+  for (const k of RESOURCE_KEYS) {
+    const base = cd.cost[k] || 0;
+    let diff = Math.ceil(base * 1.5) - base;
+    if (k === 'gold') diff = Math.max(1, diff);
+    if (diff > 0) cost[k] = diff * n;
+  }
+  return cost;
+}
+// generic over tier: works for any 'dwelling<tier>up' building that gets added later
+function canUpgradeStack(castle, stack) {
+  if (!castle || !stack || stack.factionId !== castle.factionId || stack.upgraded) return false;
+  if (!castle.buildings['dwelling' + stack.tier + 'up']) return false;
+  const cd = factionById(stack.factionId).creatures[stack.tier - 1];
+  return !!(cd && cd.upgrade && cd.upDef);
+}
+function canAffordUpgrade(castle, stack) {
+  const p = game.players[castle.ownerIdx], cost = upgradeCostFor(stack);
+  for (const k in cost) if ((p.resources[k] || 0) < cost[k]) return false;
+  return true;
+}
+function drawUpgradeControl(castle, stack, rightX) {
+  if (!canUpgradeStack(castle, stack)) return;
+  const topBar = chromeMetrics().topBar;
+  const w = W < 600 ? 88 : 110, x = rightX - w;
+  const ok = canAffordUpgrade(castle, stack);
+  drawButton(x, topBar + 8, w, 34, t('upgradeUnit'), '#86efac', '#15803d', () => confirmUpgrade(castle, stack), { disabled: !ok, fontSize: 12, textColor: '#052e16' });
+  return x;
+}
+function confirmUpgrade(castle, stack) {
+  if (!canUpgradeStack(castle, stack)) { showMessage(t('upgradeUnit'), t('upgradeNotAvailable')); return; }
+  const cd = factionById(stack.factionId).creatures[stack.tier - 1];
+  const cost = upgradeCostFor(stack);
+  const sub = t('upgradeConfirm', { n: stack.count, from: creatureDisplayName(stack), to: cd.upgrade }) +
+    '\n' + upgradeDeltaText(cd) + '\n' + t('upgradeCost') + ': ' + costText(cost);
+  showMessage(t('upgradeUnit'), sub, [
+    { label: t('confirm'), cls: 'btn-gold', onClick: () => {
+      // re-check: resources / stack may have changed while the dialog was open
+      if (!canUpgradeStack(castle, stack)) return;
+      if (!canAffordUpgrade(castle, stack)) { showMessage(t('upgradeUnit'), t('cannotAfford')); return; }
+      const p = game.players[castle.ownerIdx], c = upgradeCostFor(stack);
+      for (const k in c) p.resources[k] -= c[k];
+      stack.upgraded = true;
+      sfx.build(); saveGame();
+    } },
+    { label: t('cancel'), cls: 'btn-gray' },
+  ]);
+}
+function confirmDisband(army, i, isHero, onDone) {
+  const stack = army[i];
+  if (!stack) return;
+  if (isHero && heroLastStack(army)) { showMessage(t('disband'), t('cantEmptyHero')); return; }
+  showMessage(t('disband'), t('disbandConfirm', { n: stack.count, name: creatureDisplayName(stack) }), [
+    { label: t('confirm'), cls: 'btn-red', onClick: () => {
+      // re-check: the army may have changed while the dialog was open
+      if (army[i] !== stack || (isHero && heroLastStack(army))) return;
+      army[i] = null; onDone(); sfx.click(); saveGame();
+    } },
+    { label: t('cancel'), cls: 'btn-gray' },
+  ]);
 }
 
 function onHeroArmySlotTap(hero, i) {
@@ -4897,25 +5190,203 @@ function onHeroArmySlotTap(hero, i) {
 }
 
 // ============================================================
+// SCREEN: GARRISON (castle illustration + garrison slots + visiting hero's slots)
+// ============================================================
+// Castle drawn from primitives, centred on (cx, cy), `h` px tall (~`h` px wide too).
+// Roofs use the faction colour, the flag the owner's colour.
+function drawCastleIllustration(cx, cy, h, ownerColor, factionId) {
+  const u = h / 104;
+  const roof = (factionById(factionId) || {}).primary || '#b91c1c';
+  const stone = '#9a8a73', stoneLit = '#b9a98f', stoneDark = '#6f5f4b', line = 'rgba(30,20,8,0.75)';
+  ctx.save();
+  ctx.translate(cx, cy + 7 * u); ctx.scale(u, u);   // unit box: x -50..50, y -66..38
+  ctx.lineWidth = 1.2; ctx.lineJoin = 'round';
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath(); ctx.ellipse(0, 38, 54, 6, 0, 0, Math.PI * 2); ctx.fill();
+  const rect = (x, y, w, hh, fill) => { ctx.fillStyle = fill; ctx.fillRect(x, y, w, hh); ctx.strokeStyle = line; ctx.strokeRect(x, y, w, hh); };
+  const cone = (x0, x1, yBase, yTop) => {
+    ctx.fillStyle = roof; ctx.beginPath(); ctx.moveTo(x0 - 2, yBase); ctx.lineTo((x0 + x1) / 2, yTop); ctx.lineTo(x1 + 2, yBase); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.beginPath(); ctx.moveTo(x0 - 2, yBase); ctx.lineTo((x0 + x1) / 2, yTop); ctx.lineTo((x0 + x1) / 2 - 2, yBase); ctx.closePath(); ctx.fill();
+  };
+  const merlons = (x0, x1, y) => { for (let x = x0; x + 4 <= x1; x += 8) rect(x, y - 4, 4, 4, stoneDark); };
+  const slit = (x, y) => { ctx.fillStyle = '#1f1408'; roundRect(x - 1.5, y, 3, 7, 1.5); ctx.fill(); };
+  // central keep (behind the wall) with flag
+  rect(-17, -30, 34, 44, stone); rect(-17, -30, 10, 44, stoneLit); merlons(-17, 17, -30);
+  cone(-14, 14, -34, -54);
+  ctx.strokeStyle = '#2b1d0e'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(0, -54); ctx.lineTo(0, -66); ctx.stroke();
+  ctx.lineWidth = 1.2; ctx.fillStyle = ownerColor;
+  ctx.beginPath(); ctx.moveTo(0, -66); ctx.lineTo(16, -61); ctx.lineTo(0, -56); ctx.closePath(); ctx.fill(); ctx.stroke();
+  slit(-4, -22); slit(4, -22); slit(0, -8);
+  // side towers
+  for (const sx of [-48, 26]) {
+    rect(sx, -14, 22, 52, stone); rect(sx, -14, 7, 52, stoneLit); merlons(sx, sx + 22, -14);
+    cone(sx + 1, sx + 21, -18, -38);
+    slit(sx + 8, -2); slit(sx + 8, 14);
+  }
+  // curtain wall + gate
+  rect(-26, 4, 52, 34, stone); rect(-26, 4, 52, 8, stoneLit); merlons(-26, 26, 4);
+  ctx.strokeStyle = 'rgba(30,20,8,0.3)'; ctx.lineWidth = 0.8;
+  for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.moveTo(-26, 16 + k * 8); ctx.lineTo(-10, 16 + k * 8); ctx.moveTo(10, 16 + k * 8); ctx.lineTo(26, 16 + k * 8); ctx.stroke(); }
+  ctx.fillStyle = '#2b1a0a'; ctx.beginPath(); ctx.moveTo(-9, 38); ctx.lineTo(-9, 22); ctx.arc(0, 22, 9, Math.PI, 0); ctx.lineTo(9, 38); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = line; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.strokeStyle = '#c9a35c'; ctx.lineWidth = 0.9;
+  for (const gx of [-5, 0, 5]) { ctx.beginPath(); ctx.moveTo(gx, 15); ctx.lineTo(gx, 38); ctx.stroke(); }
+  ctx.beginPath(); ctx.moveTo(-9, 26); ctx.lineTo(9, 26); ctx.stroke();
+  ctx.restore();
+}
+
+// shared selection across the garrison row and the hero row: { which: 'garrison'|'hero', i } | null
+let garrisonSel = null;
+function garrisonArmies(castle) {
+  const hero = heroAtCastle(castle);
+  return { hero, garrison: ensureGarrison(castle), heroArmy: hero ? hero.army : null };
+}
+function onGarrisonSlotTap(castle, which, i) {
+  const A = garrisonArmies(castle);
+  const armyOf = w => (w === 'hero' ? A.heroArmy : A.garrison);
+  const dstArr = armyOf(which);
+  if (!dstArr) return;
+  if (!garrisonSel) {
+    if (dstArr[i]) { garrisonSel = { which, i }; sfx.click(); }
+    return;
+  }
+  const srcArr = armyOf(garrisonSel.which), si = garrisonSel.i;
+  garrisonSel = null;
+  if (!srcArr || (srcArr === dstArr && si === i)) return; // deselect (or the hero walked away)
+  const a = srcArr[si], b = dstArr[i];
+  if (!a) return;
+  const merge = !!b && a.factionId === b.factionId && a.tier === b.tier && a.upgraded === b.upgraded;
+  if (merge) { b.count += a.count; srcArr[si] = null; }
+  else { srcArr[si] = b; dstArr[i] = a; }
+  if (A.heroArmy && !A.heroArmy.some(s => s)) { // never leave the hero without troops: undo
+    if (merge) b.count -= a.count;
+    srcArr[si] = a; dstArr[i] = b;
+    showMessage(t('cantEmptyHero'), '');
+    return;
+  }
+  sfx.click();
+  saveGame();
+}
+
+function drawGarrisonGroup(px, py, pw, ph, title, army, which, slotH, gap) {
+  drawPanel(px, py, pw, ph, {});
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fde68a'; ctx.font = '800 13px sans-serif';
+  ctx.fillText(title, px + 12, py + 16, pw - 24);
+  const castle = game.objects.find(o => o.id === game.selectedCastleId);
+  for (let i = 0; i < 5; i++) {
+    const sx = px + 8, sy = py + 30 + i * (slotH + gap), sw = pw - 16;
+    drawArmySlot(army[i], sx, sy, sw, slotH, !!garrisonSel && garrisonSel.which === which && garrisonSel.i === i);
+    addButton(sx, sy, sw, slotH, () => onGarrisonSlotTap(castle, which, i));
+  }
+}
+function drawNoHeroPanel(px, py, pw, ph) {
+  drawPanel(px, py, pw, ph, {});
+  ctx.fillStyle = '#cbd5e1'; ctx.font = '700 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const lines = wrapLines(t('noHeroAtCastle'), pw - 24);
+  lines.forEach((l, k) => ctx.fillText(l, px + pw / 2, py + ph / 2 + (k - (lines.length - 1) / 2) * 15));
+}
+
+function renderGarrison() {
+  ctx.fillStyle = '#1a1408'; ctx.fillRect(0, 0, W, H);
+  const topBar = chromeMetrics().topBar;
+  const castle = game.objects.find(o => o.id === game.selectedCastleId);
+  if (!castle) { game.screen = 'adventure'; return; }
+  const fac = factionById(castle.factionId);
+  const A = garrisonArmies(castle);
+  // drop a selection that no longer points at a troop (hero left, stack disbanded...)
+  if (garrisonSel) {
+    const arr = garrisonSel.which === 'hero' ? A.heroArmy : A.garrison;
+    if (!arr || !arr[garrisonSel.i]) garrisonSel = null;
+  }
+  drawButton(10, topBar + 8, 90, 34, t('back'), '#94a3b8', '#475569', () => { game.screen = 'castle'; garrisonSel = null; });
+  let titleR = W - 10; // left edge of the first control on the right, minus a gutter
+  if (garrisonSel) {
+    const isHero = garrisonSel.which === 'hero';
+    const arr = isHero ? A.heroArmy : A.garrison;
+    drawDisbandControl(arr, garrisonSel.i, isHero, () => { garrisonSel = null; });
+    const ux = drawUpgradeControl(castle, arr[garrisonSel.i], W - 14 - 100 - 8);
+    titleR = (ux != null ? ux : W - 14 - 100) - 10;
+  }
+  drawHeaderTitle(topBar, 10 + 90 + 10, titleR, [castle.name + ' — ' + t('garrison'), t('garrison')]);
+
+  const narrow = W < 600;
+  const y0 = topBar + 56, availH = H - y0 - 10, gap = 4;
+  const ownerColor = castle.ownerIdx === 0 ? '#3b82f6' : '#dc2626';
+  const heroTitle = A.hero ? A.hero.name + ' — ' + t('army') : '';
+  const clampSlot = v => Math.max(40, Math.min(64, Math.floor(v)));
+  const label = (txt, x, y, w) => { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff'; ctx.font = '800 13px sans-serif'; ctx.fillText(txt, x, y, w); };
+  if (!narrow) {
+    // wide: castle panel left, garrison + hero columns side by side
+    const cw = Math.min(300, Math.floor(W * 0.34));
+    drawPanel(14, y0, cw, availH, {});
+    const ih = Math.max(60, Math.min(cw - 24, availH - 84, 240));
+    drawCastleIllustration(14 + cw / 2, y0 + 26 + ih / 2, ih, ownerColor, castle.factionId);
+    label(castle.name, 14 + cw / 2, y0 + ih + 44, cw - 20);
+    ctx.fillStyle = '#cbd5e1'; ctx.font = '600 11px sans-serif'; ctx.fillText(fac.name, 14 + cw / 2, y0 + ih + 62, cw - 20);
+    const gx = 14 + cw + 10, gw = Math.floor((W - gx - 14 - 10) / 2);
+    const slotH = clampSlot((availH - 38 - 4 * gap) / 5);
+    const ph = 38 + 5 * slotH + 4 * gap;
+    drawGarrisonGroup(gx, y0, gw, ph, t('garrison'), A.garrison, 'garrison', slotH, gap);
+    const hx = gx + gw + 10;
+    if (A.hero) drawGarrisonGroup(hx, y0, gw, ph, heroTitle, A.heroArmy, 'hero', slotH, gap);
+    else drawNoHeroPanel(hx, y0, gw, Math.min(ph, 90));
+  } else {
+    // portrait phone: one column — castle, garrison, hero. Slots get priority (>= 44px tall when
+    // the screen allows); the castle takes whatever height is left and is dropped on very short screens.
+    const noHeroH = 56, nSlots = A.hero ? 10 : 5;
+    const fixed = (A.hero ? 2 * 38 + 8 * gap : 38 + 4 * gap + noHeroH) + 8;
+    let castleH = Math.min(170, availH - 22 - 8 - fixed - nSlots * 44);
+    if (castleH < 70) castleH = 0;
+    const blockH = castleH + 22;
+    const slotH = Math.max(30, Math.min(64, Math.floor((availH - blockH - 8 - fixed) / nSlots)));
+    if (castleH) drawCastleIllustration(W / 2, y0 + castleH / 2, castleH, ownerColor, castle.factionId);
+    label(castle.name + ' · ' + fac.name, W / 2, y0 + castleH + 10, W - 28);
+    const ph = 38 + 5 * slotH + 4 * gap;
+    const gy = y0 + blockH;
+    drawGarrisonGroup(14, gy, W - 28, ph, t('garrison'), A.garrison, 'garrison', slotH, gap);
+    if (A.hero) drawGarrisonGroup(14, gy + ph + 8, W - 28, ph, heroTitle, A.heroArmy, 'hero', slotH, gap);
+    else drawNoHeroPanel(14, gy + ph + 8, W - 28, noHeroH);
+  }
+}
+
+// ============================================================
 // SCREEN: CASTLE SCREEN
 // ============================================================
 // ---- castle building list: descriptions, costs, state; scrolls when it doesn't fit ----
+// The castle screen has two scrollable zones: the buildings list ('list') and the recruit panel
+// ('recruit'); the latter only scrolls when it doesn't fit (short landscape / small portrait screens).
 let castleScroll = 0, castleScrollFor = null;
-const castleDrag = { active: false, startY: 0, startScroll: 0 };
+const castleDrag = { active: false, startY: 0, startScroll: 0, zone: 'list' };
 let castleListRect = null, castleContentH = 0;
+let recruitScroll = 0, recruitListRect = null, recruitContentH = 0;
 function castleScrollClamp() {
   const maxS = castleListRect ? Math.max(0, castleContentH - castleListRect.h) : 0;
   castleScroll = Math.max(0, Math.min(maxS, castleScroll));
+  const maxR = recruitListRect ? Math.max(0, recruitContentH - recruitListRect.h) : 0;
+  recruitScroll = Math.max(0, Math.min(maxR, recruitScroll));
+}
+function castleZoneAt(px, py) {
+  const inR = r => r && px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
+  if (inR(recruitListRect)) return 'recruit';
+  if (inR(castleListRect)) return 'list';
+  return null;
+}
+function castleScrollBy(zone, dy) {
+  if (zone === 'recruit') recruitScroll += dy; else castleScroll += dy;
+  castleScrollClamp();
 }
 function castleScrollDown(px, py) {
-  const r = castleListRect;
-  if (r && px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) {
-    castleDrag.active = true; castleDrag.startY = py; castleDrag.startScroll = castleScroll;
+  const zone = castleZoneAt(px, py);
+  if (zone) {
+    castleDrag.active = true; castleDrag.zone = zone; castleDrag.startY = py;
+    castleDrag.startScroll = zone === 'recruit' ? recruitScroll : castleScroll;
   }
 }
 function castleScrollMove(px, py) {
   if (!castleDrag.active) return;
-  castleScroll = castleDrag.startScroll - (py - castleDrag.startY);
+  const v = castleDrag.startScroll - (py - castleDrag.startY);
+  if (castleDrag.zone === 'recruit') recruitScroll = v; else castleScroll = v;
   castleScrollClamp();
 }
 function castleScrollUp() { castleDrag.active = false; }
@@ -4977,11 +5448,21 @@ function renderCastle() {
   if (!castle) { game.screen = 'adventure'; return; }
   const fac = factionById(castle.factionId);
   const p = game.players[castle.ownerIdx];
-  if (castleScrollFor !== castle.id) { castleScrollFor = castle.id; castleScroll = 0; }
+  if (castleScrollFor !== castle.id) { castleScrollFor = castle.id; castleScroll = 0; recruitScroll = 0; }
   drawButton(10, topBar + 8, 90, 34, t('back'), '#94a3b8', '#475569', () => { game.screen = 'adventure'; });
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#f4c95d'; ctx.font = '900 20px sans-serif';
-  ctx.fillText(castle.name + ' — ' + fac.name, W / 2, topBar + 26, W - 120);
+  const openGarrison = () => { sfx.click(); game.selectedCastleId = castle.id; garrisonSel = null; game.screen = 'garrison'; };
+  const garrisonLabel = '🏰 ' + t('garrison');
+  // wide: garrison button sits in the header (right), where it can't collide with the recruit rows;
+  // narrow: it goes at the bottom of the recruit panel instead (the header is too tight for it)
+  const narrowHdr = W < 600;
+  if (!narrowHdr) drawButton(W - 14 - 130, topBar + 8, 130, 34, garrisonLabel, '#fbbf24', '#b45309', openGarrison, { fontSize: 13 });
+  // Hire Hero (tavern): wide screens put it in the header next to Back; narrow ones at the bottom of the recruit panel
+  const hasTavern = !!castle.buildings.tavern && castle.ownerIdx === game.turn.playerIdx;
+  const hireLabel = '🍻 ' + t('hireHero');
+  const openHire = () => { sfx.click(); openHireHeroModal(castle); };
+  const hireBtnW = 150;
+  if (hasTavern && !narrowHdr) drawButton(10 + 90 + 8, topBar + 8, hireBtnW, 34, hireLabel, '#fcd34d', '#b45309', openHire, { fontSize: 13 });
+  drawHeaderTitle(topBar, 10 + 90 + (hasTavern && !narrowHdr ? 8 + hireBtnW : 0) + 10, (narrowHdr ? W : W - 14 - 130) - 10, [castle.name + ' — ' + fac.name, castle.name]);
 
   // wide screens: buildings left, recruit right. narrow (portrait): recruit panel on top
   // (sized to its content), the scrollable buildings list underneath.
@@ -4989,10 +5470,11 @@ function renderCastle() {
   const y = topBar + 56;
   const dwellTiers = [1, 2, 3, 4, 5].filter(tier => castle.buildings['dwelling' + tier]);
   const guildLvl = castle.buildings.mageGuild || 0;
-  const recruitNeedH = 40 + dwellTiers.length * 46 + (guildLvl > 0 ? 50 : 0) + 6;
+  const recruitNeedH = 40 + dwellTiers.length * 46 + (guildLvl > 0 ? 50 : 0) + 6 + (narrow ? 46 + (hasTavern ? 44 : 0) : 0) + 4;
   let L, R;
   if (narrow) {
-    R = { x: 14, y, w: W - 28, h: recruitNeedH };
+    // the recruit panel never takes more than leaves the buildings list ~150px; beyond that it scrolls
+    R = { x: 14, y, w: W - 28, h: Math.min(recruitNeedH, Math.max(120, H - 10 - y - 8 - 150)) };
     L = { x: 14, y: y + R.h + 8, w: W - 28, h: H - (y + R.h + 8) - 10 };
   } else {
     const lw = Math.min(W * 0.56, 460), rw = Math.min(280, W - lw - 42);
@@ -5090,7 +5572,14 @@ function renderCastle() {
   drawPanel(R.x, R.y, R.w, R.h, {});
   ctx.fillStyle = '#fde68a'; ctx.font = '800 13px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillText(t('recruit') + ':', R.x + 12, R.y + 18);
-  let ry = R.y + 40;
+  // the rows live in a clipped, scrollable view (same mechanics as the buildings list); when the
+  // panel is tall enough for everything the content simply fits and nothing scrolls
+  const rview = { x: R.x + 4, y: R.y + 32, w: R.w - 8, h: R.h - 36 };
+  recruitListRect = rview; recruitContentH = recruitNeedH - 36;
+  castleScrollClamp();
+  ctx.save();
+  ctx.beginPath(); ctx.rect(rview.x, rview.y, rview.w, rview.h); ctx.clip();
+  let ry = rview.y + 8 - recruitScroll;
   const recruitBtnW = Math.min(88, R.w - 24);
   for (const tier of dwellTiers) {
     const avail = castleAvailableToRecruit(castle, tier);
@@ -5104,12 +5593,30 @@ function renderCastle() {
     // button sized to fit the full (untruncated) label so its drawn geometry always
     // matches its registered hit rect — a too-narrow button was the earlier symptom here
     const rbx = R.x + R.w - 8 - recruitBtnW, rby = ry + 3, rbh = 34;
-    drawButton(rbx, rby, recruitBtnW, rbh, t('recruit'), avail > 0 ? '#4ade80' : '#6b6b6b', avail > 0 ? '#16a34a' : '#444', avail > 0 ? (() => openRecruitModal(castle, tier)) : null, { disabled: avail <= 0, fontSize: 12 });
+    drawButton(rbx, rby, recruitBtnW, rbh, t('recruit'), avail > 0 ? '#4ade80' : '#6b6b6b', avail > 0 ? '#16a34a' : '#444', null, { disabled: avail <= 0, fontSize: 12 });
+    if (avail > 0) addClippedButton(rbx, rby, recruitBtnW, rbh, rview, () => openRecruitModal(castle, tier));
     ry += 46;
   }
   if (guildLvl > 0) {
     const hero = findHeroById(game.selectedHeroId);
-    drawButton(R.x + 8, ry + 8, R.w - 16, 38, '📖 ' + t('spellbook'), '#a78bfa', '#6d28d9', hero ? (() => openLearnSpellsModal(castle, hero, guildLvl)) : null, { disabled: !hero });
+    drawButton(R.x + 8, ry + 8, R.w - 16, 38, '📖 ' + t('spellbook'), '#a78bfa', '#6d28d9', null, { disabled: !hero });
+    if (hero) addClippedButton(R.x + 8, ry + 8, R.w - 16, 38, rview, () => openLearnSpellsModal(castle, hero, guildLvl));
+    ry += 50;
+  }
+  if (narrow) {
+    drawButton(R.x + 8, ry + 2, R.w - 16, 38, garrisonLabel, '#fbbf24', '#b45309', null);
+    addClippedButton(R.x + 8, ry + 2, R.w - 16, 38, rview, openGarrison);
+    if (hasTavern) {
+      drawButton(R.x + 8, ry + 46, R.w - 16, 38, hireLabel, '#fcd34d', '#b45309', null);
+      addClippedButton(R.x + 8, ry + 46, R.w - 16, 38, rview, openHire);
+    }
+  }
+  ctx.restore();
+  if (recruitContentH > rview.h) { // scroll thumb
+    const th = Math.max(20, rview.h * rview.h / recruitContentH);
+    const tyy = rview.y + (rview.h - th) * (recruitScroll / (recruitContentH - rview.h));
+    ctx.fillStyle = 'rgba(253,230,138,0.55)';
+    roundRect(rview.x + rview.w - 3, tyy, 3, th, 1.5); ctx.fill();
   }
 }
 
@@ -5122,22 +5629,35 @@ function openLearnSpellsModal(castle, hero, guildLvl) {
   })), [{ label: t('close') }]);
 }
 
-function openRecruitModal(castle, tier) {
-  // recruit into whichever hero is actually standing in the castle; if none is,
-  // troops go into the castle garrison instead of silently failing
+// dest: 'hero' | 'garrison' | undefined. With a hero present and no dest yet, step 1 asks
+// where the troops go (two big buttons — fits a phone better than doubling the count rows);
+// step 2 is the usual Max / 1 / 5. With no hero the garrison is the only target (as before).
+function openRecruitModal(castle, tier, dest) {
   const hero = heroAtCastle(castle);
+  if (!hero) dest = 'garrison';
   const avail = castleAvailableToRecruit(castle, tier);
   const fac = factionById(castle.factionId);
   const cd = fac.creatures[tier - 1];
   const upgraded = !!castle.buildings['dwelling' + tier + 'up'];
   const shown = upgraded ? cd.upDef : cd;
-  const sub = (hero ? hero.name : t('recruitToGarrison')) + '\n' +
+  const where = !hero ? t('recruitToGarrison')
+    : dest === 'hero' ? t('toHero') + ': ' + hero.name
+    : dest === 'garrison' ? t('toGarrison')
+    : t('toHero') + ': ' + hero.name + '  /  ' + t('toGarrison');
+  const sub = where + '\n' +
     (upgraded ? cd.upgrade : cd.name) + '\n' +
     creatureStatLine1(shown) + ' · ' + creatureStatLine2(shown) + '\n' +
     creatureRangeLabel(shown) + '\n' +
     t('costEach') + ': ' + costText(cd.cost);
+  if (!dest) {
+    showListModal(t('recruitTitle'), sub, [
+      { label: t('toHero') + ' (' + hero.name + ')', onClick: () => { hideListModal(); openRecruitModal(castle, tier, 'hero'); } },
+      { label: t('toGarrison'), onClick: () => { hideListModal(); openRecruitModal(castle, tier, 'garrison'); } },
+    ], [{ label: t('close') }]);
+    return;
+  }
   const doRecruit = (count) => {
-    const ok = hero ? recruitFromCastle(castle, hero, tier, count) : recruitIntoGarrison(castle, tier, count);
+    const ok = dest === 'hero' ? recruitFromCastle(castle, hero, tier, count) : recruitIntoGarrison(castle, tier, count);
     hideListModal();
     if (!ok) showMessage(t('recruitFailed'), '', [{ label: t('ok') }]);
   };
@@ -5509,6 +6029,7 @@ function render() {
     case 'adventure': renderAdventure(); break;
     case 'castle': renderCastle(); break;
     case 'heroScreen': renderHeroScreen(); break;
+    case 'garrison': renderGarrison(); break;
     case 'combat': renderCombat(); break;
     case 'combatResult': renderCombatResult(); break;
     case 'passDevice': ctx.fillStyle = '#08131f'; ctx.fillRect(0, 0, W, H); break;
@@ -5553,7 +6074,7 @@ function onUp(px, py) {
 canvas.addEventListener('touchstart', e => { e.preventDefault(); const p = pointFromEvent(e); onDown(p.x, p.y); }, { passive: false });
 canvas.addEventListener('touchmove', e => { e.preventDefault(); const p = pointFromEvent(e); onMove(p.x, p.y); }, { passive: false });
 canvas.addEventListener('touchend', e => { e.preventDefault(); const p = pointFromEvent(e); onUp(p.x, p.y); }, { passive: false });
-canvas.addEventListener('wheel', e => { if (game.screen === 'castle') { castleScroll += e.deltaY; e.preventDefault(); } }, { passive: false });
+canvas.addEventListener('wheel', e => { if (game.screen === 'castle') { castleScrollBy(castleZoneAt(e.clientX, e.clientY) || 'list', e.deltaY); e.preventDefault(); } }, { passive: false });
 canvas.addEventListener('mousedown', e => onDown(e.clientX, e.clientY));
 window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
 window.addEventListener('mouseup', e => onUp(e.clientX, e.clientY));
